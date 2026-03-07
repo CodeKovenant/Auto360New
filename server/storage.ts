@@ -34,6 +34,7 @@ export interface IStorage {
   deleteBusiness(id: string): Promise<void>;
   getPendingBusinesses(): Promise<Business[]>;
   getApprovedBusinesses(): Promise<Business[]>;
+  getRejectedBusinesses(): Promise<Business[]>;
 
   // Spare Parts
   getSparePartsByBusinessId(businessId: string): Promise<SparePart[]>;
@@ -192,6 +193,10 @@ export class DatabaseStorage implements IStorage {
 
   async getApprovedBusinesses() {
     return db.select().from(businesses).where(eq(businesses.status, "approved")).orderBy(businesses.createdAt);
+  }
+
+  async getRejectedBusinesses() {
+    return db.select().from(businesses).where(eq(businesses.status, "rejected")).orderBy(businesses.createdAt);
   }
 
   async getSparePartsByBusinessId(businessId: string) {

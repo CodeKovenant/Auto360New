@@ -150,15 +150,47 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Admin routes
   app.get("/api/admin", adminMiddleware, async (req, res) => {
     try {
-      const [pending, approved, allReviews, allUsers] = await Promise.all([
+      const [pending, approved, rejected, allReviews, allUsers] = await Promise.all([
         storage.getPendingBusinesses(),
         storage.getApprovedBusinesses(),
+        storage.getRejectedBusinesses(),
         storage.getAllReviews(),
         storage.getAllUsers(),
       ]);
+
+      // Build per-business rating stats from reviews
+      const ratingMap: Record<string, { total: number; count: number }> = {};
+      for (const r of allReviews) {
+        if (!ratingMap[r.businessId]) ratingMap[r.businessId] = { total: 0, count: 0 };
+        ratingMap[r.businessId].total += r.rating;
+        ratingMap[r.businessId].count += 1;
+      }
+
+      // Build user map for owner lookup
+      const userMap: Record<string, { name: string; email: string }> = {};
+      for (const u of allUsers) userMap[u.id] = { name: u.name, email: u.email };
+
+      const enrich = (biz: any) => ({
+        ...biz,
+        avgRating: ratingMap[biz.id] ? ratingMap[biz.id].total / ratingMap[biz.id].count : 0,
+        reviewCount: ratingMap[biz.id]?.count ?? 0,
+        ownerName: biz.ownerId ? userMap[biz.ownerId]?.name ?? null : null,
+        ownerEmail: biz.ownerId ? userMap[biz.ownerId]?.email ?? null : null,
+      });
+
       res.json({
-        stats: { total: pending.length + approved.length, pending: pending.length, approved: approved.length, totalReviews: allReviews.length },
-        pending, approved, reviews: allReviews, users: allUsers,
+        stats: {
+          total: pending.length + approved.length + rejected.length,
+          pending: pending.length,
+          approved: approved.length,
+          rejected: rejected.length,
+          totalReviews: allReviews.length,
+        },
+        pending: pending.map(enrich),
+        approved: approved.map(enrich),
+        rejected: rejected.map(enrich),
+        reviews: allReviews,
+        users: allUsers,
       });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
