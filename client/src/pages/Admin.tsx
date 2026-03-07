@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Shield, Building2, CheckCircle, XCircle, Trash2, Users, Star, Clock } from "lucide-react";
+import { Shield, Building2, CheckCircle, XCircle, Trash2, Users, Star, Clock, Flag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +10,8 @@ import StarRating from "@/components/StarRating";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Business, Review, User } from "@shared/schema";
-import { BUSINESS_CATEGORIES } from "@shared/schema";
+import type { Business, Review, User, BusinessReport } from "@shared/schema";
+import { BUSINESS_CATEGORIES, REPORT_REASONS } from "@shared/schema";
 
 interface AdminData {
   stats: { total: number; pending: number; approved: number; totalReviews: number };
@@ -37,6 +37,10 @@ export default function Admin() {
 
   const { data, isLoading } = useQuery<AdminData>({
     queryKey: ["/api/admin"],
+  });
+
+  const { data: reports } = useQuery<(BusinessReport & { businessName: string })[]>({
+    queryKey: ["/api/admin/reports"],
   });
 
   const approveMutation = useMutation({
@@ -172,6 +176,9 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="users" data-testid="admin-tab-users">
               Users ({users.length})
+            </TabsTrigger>
+            <TabsTrigger value="reports" data-testid="admin-tab-reports">
+              Reports {reports && reports.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5">{reports.length}</span>}
             </TabsTrigger>
           </TabsList>
 
@@ -335,6 +342,42 @@ export default function Admin() {
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+            )}
+          </TabsContent>
+          {/* Reports */}
+          <TabsContent value="reports">
+            {!reports || reports.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Flag className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p>No reports submitted yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reports.map(r => {
+                  const reasonLabel = REPORT_REASONS.find(x => x.value === r.reason)?.label || r.reason;
+                  return (
+                    <Card key={r.id} data-testid={`admin-report-${r.id}`} className="border-red-100 dark:border-red-900/30">
+                      <CardContent className="pt-4 pb-4">
+                        <div className="flex items-start justify-between gap-2 flex-wrap mb-2">
+                          <div>
+                            <p className="font-semibold text-sm text-gray-900 dark:text-white">{r.businessName}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Reported by <span className="font-medium">{r.name}</span> ({r.email})
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="destructive" className="text-xs">{reasonLabel}</Badge>
+                            <span className="text-xs text-muted-foreground">{r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-KE") : ""}</span>
+                          </div>
+                        </div>
+                        {r.description && (
+                          <p className="text-sm text-muted-foreground bg-gray-50 dark:bg-gray-800 rounded-md p-2">{r.description}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>

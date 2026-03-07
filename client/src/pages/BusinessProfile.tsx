@@ -1,7 +1,11 @@
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { MapPin, Phone, MessageCircle, Building2, Package, Star, Send, Car, Wrench } from "lucide-react";
+import {
+  MapPin, Phone, MessageCircle, Building2, Package, Star, Send,
+  Car, Wrench, Shield, AlertTriangle, Share2, Flag,
+} from "lucide-react";
+import { SiFacebook, SiX, SiInstagram, SiWhatsapp } from "react-icons/si";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import StarRating from "@/components/StarRating";
 import CarCard from "@/components/CarCard";
 import GarageServiceCard from "@/components/GarageServiceCard";
@@ -16,7 +21,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import type { Business, SparePart, Review, Car as CarType, GarageService } from "@shared/schema";
-import { BUSINESS_CATEGORIES } from "@shared/schema";
+import { BUSINESS_CATEGORIES, REPORT_REASONS } from "@shared/schema";
 
 interface BusinessData {
   business: Business & { avgRating: number; reviewCount: number };
@@ -38,6 +43,197 @@ function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" |
   );
 }
 
+// ── Share Buttons ─────────────────────────────────────────────────────────────
+function ShareButtons({ businessName }: { businessName: string }) {
+  const profileUrl = typeof window !== "undefined" ? window.location.href : "";
+  const shareText = `Check out ${businessName} on AutoDirectory Kenya: ${profileUrl}`;
+
+  const shares = [
+    {
+      label: "Facebook",
+      icon: SiFacebook,
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(profileUrl)}`,
+      color: "bg-blue-600 hover:bg-blue-700 text-white",
+    },
+    {
+      label: "X",
+      icon: SiX,
+      href: `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}`,
+      color: "bg-gray-900 hover:bg-black text-white",
+    },
+    {
+      label: "Instagram",
+      icon: SiInstagram,
+      href: `https://www.instagram.com/`,
+      color: "bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 hover:opacity-90 text-white",
+    },
+    {
+      label: "WhatsApp",
+      icon: SiWhatsapp,
+      href: `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`,
+      color: "bg-green-500 hover:bg-green-600 text-white",
+    },
+  ];
+
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Share2 className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-gray-900 dark:text-white">Share this business</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {shares.map(({ label, icon: Icon, href, color }) => (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-opacity ${color}`}
+              data-testid={`share-${label.toLowerCase()}`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </a>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Safety Tips ───────────────────────────────────────────────────────────────
+const SAFETY_TIPS = [
+  "Verify the business registration before making any payment.",
+  "For high-value transactions, meet in a safe, public location.",
+  "Use official channels — WhatsApp, phone, or the contact form on this page.",
+  "Do not share sensitive personal or financial information upfront.",
+  "Request a receipt or written agreement for any service rendered.",
+];
+
+function SafetyTips() {
+  return (
+    <Card className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/10">
+      <CardContent className="pt-4 pb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Safety Tips</span>
+        </div>
+        <ul className="space-y-1.5" data-testid="safety-tips">
+          {SAFETY_TIPS.map((tip, i) => (
+            <li key={i} className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400">
+              <span className="mt-0.5 w-4 h-4 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 flex items-center justify-center flex-shrink-0 font-bold" style={{ fontSize: "10px" }}>{i + 1}</span>
+              {tip}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Report Business Form ───────────────────────────────────────────────────────
+function ReportBusinessForm({ businessId }: { businessId: string }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [reason, setReason] = useState("");
+  const [description, setDescription] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/report", { businessId, name, email, reason, description });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Report submitted", description: "Our team will review this report. Thank you." });
+      setName(""); setEmail(""); setReason(""); setDescription("");
+      setOpen(false);
+    },
+    onError: (e: Error) => toast({ title: "Error submitting report", description: e.message, variant: "destructive" }),
+  });
+
+  if (!open) {
+    return (
+      <div className="flex justify-center pt-2">
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+          data-testid="button-open-report"
+        >
+          <AlertTriangle className="w-3.5 h-3.5" />
+          Report this business
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="border-red-200 dark:border-red-900">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2 text-red-600 dark:text-red-400">
+          <Flag className="w-4 h-4" />
+          Report this Business
+        </CardTitle>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Help us keep the directory safe. Reports are reviewed by our admin team.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">Your Name</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="John Doe" className="mt-1" data-testid="input-report-name" />
+          </div>
+          <div>
+            <Label className="text-xs">Your Email</Label>
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className="mt-1" data-testid="input-report-email" />
+          </div>
+        </div>
+        <div>
+          <Label className="text-xs">Reason</Label>
+          <Select value={reason} onValueChange={setReason}>
+            <SelectTrigger className="mt-1" data-testid="select-report-reason">
+              <SelectValue placeholder="Select a reason..." />
+            </SelectTrigger>
+            <SelectContent>
+              {REPORT_REASONS.map(r => (
+                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Description (optional)</Label>
+          <Textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Describe the issue in detail..."
+            className="mt-1"
+            rows={3}
+            data-testid="input-report-description"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => mutation.mutate()}
+            disabled={!name || !email || !reason || mutation.isPending}
+            className="flex-1 bg-red-600 text-white hover:bg-red-700"
+            data-testid="button-submit-report"
+          >
+            {mutation.isPending ? "Submitting..." : "Submit Report"}
+          </Button>
+          <Button variant="outline" onClick={() => setOpen(false)} data-testid="button-cancel-report">
+            Cancel
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function BusinessProfile() {
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -104,7 +300,7 @@ export default function BusinessProfile() {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-4">
         <Skeleton className="h-40 rounded-md" />
-        <Skeleton className="h-48 rounded-md" />
+        <Skeleton className="h-32 rounded-md" />
         <Skeleton className="h-48 rounded-md" />
       </div>
     );
@@ -176,6 +372,9 @@ export default function BusinessProfile() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-6 space-y-6">
+        {/* Share buttons */}
+        <ShareButtons businessName={business.name} />
+
         {/* About */}
         <Card>
           <CardHeader><CardTitle className="text-base">About</CardTitle></CardHeader>
@@ -258,32 +457,24 @@ export default function BusinessProfile() {
                           {part.carBrand} {part.carModel} {part.year && `• ${part.year}`}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">
-                          {part.condition === "new" ? "New" : "Used"}
-                        </Badge>
-                      </div>
+                      <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">
+                        {part.condition === "new" ? "New" : "Used"}
+                      </Badge>
                     </div>
-                    {part.price && (
-                      <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-1.5">{part.price}</p>
-                    )}
+                    {part.price && <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-1.5">{part.price}</p>}
                     {part.description && <p className="text-xs text-muted-foreground mt-1">{part.description}</p>}
                     <div className="flex gap-2 mt-3">
                       <a href={`tel:${business.phone}`} className="flex-1">
                         <Button size="sm" variant="outline" className="w-full text-xs">
-                          <Phone className="w-3 h-3 mr-1" />
-                          Call
+                          <Phone className="w-3 h-3 mr-1" />Call
                         </Button>
                       </a>
                       <a
                         href={`https://wa.me/${business.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm looking for: ${part.partName} for ${part.carBrand} ${part.carModel}`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1"
+                        target="_blank" rel="noopener noreferrer" className="flex-1"
                       >
                         <Button size="sm" className="w-full text-xs bg-green-600 text-white">
-                          <MessageCircle className="w-3 h-3 mr-1" />
-                          WhatsApp
+                          <MessageCircle className="w-3 h-3 mr-1" />WhatsApp
                         </Button>
                       </a>
                     </div>
@@ -295,8 +486,9 @@ export default function BusinessProfile() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Reviews */}
-          <div className="lg:col-span-2">
+          {/* Left: Reviews + Safety Tips + Report */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Reviews */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -336,7 +528,6 @@ export default function BusinessProfile() {
                 ) : (
                   <p className="text-sm text-muted-foreground mb-4">No reviews yet. Be the first to review!</p>
                 )}
-
                 <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
                   <h4 className="font-medium text-sm mb-3 text-gray-900 dark:text-white">Leave a Review</h4>
                   <div className="space-y-3">
@@ -366,11 +557,16 @@ export default function BusinessProfile() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Safety Tips */}
+            <SafetyTips />
+
+            {/* Report Business */}
+            <ReportBusinessForm businessId={params.id} />
           </div>
 
           {/* Right sidebar */}
           <div className="space-y-4">
-            {/* Contact info */}
             <Card>
               <CardHeader><CardTitle className="text-base">Contact</CardTitle></CardHeader>
               <CardContent className="space-y-3">
@@ -382,8 +578,7 @@ export default function BusinessProfile() {
                 </a>
                 <a
                   href={`https://wa.me/${business.whatsapp.replace(/\D/g, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-3 p-3 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 w-full"
                   data-testid="link-whatsapp-profile"
                 >

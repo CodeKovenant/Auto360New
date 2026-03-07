@@ -102,6 +102,23 @@ export const garageServices = pgTable("garage_services", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const reportReasonEnum = pgEnum("report_reason", [
+  "fake_listing",
+  "scam",
+  "misleading_info",
+  "other",
+]);
+
+export const businessReports = pgTable("business_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessId: varchar("business_id").notNull().references(() => businesses.id),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  reason: reportReasonEnum("reason").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertBusinessSchema = createInsertSchema(businesses).omit({ id: true, createdAt: true, status: true });
 export const insertSparePartSchema = createInsertSchema(spareParts).omit({ id: true, createdAt: true });
@@ -109,6 +126,7 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, c
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true });
 export const insertCarSchema = createInsertSchema(cars).omit({ id: true, createdAt: true });
 export const insertGarageServiceSchema = createInsertSchema(garageServices).omit({ id: true, createdAt: true });
+export const insertBusinessReportSchema = createInsertSchema(businessReports).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -124,6 +142,15 @@ export type Car = typeof cars.$inferSelect;
 export type InsertCar = z.infer<typeof insertCarSchema>;
 export type GarageService = typeof garageServices.$inferSelect;
 export type InsertGarageService = z.infer<typeof insertGarageServiceSchema>;
+export type BusinessReport = typeof businessReports.$inferSelect;
+export type InsertBusinessReport = z.infer<typeof insertBusinessReportSchema>;
+
+export const REPORT_REASONS = [
+  { value: "fake_listing", label: "Fake Listing" },
+  { value: "scam", label: "Scam / Fraud" },
+  { value: "misleading_info", label: "Misleading Information" },
+  { value: "other", label: "Other" },
+] as const;
 
 export const BUSINESS_CATEGORIES = [
   { value: "car_dealer", label: "Car Dealer" },

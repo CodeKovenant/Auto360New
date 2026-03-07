@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { eq, ilike, and, or, sql, gte, lte, desc, inArray } from "drizzle-orm";
 import {
-  users, businesses, spareParts, reviews, messages, cars, garageServices,
+  users, businesses, spareParts, reviews, messages, cars, garageServices, businessReports,
   type User, type InsertUser,
   type Business, type InsertBusiness,
   type SparePart, type InsertSparePart,
@@ -10,6 +10,7 @@ import {
   type Message, type InsertMessage,
   type Car, type InsertCar,
   type GarageService, type InsertGarageService,
+  type BusinessReport, type InsertBusinessReport,
 } from "@shared/schema";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -65,6 +66,10 @@ export interface IStorage {
   createGarageService(service: InsertGarageService): Promise<GarageService>;
   updateGarageService(id: string, data: Partial<GarageService>): Promise<GarageService>;
   deleteGarageService(id: string): Promise<void>;
+
+  // Reports
+  createReport(report: InsertBusinessReport): Promise<BusinessReport>;
+  getAllReports(): Promise<(BusinessReport & { businessName: string })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -356,6 +361,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGarageService(id: string) {
     await db.delete(garageServices).where(eq(garageServices.id, id));
+  }
+
+  async createReport(report: InsertBusinessReport) {
+    const [created] = await db.insert(businessReports).values(report).returning();
+    return created;
+  }
+
+  async getAllReports() {
+    const allReports = await db.select().from(businessReports).orderBy(desc(businessReports.createdAt));
+    const bizIds = [...new Set(allReports.map(r => r.businessId))];
+    if (bizIds.length === 0) return [];
+    const bizList = await db.select({ id: businesses.id, name: businesses.name }).from(businesses).where(inArray(businesses.id, bizIds));
+    const bizMap = Object.fromEntries(bizList.map(b => [b.id, b.name]));
+    return allReports.map(r => ({ ...r, businessName: bizMap[r.businessId] || "Unknown" }));
   }
 }
 

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema } from "@shared/schema";
+import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertBusinessReportSchema } from "@shared/schema";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "autodirectory-secret-key";
 
@@ -193,6 +193,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       await storage.deleteReview(req.params.id);
       res.json({ success: true });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/reports", adminMiddleware, async (req, res) => {
+    try {
+      const reports = await storage.getAllReports();
+      res.json(reports);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // Reports (public)
+  app.post("/api/report", async (req, res) => {
+    try {
+      const body = insertBusinessReportSchema.parse(req.body);
+      const report = await storage.createReport(body);
+      res.json(report);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }

@@ -15,6 +15,9 @@ AutoDirectory is a SaaS directory platform for car-related businesses, targeting
 - **Car Dealer Listings:** Car dealers can add individual car listings (brand/model/year/price/mileage/fuel/transmission/images), displayed on `/cars` with filters and detail view at `/cars/:id`
 - **Garage Service Cards:** Garages can add service listings (name/description/price), displayed on `/garages/services` with quick-filter chips; WhatsApp booking CTA on each card
 - Homepage features "Featured Cars for Sale" and "Popular Garage Services" sections
+- **Social Sharing:** Business profiles have share buttons (Facebook, X, Instagram, WhatsApp) that generate pre-filled share messages
+- **Safety Tips:** An amber-styled Safety Tips section appears below reviews on every business profile
+- **Report Business:** Visitors can submit a report on any business (reason + description); reports are stored in `business_reports` table and visible in the Admin panel under a dedicated Reports tab
 
 The stack is a monorepo: React (Vite) frontend + Express backend, sharing TypeScript types via a `/shared` folder.
 
