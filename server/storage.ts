@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, ilike, and, or, sql, gte, lte, desc } from "drizzle-orm";
+import { eq, ilike, and, or, sql, gte, lte, desc, inArray } from "drizzle-orm";
 import {
   users, businesses, spareParts, reviews, messages, cars, garageServices,
   type User, type InsertUser,
@@ -193,20 +193,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllReviews() {
-    const result = await db
-      .select({
-        id: reviews.id,
-        businessId: reviews.businessId,
-        name: reviews.name,
-        rating: reviews.rating,
-        comment: reviews.comment,
-        createdAt: reviews.createdAt,
-        businessName: businesses.name,
-      })
-      .from(reviews)
-      .leftJoin(businesses, eq(reviews.businessId, businesses.id))
-      .orderBy(reviews.createdAt);
-    return result.map(r => ({ ...r, businessName: r.businessName || "Unknown" }));
+    const allReviews = await db.select().from(reviews).orderBy(desc(reviews.createdAt));
+    const bizIds = [...new Set(allReviews.map(r => r.businessId))];
+    if (bizIds.length === 0) return [];
+    const bizList = await db.select({ id: businesses.id, name: businesses.name }).from(businesses).where(inArray(businesses.id, bizIds));
+    const bizMap = Object.fromEntries(bizList.map(b => [b.id, b.name]));
+    return allReviews.map(r => ({ ...r, businessName: bizMap[r.businessId] || "Unknown" }));
   }
 
   async createReview(review: InsertReview) {

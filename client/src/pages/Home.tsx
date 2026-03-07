@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import BusinessCard from "@/components/BusinessCard";
 import CarCard from "@/components/CarCard";
 import GarageServiceCard from "@/components/GarageServiceCard";
+import ReviewCard from "@/components/ReviewCard";
 import type { Business, Car as CarType, GarageService } from "@shared/schema";
 
 const CATEGORIES = [
@@ -19,6 +20,19 @@ const CATEGORIES = [
   { value: "other", label: "Other Services", icon: MoreHorizontal, color: "bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700" },
 ];
 
+const POPULAR_BRANDS = [
+  { name: "Toyota", emoji: "🚙" },
+  { name: "Nissan", emoji: "🚗" },
+  { name: "Honda", emoji: "🚘" },
+  { name: "Subaru", emoji: "🚐" },
+  { name: "Mazda", emoji: "🚙" },
+  { name: "Mitsubishi", emoji: "🚗" },
+  { name: "BMW", emoji: "🏎" },
+  { name: "Mercedes", emoji: "🚘" },
+  { name: "Land Rover", emoji: "🚙" },
+  { name: "Volkswagen", emoji: "🚗" },
+];
+
 const STEPS = [
   { num: "01", title: "Business Registers", desc: "Car businesses register and submit their listing for review." },
   { num: "02", title: "Admin Approves", desc: "Our team reviews and approves legitimate businesses." },
@@ -27,6 +41,7 @@ const STEPS = [
 
 type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string };
 type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string };
+type RecentReview = { id: string; name: string; rating: number; comment: string; businessId: string; businessName: string; createdAt: string | Date | null };
 
 export default function Home() {
   const [search, setSearch] = useState("");
@@ -44,13 +59,13 @@ export default function Home() {
     queryKey: ["/api/services/popular"],
   });
 
+  const { data: recentReviews, isLoading: reviewsLoading } = useQuery<RecentReview[]>({
+    queryKey: ["/api/reviews/recent"],
+  });
+
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (search.trim()) {
-      navigate(`/businesses?q=${encodeURIComponent(search.trim())}`);
-    } else {
-      navigate("/businesses");
-    }
+    navigate(search.trim() ? `/businesses?q=${encodeURIComponent(search.trim())}` : "/businesses");
   }
 
   return (
@@ -132,8 +147,31 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Popular Car Brands */}
+      <section className="py-12 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="brands-heading">Popular Car Brands</h2>
+            <p className="text-muted-foreground">Browse cars by your favorite brand</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {POPULAR_BRANDS.map(brand => (
+              <Link href={`/cars?brand=${encodeURIComponent(brand.name)}`} key={brand.name}>
+                <div
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-sm transition-all cursor-pointer"
+                  data-testid={`brand-${brand.name.toLowerCase().replace(/\s/g, "-")}`}
+                >
+                  <span className="text-base">{brand.emoji}</span>
+                  <span>{brand.name}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Featured Cars */}
-      <section className="py-14 bg-gray-50 dark:bg-gray-900">
+      <section className="py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div>
@@ -167,7 +205,7 @@ export default function Home() {
       </section>
 
       {/* Popular Garage Services */}
-      <section className="py-14">
+      <section className="py-14 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div>
@@ -192,16 +230,13 @@ export default function Home() {
             <div className="text-center py-12">
               <Wrench className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
               <p className="text-muted-foreground">No garage services listed yet.</p>
-              <Link href="/businesses?category=garage">
-                <Button variant="outline" className="mt-4">Browse Garages</Button>
-              </Link>
             </div>
           )}
         </div>
       </section>
 
       {/* Featured Businesses */}
-      <section className="py-14 bg-gray-50 dark:bg-gray-900">
+      <section className="py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div>
@@ -227,6 +262,29 @@ export default function Home() {
               <Link href="/register-business">
                 <Button className="mt-4 bg-orange-500 text-white">Register Your Business</Button>
               </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Recent Reviews */}
+      <section className="py-14 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="recent-reviews-heading">What Customers Say</h2>
+            <p className="text-muted-foreground">Real reviews from verified customers</p>
+          </div>
+          {reviewsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-md" />)}
+            </div>
+          ) : recentReviews && recentReviews.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {recentReviews.slice(0, 6).map(r => <ReviewCard key={r.id} review={r} />)}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No reviews yet. Be the first to review a business!</p>
             </div>
           )}
         </div>
@@ -269,21 +327,27 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-gray-800 py-8 bg-white dark:bg-gray-950">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center">
-              <Car className="w-4 h-4 text-white" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center">
+                <Car className="w-4 h-4 text-white" />
+              </div>
+              <span className="font-bold text-gray-900 dark:text-white">AutoDirectory</span>
             </div>
-            <span className="font-bold text-gray-900 dark:text-white">AutoDirectory</span>
+            <div className="flex items-center gap-6 flex-wrap">
+              <Link href="/cars" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Cars for Sale</Link>
+              <Link href="/garages/services" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Garage Services</Link>
+              <Link href="/businesses" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Businesses</Link>
+              <Link href="/register-business" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Register</Link>
+            </div>
           </div>
-          <div className="flex items-center gap-6">
-            <Link href="/cars" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Cars for Sale</Link>
-            <Link href="/garages/services" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Garage Services</Link>
-            <Link href="/businesses" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Businesses</Link>
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center justify-between flex-wrap gap-2">
+            <p className="text-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} AutoDirectory Kenya. All rights reserved.
+            </p>
+            <p className="text-sm text-muted-foreground">hello@autodirectory.co.ke</p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} AutoDirectory. All rights reserved.
-          </p>
         </div>
       </footer>
     </div>

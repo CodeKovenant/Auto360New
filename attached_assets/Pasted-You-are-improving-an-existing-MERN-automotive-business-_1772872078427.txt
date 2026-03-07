@@ -1,0 +1,214 @@
+You are improving an existing MERN automotive business directory SaaS called Auto360. The goal is to enhance the business profile pages and homepage.
+
+1️⃣ BUSINESS PROFILE PAGE IMPROVEMENTS
+
+Each business profile page (/business/:id) should display:
+
+Header Section
+
+Business Logo
+
+Business Name
+
+Business Type (Car Dealer / Garage / Spare Part Dealer / Other)
+
+Location
+
+Average Rating (from reviews)
+
+Services / Products Section
+
+Display all services or products as cards.
+
+Each card includes:
+
+Name of service/product
+
+Short description
+
+Starting price / estimated price
+
+Image (if available)
+
+Contact button (WhatsApp / Call)
+
+Example card layout:
+
+-----------------------------
+| IMAGE                     |
+| Service: Oil Change       |
+| Price: From KSh 2,000     |
+| Description: Engine oil replacement |
+| [Contact] [WhatsApp]      |
+-----------------------------
+
+Use responsive Tailwind card grid.
+
+Reviews Section
+
+Show latest reviews
+
+Each review includes:
+
+Reviewer name
+
+Rating (stars 1–5)
+
+Comment
+
+Date
+
+Show average rating at top of reviews section.
+
+Contact Section
+
+Display: Phone, WhatsApp, Email, Physical Address
+
+Contact form with fields: Name, Phone, Message, Submit button
+
+2️⃣ HOMEPAGE IMPROVEMENTS (/)
+Top Bar
+
+Display a welcome message:
+“Welcome to Auto360”
+
+Show contact info: email, WhatsApp number
+
+Display social media icons (Facebook, X, Instagram, TikTok) with links
+
+Fixed or sticky at top of page
+
+Popular Car Brands
+
+Display logos of popular car brands as clickable buttons / cards:
+
+Toyota, BMW, Mercedes, Honda, Nissan, etc.
+
+Clicking a brand filters car listings on /cars page
+
+Recent Reviews
+
+Display latest 3–5 reviews from businesses
+
+Each review shows:
+
+Reviewer name
+
+Rating stars
+
+Comment snippet
+
+Business name
+
+Example:
+
+⭐⭐⭐⭐⭐ John M.
+“Professional and reliable service” – AutoFix Garage
+Featured Sections
+
+Featured Cars / Vehicles (CarCard grid)
+
+Featured Garage Services (GarageServiceCard grid)
+
+3️⃣ DATABASE UPDATES
+
+Business Schema Update:
+
+Business {
+  name
+  type
+  description
+  logo
+  phone
+  whatsapp
+  email
+  address
+  location
+  approved
+  ownerId
+  createdAt
+  products: [
+    {
+      name,
+      description,
+      startingPrice,
+      image
+    }
+  ],
+  services: [
+    {
+      name,
+      description,
+      startingPrice,
+      image
+    }
+  ]
+}
+
+Review Schema: unchanged.
+
+4️⃣ FRONTEND COMPONENTS
+
+Create / update:
+
+ProductCard.jsx — shows service/product + starting price + contact buttons
+
+ServiceCard.jsx — similar to ProductCard
+
+CarCard.jsx — for cars
+
+GarageServiceCard.jsx — for garage services
+
+ReviewCard.jsx — shows reviewer name, stars, comment, business name
+
+TopBar.jsx — shows welcome message, contact info, social media icons
+
+BrandCard.jsx — clickable logos for popular brands
+
+Layout
+
+Business Profile Page:
+
+TopBar
+Business Header
+Products / Services (cards grid)
+Reviews (latest 3–5)
+Contact Form
+
+Homepage:
+
+TopBar
+Hero Section (search bar)
+Popular Car Brands (cards)
+Featured Cars / Services (cards)
+Recent Reviews (3–5 latest)
+Footer
+5️⃣ API UPDATES
+
+Add endpoints to fetch:
+
+/api/business/:id/products — products/services for business
+
+/api/reviews/recent — latest reviews for homepage
+
+/api/brands/popular — popular brands for homepage
+
+6️⃣ DESIGN REQUIREMENTS
+
+Use TailwindCSS for responsive, modern design
+
+Card grids for services/products
+
+Hover effects on cards (shadow-lg, scale-105)
+
+Sticky top bar for contact info + social media
+
+Colors: Blue, White, Orange accent
+
+7️⃣ FUNCTIONALITY
+
+Clicking a product/service card allows user to contact business
+
+Clicking brand logo filters car listings
+
+Homepage recent reviews are clickable to go to business profile

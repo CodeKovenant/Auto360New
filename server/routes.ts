@@ -228,6 +228,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Reviews
+  app.get("/api/reviews/recent", async (req, res) => {
+    try {
+      const limit = parseInt((req.query.limit as string) || "6", 10);
+      const all = await storage.getAllReviews();
+      res.json(all.slice(0, limit));
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/reviews/:businessId", async (req, res) => {
     try {
       const revs = await storage.getReviewsByBusinessId(req.params.businessId);
