@@ -1,0 +1,493 @@
+Below is a complete Replit AI prompt that instructs Replit to generate the entire MERN SaaS MVP for car businesses with all the features we discussed:
+
+Home page
+
+Business directory
+
+Business registration
+
+Admin approval system
+
+Business dashboards
+
+Spare parts listing with car models
+
+Reviews system
+
+Contact forms
+
+WhatsApp contact
+
+Search with filters
+
+Admin panel
+
+You can paste this directly into Replit AI to generate the full project.
+
+COMPLETE REPLIT PROMPT
+
+Build a MERN SaaS platform for car-related businesses
+
+Project Overview
+
+Build a full-stack SaaS directory platform for car-related businesses using the MERN stack:
+
+MongoDB
+
+Express.js
+
+React
+
+Node.js
+
+The platform allows car businesses to register and list their services, while users search and contact them.
+
+Businesses include:
+
+Car Dealers
+
+Professional Garages
+
+Spare Parts Dealers
+
+Other Automotive Services (Car Wash, Insurance, Towing, etc.)
+
+Only Admins and Business Owners have dashboards.
+Normal users do not create accounts.
+
+Users interact with businesses through:
+
+Contact form
+
+WhatsApp link
+
+Reviews
+
+All businesses must be approved by Admin before appearing publicly.
+
+Core Features
+1. Homepage
+
+Create a modern responsive homepage.
+
+Sections
+
+Hero Section
+
+Headline:
+Find Trusted Car Services Near You
+
+Subheadline:
+Dealers, garages, spare parts, car wash and more.
+
+Buttons:
+
+Browse Businesses
+
+Register Your Business
+
+Categories Section
+
+Display cards for:
+
+Car Dealers
+
+Professional Garages
+
+Spare Parts Dealers
+
+Car Wash
+
+Insurance
+
+Other Automotive Services
+
+Clicking a category opens filtered results.
+
+Featured Businesses
+
+Show approved businesses.
+
+Each card shows:
+
+Business name
+
+Category
+
+Location
+
+Rating
+
+Contact button
+
+View Profile
+
+Search Bar
+
+Search businesses by:
+
+Business name
+
+Category
+
+Location
+
+Car model
+
+Spare part
+
+How It Works
+
+Step 1
+Business registers
+
+Step 2
+Admin approves listing
+
+Step 3
+Customers contact business
+
+Call To Action
+
+Register Your Car Business Today
+
+Button:
+Create Business Listing
+
+2. Business Types
+
+Supported business types:
+
+Car Dealer
+Professional Garage
+Spare Parts Dealer
+Car Wash
+Insurance
+Other Automotive Services
+
+3. Business Registration
+
+Businesses create accounts.
+
+Fields:
+
+Owner Name
+Email
+Password
+Business Name
+Business Category
+Phone Number
+WhatsApp Number
+Business Address
+City
+Description
+Logo upload
+
+After registration:
+
+Business status = Pending Approval
+
+Admin must approve.
+
+4. Spare Parts Dealer Feature
+
+If business category = Spare Parts Dealer
+
+Allow listing of spare parts.
+
+Each spare part includes:
+
+Part Name
+Car Brand
+Car Model
+Year (optional)
+Condition (New / Used)
+Price (optional)
+Description
+
+Example:
+
+Brake Pads
+Toyota
+Corolla
+2016
+New
+
+5. Public Business Profile
+
+Each business has a public page.
+
+Display:
+
+Business name
+Logo
+Category
+Description
+Address
+Phone number
+WhatsApp contact button
+Average rating
+Reviews
+
+For spare parts dealers show:
+
+Available spare parts list.
+
+6. Contact Business
+
+Users contact business via:
+
+Contact Form
+
+Fields:
+
+Name
+Phone
+Message
+
+Send message to business owner dashboard.
+
+WhatsApp Button
+
+Opens:
+
+https://wa.me/{business_phone}
+
+7. Reviews System
+
+Users can leave reviews without account.
+
+Fields:
+
+Name
+Rating (1-5 stars)
+Comment
+
+Displayed on business profile.
+
+Average rating calculated automatically.
+
+Admin can delete abusive reviews.
+
+8. Search and Filters
+
+Search businesses by:
+
+Business name
+
+Category
+
+Location
+
+Spare part
+
+Car brand
+
+Car model
+
+Filters:
+
+Category
+City
+Rating
+Business type
+
+Example search:
+
+Toyota brake pads Nairobi
+
+9. Admin Dashboard
+
+Admin login required.
+
+Admin capabilities:
+
+Approve or reject businesses
+
+View:
+
+Pending Businesses
+Approved Businesses
+All Reviews
+Users
+
+Admin actions:
+
+Approve listing
+Reject listing
+Delete listing
+Delete reviews
+
+Admin statistics:
+
+Total Businesses
+Total Reviews
+Businesses Pending Approval
+
+10. Business Owner Dashboard
+
+Business owners can:
+
+Edit business profile
+
+Add spare parts (if spare parts dealer)
+
+View:
+
+Customer messages
+Reviews
+
+Update:
+
+Phone number
+WhatsApp number
+Address
+Description
+Logo
+
+11. Database Schema
+
+Use MongoDB.
+
+User
+name
+email
+password
+role (admin or owner)
+Business
+name
+ownerId
+category
+description
+phone
+whatsapp
+address
+city
+logo
+status (pending, approved)
+createdAt
+SparePart
+businessId
+partName
+carBrand
+carModel
+year
+condition
+price
+description
+Review
+businessId
+name
+rating
+comment
+createdAt
+Message
+businessId
+name
+phone
+message
+createdAt
+12. API Endpoints
+
+Auth
+
+POST /api/auth/register
+POST /api/auth/login
+
+Businesses
+
+POST /api/business/register
+GET /api/business/approved
+GET /api/business/:id
+PUT /api/business/update
+
+Admin
+
+GET /api/admin/pending
+PUT /api/admin/approve/:id
+DELETE /api/admin/delete/:id
+
+Spare Parts
+
+POST /api/parts/add
+GET /api/parts/business/:id
+
+Reviews
+
+POST /api/reviews/add
+GET /api/reviews/:businessId
+
+Messages
+
+POST /api/messages/send
+GET /api/messages/business/:id
+
+Search
+
+GET /api/search?query=
+
+13. Frontend Pages
+
+Create React pages:
+
+Home
+Businesses List
+Business Profile
+Register Business
+Login
+Business Dashboard
+Admin Dashboard
+
+14. UI Requirements
+
+Use:
+
+React + TailwindCSS
+
+Responsive design.
+
+Cards for businesses.
+
+Clean modern automotive style.
+
+Colors:
+
+Dark blue
+White
+Orange accent
+
+15. Security
+
+Use:
+
+JWT authentication
+
+Protect:
+
+Admin routes
+Business owner dashboard
+
+Password hashing using bcrypt.
+
+16. Deployment Setup
+
+Make project runnable with:
+
+npm install
+npm run dev
+
+Include:
+
+Frontend folder
+Backend folder
+
+Final Goal
+
+Create a working MVP SaaS platform where:
+
+Businesses register
+Admin approves listings
+Users search car services
+Customers contact businesses
+Spare part dealers list parts
+Users leave reviews
