@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import StarRating from "@/components/StarRating";
+import LogoUpload from "@/components/LogoUpload";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -206,8 +207,8 @@ export default function Dashboard() {
                   <Textarea value={editForm.description || ""} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} className="mt-1" rows={3} />
                 </div>
                 <div className="sm:col-span-2">
-                  <Label className="text-xs">Logo URL</Label>
-                  <Input value={editForm.logo || ""} onChange={e => setEditForm(p => ({ ...p, logo: e.target.value }))} className="mt-1" />
+                  <Label className="text-xs">Business Logo</Label>
+                  <LogoUpload value={editForm.logo || ""} onChange={url => setEditForm(p => ({ ...p, logo: url }))} />
                 </div>
               </div>
               <div className="flex gap-2 mt-4">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Car, Upload, CheckCircle } from "lucide-react";
+import { Car, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { BUSINESS_CATEGORIES } from "@shared/schema";
+import LogoUpload from "@/components/LogoUpload";
 
 export default function RegisterBusiness() {
   const { user } = useAuth();
@@ -157,11 +158,8 @@ export default function RegisterBusiness() {
               </div>
 
               <div>
-                <Label htmlFor="biz-logo">Logo URL (optional)</Label>
-                <div className="relative mt-1">
-                  <Upload className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input id="biz-logo" value={form.logo} onChange={e => setField("logo", e.target.value)} placeholder="https://example.com/logo.png" className="pl-9" data-testid="input-biz-logo" />
-                </div>
+                <Label>Business Logo (optional)</Label>
+                <LogoUpload value={form.logo} onChange={url => setField("logo", url)} />
               </div>
 
               <Button

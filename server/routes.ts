@@ -1,9 +1,32 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema } from "@shared/schema";
+
+// Ensure uploads directory exists
+const uploadsDir = path.resolve(process.cwd(), "uploads/logos");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const logoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `logo-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files are allowed"));
+  },
+});
 
 const JWT_SECRET = process.env.SESSION_SECRET || "autodirectory-secret-key";
 
@@ -35,6 +58,16 @@ function ownerMiddleware(req: any, res: any, next: any) {
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+
+  // Serve uploaded logos as static files
+  app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
+
+  // Logo upload endpoint
+  app.post("/api/upload/logo", authMiddleware, logoUpload.single("logo"), (req: any, res) => {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    const url = `/uploads/logos/${req.file.filename}`;
+    res.json({ url });
+  });
 
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
