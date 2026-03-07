@@ -21,16 +21,16 @@ const CATEGORIES = [
 ];
 
 const POPULAR_BRANDS = [
-  { name: "Toyota", emoji: "🚙" },
-  { name: "Nissan", emoji: "🚗" },
-  { name: "Honda", emoji: "🚘" },
-  { name: "Subaru", emoji: "🚐" },
-  { name: "Mazda", emoji: "🚙" },
-  { name: "Mitsubishi", emoji: "🚗" },
-  { name: "BMW", emoji: "🏎" },
-  { name: "Mercedes", emoji: "🚘" },
-  { name: "Land Rover", emoji: "🚙" },
-  { name: "Volkswagen", emoji: "🚗" },
+  { name: "Toyota", logo: "https://cdn.simpleicons.org/toyota" },
+  { name: "Nissan", logo: "https://cdn.simpleicons.org/nissan" },
+  { name: "Honda", logo: "https://cdn.simpleicons.org/honda" },
+  { name: "Subaru", logo: "https://cdn.simpleicons.org/subaru" },
+  { name: "Mazda", logo: "https://cdn.simpleicons.org/mazda" },
+  { name: "Mitsubishi", logo: "https://cdn.simpleicons.org/mitsubishi" },
+  { name: "BMW", logo: "https://cdn.simpleicons.org/bmw" },
+  { name: "Hyundai", logo: "https://cdn.simpleicons.org/hyundai" },
+  { name: "Land Rover", logo: "https://cdn.jsdelivr.net/npm/simple-icons/icons/landrover.svg" },
+  { name: "Volkswagen", logo: "https://cdn.simpleicons.org/volkswagen" },
 ];
 
 const STEPS = [
@@ -185,15 +185,29 @@ export default function Home() {
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="brands-heading">Popular Car Brands</h2>
             <p className="text-muted-foreground">Browse cars by your favorite brand</p>
           </div>
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="grid grid-cols-5 sm:grid-cols-5 md:grid-cols-10 gap-3 md:gap-4">
             {POPULAR_BRANDS.map(brand => (
               <Link href={`/cars?brand=${encodeURIComponent(brand.name)}`} key={brand.name}>
                 <div
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-sm transition-all cursor-pointer"
+                  className="flex flex-col items-center gap-2.5 p-3 md:p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md transition-all cursor-pointer group"
                   data-testid={`brand-${brand.name.toLowerCase().replace(/\s/g, "-")}`}
                 >
-                  <span className="text-base">{brand.emoji}</span>
-                  <span>{brand.name}</span>
+                  <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center p-1.5 shadow-sm border border-gray-100">
+                    <img
+                      src={brand.logo}
+                      alt={`${brand.name} logo`}
+                      className="w-full h-full object-contain"
+                      onError={e => {
+                        const target = e.currentTarget;
+                        target.style.display = "none";
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `<span class="text-lg font-bold text-gray-400">${brand.name[0]}</span>`;
+                        }
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-tight">{brand.name}</span>
                 </div>
               </Link>
             ))}
