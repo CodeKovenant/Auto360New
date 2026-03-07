@@ -3,7 +3,7 @@ import { useLocation, Link } from "wouter";
 import {
   Shield, Building2, CheckCircle, XCircle, Trash2, Users, Star,
   Clock, Flag, Phone, MessageCircle, MapPin, Mail, User, ExternalLink,
-  Calendar, ChevronDown, ChevronUp, BadgeCheck
+  Calendar, ChevronDown, ChevronUp, BadgeCheck, TrendingUp, DollarSign, AlertCircle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -224,6 +224,28 @@ export default function Admin() {
     queryKey: ["/api/admin/reports"],
   });
 
+  const { data: revenue } = useQuery<{
+    stats: {
+      totalRevenue: number;
+      currentMrr: number;
+      activeSubscriptions: number;
+      expiredSubscriptions: number;
+      expiringSoon: number;
+      premiumAmount: number;
+      premiumDays: number;
+    };
+    activeSubscriptions: Array<{
+      id: string; name: string; category: string; city: string; logo: string | null;
+      premiumExpiresAt: string; activatedAt: string; amount: number; daysLeft: number;
+    }>;
+    expiredSubscriptions: Array<{
+      id: string; name: string; category: string; city: string; logo: string | null;
+      premiumExpiresAt: string | null; amount: number;
+    }>;
+  }>({
+    queryKey: ["/api/admin/revenue"],
+  });
+
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("PUT", `/api/admin/businesses/${id}/approve`);
@@ -404,6 +426,9 @@ export default function Admin() {
               Reports {reports && reports.length > 0 && (
                 <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5">{reports.length}</span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="revenue" data-testid="admin-tab-revenue">
+              Revenue
             </TabsTrigger>
           </TabsList>
 
@@ -643,6 +668,185 @@ export default function Admin() {
                     </Card>
                   );
                 })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Revenue */}
+          <TabsContent value="revenue">
+            {!revenue ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <TrendingUp className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p>Loading revenue data...</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Revenue stat cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20">
+                    <CardContent className="pt-4 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-md bg-green-100 dark:bg-green-900/40 flex items-center justify-center flex-shrink-0">
+                          <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div>
+                          <p className="text-xl font-bold text-gray-900 dark:text-white" data-testid="revenue-total">
+                            KSh {revenue.stats.totalRevenue.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Total Revenue</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+                    <CardContent className="pt-4 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-md bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                          <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-xl font-bold text-gray-900 dark:text-white" data-testid="revenue-mrr">
+                            KSh {revenue.stats.currentMrr.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Current MRR</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-4 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                          <BadgeCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-xl font-bold text-gray-900 dark:text-white" data-testid="revenue-active-subs">
+                            {revenue.stats.activeSubscriptions}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Active Subscriptions</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-4 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                          <XCircle className="w-5 h-5 text-gray-500" />
+                        </div>
+                        <div>
+                          <p className="text-xl font-bold text-gray-900 dark:text-white" data-testid="revenue-expired-subs">
+                            {revenue.stats.expiredSubscriptions}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Expired</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Expiring soon alert */}
+                {revenue.stats.expiringSoon > 0 && (
+                  <Card className="border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20">
+                    <CardContent className="pt-4 pb-4 flex items-center gap-3">
+                      <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                      <p className="text-sm text-orange-800 dark:text-orange-300">
+                        <span className="font-semibold">{revenue.stats.expiringSoon} subscription{revenue.stats.expiringSoon > 1 ? "s" : ""}</span> expiring within 7 days — consider reaching out for renewal.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Active subscriptions table */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <BadgeCheck className="w-4 h-4 text-blue-500" />
+                      Active Premium Subscriptions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {revenue.activeSubscriptions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">No active premium subscriptions</p>
+                    ) : (
+                      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {revenue.activeSubscriptions.map(sub => (
+                          <div key={sub.id} className="flex items-center gap-3 py-3" data-testid={`revenue-row-${sub.id}`}>
+                            <div className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {sub.logo
+                                ? <img src={sub.logo} alt={sub.name} className="w-full h-full object-cover" />
+                                : <Building2 className="w-4 h-4 text-gray-400" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{sub.name}</p>
+                                <BadgeCheck className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                              </div>
+                              <p className="text-xs text-muted-foreground">{getCategoryLabel(sub.category)} · {sub.city}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-semibold text-green-600 dark:text-green-400">KSh {sub.amount.toLocaleString()}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {sub.daysLeft <= 7
+                                  ? <span className="text-orange-500 font-medium">{sub.daysLeft}d left</span>
+                                  : <span>{sub.daysLeft}d left</span>}
+                              </p>
+                            </div>
+                            <div className="text-right text-xs text-muted-foreground flex-shrink-0 hidden sm:block">
+                              <p>Activated {formatDate(sub.activatedAt)}</p>
+                              <p>Expires {formatDate(sub.premiumExpiresAt)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Expired subscriptions */}
+                {revenue.expiredSubscriptions.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base text-muted-foreground flex items-center gap-2">
+                        <XCircle className="w-4 h-4" />
+                        Expired Subscriptions
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {revenue.expiredSubscriptions.map(sub => (
+                          <div key={sub.id} className="flex items-center gap-3 py-3 opacity-60">
+                            <div className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {sub.logo
+                                ? <img src={sub.logo} alt={sub.name} className="w-full h-full object-cover" />
+                                : <Building2 className="w-4 h-4 text-gray-400" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{sub.name}</p>
+                              <p className="text-xs text-muted-foreground">{getCategoryLabel(sub.category)} · {sub.city}</p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-medium text-gray-500 line-through">KSh {sub.amount.toLocaleString()}</p>
+                              {sub.premiumExpiresAt && (
+                                <p className="text-xs text-red-500">Expired {formatDate(sub.premiumExpiresAt)}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Subscription rate info */}
+                <Card className="bg-gray-50 dark:bg-gray-900">
+                  <CardContent className="pt-4 pb-4">
+                    <p className="text-xs text-muted-foreground text-center">
+                      Premium subscription rate: <span className="font-semibold text-gray-700 dark:text-gray-300">KSh {revenue.stats.premiumAmount.toLocaleString()}</span> per {revenue.stats.premiumDays} days.
+                      Projected annual revenue at current subscriptions: <span className="font-semibold text-green-600 dark:text-green-400">KSh {Math.round(revenue.stats.currentMrr * (365 / revenue.stats.premiumDays)).toLocaleString()}</span>.
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </TabsContent>

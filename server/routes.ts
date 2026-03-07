@@ -7,8 +7,9 @@ import jwt from "jsonwebtoken";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema } from "@shared/schema";
+import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses } from "@shared/schema";
 import { initiateSTKPush, PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
+import { db } from "./storage";
 
 // Ensure uploads directories exist
 const logosDir = path.resolve(process.cwd(), "uploads/logos");
@@ -357,6 +358,59 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/revenue", adminMiddleware, async (req, res) => {
+    try {
+      const allBizList = await db.select().from(businesses);
+      const premiumBizList = allBizList.filter(b => b.premium && b.premiumExpiresAt);
+      const expiredPremiumList = allBizList.filter(b => !b.premium && b.premiumExpiresAt);
+      const now = new Date();
+      const activeSubs = premiumBizList.filter(b => new Date(b.premiumExpiresAt!) > now);
+      const expiringSoon = activeSubs.filter(b => {
+        const diff = new Date(b.premiumExpiresAt!).getTime() - now.getTime();
+        return diff < 7 * 24 * 60 * 60 * 1000;
+      });
+      const allPremiumEver = [...premiumBizList, ...expiredPremiumList];
+      const totalRevenue = allPremiumEver.length * PREMIUM_AMOUNT;
+      const currentMrr = activeSubs.length * PREMIUM_AMOUNT;
+      const result = {
+        stats: {
+          totalRevenue,
+          currentMrr,
+          activeSubscriptions: activeSubs.length,
+          expiredSubscriptions: expiredPremiumList.length,
+          expiringSoon: expiringSoon.length,
+          premiumAmount: PREMIUM_AMOUNT,
+          premiumDays: PREMIUM_DAYS,
+        },
+        activeSubscriptions: activeSubs.map(b => ({
+          id: b.id,
+          name: b.name,
+          category: b.category,
+          city: b.city,
+          logo: b.logo,
+          premiumExpiresAt: b.premiumExpiresAt,
+          activatedAt: b.premiumExpiresAt
+            ? new Date(new Date(b.premiumExpiresAt).getTime() - PREMIUM_DAYS * 24 * 60 * 60 * 1000)
+            : null,
+          amount: PREMIUM_AMOUNT,
+          daysLeft: Math.max(0, Math.ceil((new Date(b.premiumExpiresAt!).getTime() - now.getTime()) / (24 * 60 * 60 * 1000))),
+        })),
+        expiredSubscriptions: expiredPremiumList.map(b => ({
+          id: b.id,
+          name: b.name,
+          category: b.category,
+          city: b.city,
+          logo: b.logo,
+          premiumExpiresAt: b.premiumExpiresAt,
+          amount: PREMIUM_AMOUNT,
+        })),
+      };
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
     }
   });
 
