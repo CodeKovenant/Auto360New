@@ -17,7 +17,7 @@ import PartImageUpload from "@/components/PartImageUpload";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Business, Message, Review, SparePart, Car as CarType, GarageService } from "@shared/schema";
+import type { Business, Message, Review, SparePart, Car as CarType, GarageService, SupportService } from "@shared/schema";
 import { BUSINESS_CATEGORIES, FUEL_TYPES, TRANSMISSIONS, CAR_CONDITIONS, PART_CONDITIONS } from "@shared/schema";
 
 interface DashboardData {
@@ -27,6 +27,7 @@ interface DashboardData {
   spareParts: SparePart[];
   cars: CarType[];
   garageServices: GarageService[];
+  supportServices: SupportService[];
 }
 
 function statusBadge(status: string) {
@@ -51,6 +52,12 @@ export default function Dashboard() {
   // Spare parts state
   const [newPart, setNewPart] = useState({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "", image: "" });
   const [showAddPart, setShowAddPart] = useState(false);
+  const [editingPart, setEditingPart] = useState<SparePart | null>(null);
+
+  // Support services state
+  const [newSupportService, setNewSupportService] = useState({ name: "", description: "", price: "" });
+  const [showAddSupportService, setShowAddSupportService] = useState(false);
+  const [editingSupportService, setEditingSupportService] = useState<SupportService | null>(null);
 
   // Car state
   const [showAddCar, setShowAddCar] = useState(false);
@@ -81,6 +88,30 @@ export default function Dashboard() {
   const deletePartMutation = useMutation({
     mutationFn: async (id: string) => { await apiRequest("DELETE", `/api/parts/${id}`); },
     onSuccess: () => { toast({ title: "Part removed" }); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const updatePartMutation = useMutation({
+    mutationFn: async (part: SparePart) => { const res = await apiRequest("PUT", `/api/parts/${part.id}`, part); return res.json(); },
+    onSuccess: () => { toast({ title: "Part updated!" }); setEditingPart(null); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const addSupportServiceMutation = useMutation({
+    mutationFn: async () => { const res = await apiRequest("POST", "/api/support-services", { ...newSupportService, businessId: data?.business.id }); return res.json(); },
+    onSuccess: () => { toast({ title: "Service added!" }); setNewSupportService({ name: "", description: "", price: "" }); setShowAddSupportService(false); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const updateSupportServiceMutation = useMutation({
+    mutationFn: async (svc: SupportService) => { const res = await apiRequest("PUT", `/api/support-services/${svc.id}`, svc); return res.json(); },
+    onSuccess: () => { toast({ title: "Service updated!" }); setEditingSupportService(null); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteSupportServiceMutation = useMutation({
+    mutationFn: async (id: string) => { await apiRequest("DELETE", `/api/support-services/${id}`); },
+    onSuccess: () => { toast({ title: "Service removed" }); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -145,9 +176,10 @@ export default function Dashboard() {
     </div>
   );
 
-  const { business, messages, reviews, spareParts, cars, garageServices } = data;
+  const { business, messages, reviews, spareParts, cars, garageServices, supportServices } = data;
   const isDealer = business.category === "car_dealer";
   const isGarage = business.category === "garage";
+  const isSupportBiz = ["insurance", "car_wash", "other"].includes(business.category);
 
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen pb-10">
@@ -174,7 +206,8 @@ export default function Dashboard() {
             { icon: Star, color: "orange", count: reviews.length, label: "Reviews" },
             ...(isDealer ? [{ icon: Car, color: "blue", count: cars.length, label: "Cars Listed" }] : []),
             ...(isGarage ? [{ icon: Wrench, color: "orange", count: garageServices.length, label: "Services" }] : []),
-            ...(!isDealer && !isGarage ? [{ icon: Package, color: "green", count: spareParts.length, label: "Parts Listed" }] : []),
+            ...(isSupportBiz ? [{ icon: Wrench, color: "orange", count: supportServices.length, label: "Services" }] : []),
+            ...(!isDealer && !isGarage && !isSupportBiz ? [{ icon: Package, color: "green", count: spareParts.length, label: "Parts Listed" }] : []),
           ].map((stat, i) => (
             <Card key={i}>
               <CardContent className="pt-4 pb-4 flex items-center gap-3">
@@ -221,13 +254,14 @@ export default function Dashboard() {
           </Card>
         )}
 
-        <Tabs defaultValue={isDealer ? "cars" : isGarage ? "services" : "messages"}>
+        <Tabs defaultValue={isDealer ? "cars" : isGarage ? "services" : isSupportBiz ? "support-services" : "messages"}>
           <TabsList className="mb-4 flex-wrap h-auto">
             {isDealer && <TabsTrigger value="cars" data-testid="tab-cars">My Cars ({cars.length})</TabsTrigger>}
             {isGarage && <TabsTrigger value="services" data-testid="tab-services">My Services ({garageServices.length})</TabsTrigger>}
+            {isSupportBiz && <TabsTrigger value="support-services" data-testid="tab-support-services">My Services ({supportServices.length})</TabsTrigger>}
             <TabsTrigger value="messages" data-testid="tab-messages">Messages ({messages.length})</TabsTrigger>
             <TabsTrigger value="reviews" data-testid="tab-reviews">Reviews ({reviews.length})</TabsTrigger>
-            {!isDealer && !isGarage && <TabsTrigger value="parts" data-testid="tab-parts">Spare Parts ({spareParts.length})</TabsTrigger>}
+            {!isDealer && !isGarage && !isSupportBiz && <TabsTrigger value="parts" data-testid="tab-parts">Spare Parts ({spareParts.length})</TabsTrigger>}
           </TabsList>
 
           {/* Cars Tab */}
@@ -548,27 +582,135 @@ export default function Dashboard() {
                   {spareParts.map(part => (
                     <Card key={part.id} data-testid={`dash-part-${part.id}`}>
                       <CardContent className="pt-4 pb-4">
-                        <div className="flex items-start gap-3">
-                          {part.image && (
-                            <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-700">
-                              <img src={part.image} alt={part.partName} className="w-full h-full object-cover" data-testid={`img-part-${part.id}`} />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 flex-wrap">
+                        {editingPart?.id === part.id ? (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div><Label className="text-xs">Part Name</Label><Input value={editingPart.partName} onChange={e => setEditingPart(p => p ? { ...p, partName: e.target.value } : null)} className="mt-1" /></div>
+                              <div><Label className="text-xs">Price</Label><Input value={editingPart.price || ""} onChange={e => setEditingPart(p => p ? { ...p, price: e.target.value } : null)} className="mt-1" placeholder="KSh 2,500" /></div>
+                              <div><Label className="text-xs">Car Brand</Label><Input value={editingPart.carBrand} onChange={e => setEditingPart(p => p ? { ...p, carBrand: e.target.value } : null)} className="mt-1" /></div>
+                              <div><Label className="text-xs">Car Model</Label><Input value={editingPart.carModel} onChange={e => setEditingPart(p => p ? { ...p, carModel: e.target.value } : null)} className="mt-1" /></div>
+                              <div><Label className="text-xs">Year</Label><Input value={editingPart.year || ""} onChange={e => setEditingPart(p => p ? { ...p, year: e.target.value } : null)} className="mt-1" /></div>
                               <div>
-                                <p className="font-medium text-sm text-gray-900 dark:text-white">{part.partName}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">{part.carBrand} {part.carModel} {part.year && `• ${part.year}`}</p>
+                                <Label className="text-xs">Condition</Label>
+                                <Select value={editingPart.condition || "new"} onValueChange={v => setEditingPart(p => p ? { ...p, condition: v as any } : null)}>
+                                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                                  <SelectContent>{PART_CONDITIONS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                                </Select>
                               </div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">{part.condition === "new" ? "New" : "Used"}</Badge>
-                                {part.price && <span className="text-sm font-semibold text-orange-600">{part.price}</span>}
-                                <Button size="sm" variant="ghost" className="text-red-500 text-xs h-7" onClick={() => deletePartMutation.mutate(part.id)} data-testid={`button-delete-part-${part.id}`}>Remove</Button>
-                              </div>
+                              <div className="col-span-2"><Label className="text-xs">Description</Label><Textarea value={editingPart.description || ""} onChange={e => setEditingPart(p => p ? { ...p, description: e.target.value } : null)} rows={2} className="mt-1" /></div>
                             </div>
-                            {part.description && <p className="text-xs text-muted-foreground mt-1">{part.description}</p>}
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => updatePartMutation.mutate(editingPart!)} disabled={updatePartMutation.isPending} className="bg-orange-500 text-white">Save</Button>
+                              <Button size="sm" variant="outline" onClick={() => setEditingPart(null)}>Cancel</Button>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="flex items-start gap-3">
+                            {part.image && (
+                              <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-700">
+                                <img src={part.image} alt={part.partName} className="w-full h-full object-cover" data-testid={`img-part-${part.id}`} />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 flex-wrap">
+                                <div>
+                                  <p className="font-medium text-sm text-gray-900 dark:text-white">{part.partName}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">{part.carBrand} {part.carModel} {part.year && `• ${part.year}`}</p>
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">{part.condition === "new" ? "New" : "Used"}</Badge>
+                                  {part.price && <span className="text-sm font-semibold text-orange-600">{part.price}</span>}
+                                  <Button size="sm" variant="outline" onClick={() => setEditingPart(part)} data-testid={`button-edit-part-${part.id}`}><Edit className="w-3.5 h-3.5" /></Button>
+                                  <Button size="sm" variant="ghost" className="text-red-500 text-xs h-7" onClick={() => deletePartMutation.mutate(part.id)} data-testid={`button-delete-part-${part.id}`}>Remove</Button>
+                                </div>
+                              </div>
+                              {part.description && <p className="text-xs text-muted-foreground mt-1">{part.description}</p>}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          )}
+
+          {/* Support Services Tab */}
+          {isSupportBiz && (
+            <TabsContent value="support-services">
+              {business.status !== "approved" && (
+                <div className="p-4 mb-4 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-sm text-yellow-700 dark:text-yellow-300">
+                  Your business must be approved before customers can see your services.
+                </div>
+              )}
+
+              <div className="flex justify-end mb-4">
+                <Button onClick={() => setShowAddSupportService(!showAddSupportService)} className="bg-orange-500 text-white" data-testid="button-add-support-service">
+                  {showAddSupportService ? "Cancel" : "+ Add Service"}
+                </Button>
+              </div>
+
+              {showAddSupportService && (
+                <Card className="mb-4">
+                  <CardHeader><CardTitle className="text-sm">Add Service</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs">Service Name <span className="text-red-500">*</span></Label>
+                        <Input value={newSupportService.name} onChange={e => setNewSupportService(p => ({ ...p, name: e.target.value }))} placeholder="Comprehensive Cover" className="mt-1" data-testid="input-support-service-name" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Price</Label>
+                        <Input value={newSupportService.price} onChange={e => setNewSupportService(p => ({ ...p, price: e.target.value }))} placeholder="KSh 15,000/year" className="mt-1" />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Label className="text-xs">Description</Label>
+                        <Textarea value={newSupportService.description} onChange={e => setNewSupportService(p => ({ ...p, description: e.target.value }))} rows={2} className="mt-1" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <Button onClick={() => addSupportServiceMutation.mutate()} disabled={addSupportServiceMutation.isPending || !newSupportService.name} className="bg-orange-500 text-white" data-testid="button-save-support-service">
+                        {addSupportServiceMutation.isPending ? "Adding..." : "Add Service"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setShowAddSupportService(false)}>Cancel</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {supportServices.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground"><Wrench className="w-10 h-10 mx-auto mb-3 opacity-30" /><p>No services listed yet</p></div>
+              ) : (
+                <div className="space-y-3">
+                  {supportServices.map(svc => (
+                    <Card key={svc.id} data-testid={`dash-support-service-${svc.id}`}>
+                      <CardContent className="pt-4 pb-4">
+                        {editingSupportService?.id === svc.id ? (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div><Label className="text-xs">Service Name</Label><Input value={editingSupportService.name} onChange={e => setEditingSupportService(p => p ? { ...p, name: e.target.value } : null)} className="mt-1" /></div>
+                              <div><Label className="text-xs">Price</Label><Input value={editingSupportService.price || ""} onChange={e => setEditingSupportService(p => p ? { ...p, price: e.target.value } : null)} className="mt-1" /></div>
+                              <div className="col-span-2"><Label className="text-xs">Description</Label><Textarea value={editingSupportService.description || ""} onChange={e => setEditingSupportService(p => p ? { ...p, description: e.target.value } : null)} rows={2} className="mt-1" /></div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => updateSupportServiceMutation.mutate(editingSupportService!)} disabled={updateSupportServiceMutation.isPending} className="bg-orange-500 text-white">Save</Button>
+                              <Button size="sm" variant="outline" onClick={() => setEditingSupportService(null)}>Cancel</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <div>
+                              <p className="font-semibold text-gray-900 dark:text-white">{svc.name}</p>
+                              {svc.description && <p className="text-sm text-muted-foreground mt-0.5">{svc.description}</p>}
+                              {svc.price && <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-0.5">From {svc.price}</p>}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => setEditingSupportService(svc)} data-testid={`button-edit-support-service-${svc.id}`}><Edit className="w-3.5 h-3.5" /></Button>
+                              <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deleteSupportServiceMutation.mutate(svc.id)} data-testid={`button-delete-support-service-${svc.id}`}>Remove</Button>
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}

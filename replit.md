@@ -13,7 +13,9 @@ AutoDirectory is a SaaS directory platform for car-related businesses, targeting
 - Star ratings and reviews system
 - Spare parts catalog linked to car brands/models
 - **Car Dealer Listings:** Car dealers can add individual car listings (brand/model/year/price/mileage/fuel/transmission/condition/images), displayed on `/cars` with filters (including condition: Brand New / Used) and detail view at `/cars/:id`; condition badge shown on car cards (green "Brand New" / dark "Used")
-- **Garage Service Cards:** Garages can add service listings (name/description/price), displayed on `/garages/services` with quick-filter chips; WhatsApp booking CTA on each card
+- **Garage Service Cards:** Garages can add/edit/delete service listings (name/description/price), displayed on `/garages/services` with quick-filter chips; WhatsApp booking CTA on each card
+- **Spare Parts Editing:** Spare parts shops can now add, edit (inline form with all fields), and delete parts from their dashboard
+- **Automotive Support Services Management:** Insurance/Car Wash/Other businesses have a "My Services" tab in their dashboard with full add/edit/delete support for their service listings
 - Homepage features "Featured Cars for Sale" and "Popular Garage Services" sections
 - **Social Sharing:** Business profiles have share buttons (Facebook, X, Instagram, WhatsApp) that generate pre-filled share messages
 - **Safety Tips:** An amber-styled Safety Tips section appears below reviews on every business profile

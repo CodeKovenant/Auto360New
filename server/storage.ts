@@ -39,6 +39,7 @@ export interface IStorage {
   // Spare Parts
   getSparePartsByBusinessId(businessId: string): Promise<SparePart[]>;
   createSparePart(part: InsertSparePart): Promise<SparePart>;
+  updateSparePart(id: string, data: Partial<SparePart>): Promise<SparePart>;
   deleteSparePart(id: string): Promise<void>;
 
   // Reviews
@@ -206,6 +207,12 @@ export class DatabaseStorage implements IStorage {
   async createSparePart(part: InsertSparePart) {
     const [created] = await db.insert(spareParts).values(part).returning();
     return created;
+  }
+
+  async updateSparePart(id: string, data: Partial<SparePart>) {
+    const { id: _id, businessId: _bid, createdAt: _ca, ...rest } = data as any;
+    const [updated] = await db.update(spareParts).set(rest).where(eq(spareParts.id, id)).returning();
+    return updated;
   }
 
   async deleteSparePart(id: string) {

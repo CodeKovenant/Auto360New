@@ -320,6 +320,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.put("/api/parts/:id", ownerMiddleware, async (req, res) => {
+    try {
+      const part = await storage.updateSparePart(req.params.id, req.body);
+      res.json(part);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   app.delete("/api/parts/:id", ownerMiddleware, async (req, res) => {
     try {
       await storage.deleteSparePart(req.params.id);
