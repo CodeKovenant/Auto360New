@@ -41,6 +41,8 @@ export const businesses = pgTable("businesses", {
   latitude: numeric("latitude"),
   longitude: numeric("longitude"),
   status: businessStatusEnum("status").notNull().default("pending"),
+  premium: boolean("premium").default(false),
+  premiumExpiresAt: timestamp("premium_expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

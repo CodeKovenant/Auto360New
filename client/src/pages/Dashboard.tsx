@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Building2, MessageSquare, Star, Plus, Edit, Package, CheckCircle, Clock, XCircle, Car, Wrench } from "lucide-react";
+import { Building2, MessageSquare, Star, Plus, Edit, Package, CheckCircle, Clock, XCircle, Car, Wrench, BadgeCheck, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +68,19 @@ export default function Dashboard() {
   const [showAddService, setShowAddService] = useState(false);
   const [editingService, setEditingService] = useState<GarageService | null>(null);
   const [newService, setNewService] = useState({ name: "", description: "", price: "", popular: false });
+
+  // M-Pesa premium state
+  const [mpesaPhone, setMpesaPhone] = useState("");
+
+  const { data: mpesaConfig } = useQuery<{ amount: number; days: number; configured: boolean }>({
+    queryKey: ["/api/mpesa/config"],
+  });
+
+  const premiumMutation = useMutation({
+    mutationFn: async () => { const res = await apiRequest("POST", "/api/mpesa/initiate", { phone: mpesaPhone }); return res.json(); },
+    onSuccess: (data: { message: string }) => { toast({ title: "Payment initiated!", description: data.message }); setMpesaPhone(""); },
+    onError: (e: Error) => toast({ title: "Payment failed", description: e.message, variant: "destructive" }),
+  });
 
   function startEdit() {
     if (data?.business) { setEditForm({ ...data.business }); setEditMode(true); }
@@ -222,6 +235,58 @@ export default function Dashboard() {
             </Card>
           ))}
         </div>
+
+        {/* Premium Card */}
+        {business && (
+          <Card className={`mb-6 ${business.premium ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/20" : "border-orange-200 dark:border-orange-800"}`}>
+            <CardContent className="pt-5 pb-5">
+              {business.premium ? (
+                <div className="flex items-start gap-3">
+                  <BadgeCheck className="w-8 h-8 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm" data-testid="text-premium-active">Premium Business</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Your business appears as verified with a blue checkmark.
+                      {business.premiumExpiresAt && ` Expires ${new Date(business.premiumExpiresAt).toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" })}.`}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    <Sparkles className="w-7 h-7 text-orange-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm">Get Premium — KSh {mpesaConfig?.amount?.toLocaleString() ?? "2,000"} / {mpesaConfig?.days ?? 30} days</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Stand out with a blue verified checkmark and appear in the Premium section on the homepage.</p>
+                    </div>
+                  </div>
+                  {business.status === "approved" ? (
+                    <div className="flex gap-2 items-center flex-shrink-0">
+                      <Input
+                        placeholder="07XXXXXXXX"
+                        value={mpesaPhone}
+                        onChange={e => setMpesaPhone(e.target.value)}
+                        className="w-36 h-9 text-sm"
+                        data-testid="input-mpesa-phone"
+                      />
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white h-9 whitespace-nowrap"
+                        onClick={() => premiumMutation.mutate()}
+                        disabled={premiumMutation.isPending || !mpesaPhone}
+                        data-testid="button-pay-premium"
+                      >
+                        {premiumMutation.isPending ? "Processing..." : "Pay via M-Pesa"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic flex-shrink-0">Available after approval</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Edit form */}
         {editMode && (

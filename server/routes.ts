@@ -8,6 +8,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema } from "@shared/schema";
+import { initiateSTKPush, PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
 
 // Ensure uploads directories exist
 const logosDir = path.resolve(process.cwd(), "uploads/logos");
@@ -117,6 +118,85 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/businesses/featured", async (req, res) => {
     try {
       const biz = await storage.getFeaturedBusinesses();
+      res.json(biz);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/businesses/premium", async (req, res) => {
+    try {
+      const biz = await storage.getPremiumBusinesses();
+      res.json(biz);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/mpesa/config", ownerMiddleware, async (req, res) => {
+    res.json({
+      amount: PREMIUM_AMOUNT,
+      days: PREMIUM_DAYS,
+      configured: !!(process.env.MPESA_CONSUMER_KEY && process.env.MPESA_SHORTCODE && process.env.MPESA_CALLBACK_URL),
+    });
+  });
+
+  app.post("/api/mpesa/initiate", ownerMiddleware, async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) return res.status(400).json({ message: "Phone number required" });
+
+      const user = (req as any).user;
+      const biz = await storage.getBusinessByOwnerId(user.id);
+      if (!biz) return res.status(404).json({ message: "No business found" });
+      if (biz.status !== "approved") return res.status(403).json({ message: "Business must be approved first" });
+
+      const result = await initiateSTKPush(phone, biz.id, biz.name);
+      res.json({ success: true, message: "Payment request sent to your phone. Enter your M-Pesa PIN to confirm.", checkoutRequestId: result.CheckoutRequestID });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message || "Failed to initiate payment" });
+    }
+  });
+
+  app.post("/api/mpesa/callback", async (req, res) => {
+    try {
+      const body = req.body?.Body?.stkCallback;
+      if (!body) return res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
+
+      const resultCode = body.ResultCode;
+      const accountReference = body.CallbackMetadata?.Item?.find((i: any) => i.Name === "AccountReference")?.Value || "";
+
+      if (resultCode === 0 && accountReference) {
+        const businessId = accountReference;
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + PREMIUM_DAYS);
+        await storage.updateBusiness(businessId, { premium: true, premiumExpiresAt: expiresAt });
+      }
+
+      res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
+    } catch (e: any) {
+      res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
+    }
+  });
+
+  app.post("/api/mpesa/manual-activate", adminMiddleware, async (req, res) => {
+    try {
+      const { businessId, days } = req.body;
+      if (!businessId) return res.status(400).json({ message: "businessId required" });
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + (days || PREMIUM_DAYS));
+      const biz = await storage.updateBusiness(businessId, { premium: true, premiumExpiresAt: expiresAt });
+      res.json(biz);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/mpesa/manual-deactivate", adminMiddleware, async (req, res) => {
+    try {
+      const { businessId } = req.body;
+      if (!businessId) return res.status(400).json({ message: "businessId required" });
+      const biz = await storage.updateBusiness(businessId, { premium: false, premiumExpiresAt: null as any });
       res.json(biz);
     } catch (e: any) {
       res.status(500).json({ message: e.message });

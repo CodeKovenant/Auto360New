@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2 } from "lucide-react";
+import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,6 +49,10 @@ export default function Home() {
 
   const { data: businesses } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
     queryKey: ["/api/businesses/featured"],
+  });
+
+  const { data: premiumBusinesses } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
+    queryKey: ["/api/businesses/premium"],
   });
 
   const { data: featuredCars, isLoading: carsLoading } = useQuery<CarWithDealer[]>({
@@ -123,6 +127,33 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Premium Businesses */}
+      {premiumBusinesses && premiumBusinesses.length > 0 && (
+        <section className="py-14 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <BadgeCheck className="w-6 h-6 text-blue-500" />
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Premium Businesses</h2>
+                </div>
+                <p className="text-muted-foreground">Verified and trusted premium automotive businesses</p>
+              </div>
+              <Link href="/businesses">
+                <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-premium">
+                  View All <ChevronRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {premiumBusinesses.map(biz => (
+                <BusinessCard key={biz.id} business={biz} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Categories */}
       <section className="py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

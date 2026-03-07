@@ -3,7 +3,7 @@ import { useLocation, Link } from "wouter";
 import {
   Shield, Building2, CheckCircle, XCircle, Trash2, Users, Star,
   Clock, Flag, Phone, MessageCircle, MapPin, Mail, User, ExternalLink,
-  Calendar, ChevronDown, ChevronUp
+  Calendar, ChevronDown, ChevronUp, BadgeCheck
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -270,6 +270,19 @@ export default function Admin() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const togglePremiumMutation = useMutation({
+    mutationFn: async ({ businessId, activate }: { businessId: string; activate: boolean }) => {
+      const endpoint = activate ? "/api/mpesa/manual-activate" : "/api/mpesa/manual-deactivate";
+      await apiRequest("POST", endpoint, { businessId });
+    },
+    onSuccess: (_, { activate }) => {
+      toast({ title: activate ? "Premium activated!" : "Premium deactivated." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-4">
@@ -453,16 +466,30 @@ export default function Admin() {
                     key={biz.id}
                     biz={biz}
                     actions={
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => deleteBizMutation.mutate(biz.id)}
-                        disabled={deleteBizMutation.isPending}
-                        data-testid={`button-delete-biz-${biz.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant={biz.premium ? "default" : "outline"}
+                          className={biz.premium ? "bg-blue-600 hover:bg-blue-700 text-white" : "text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"}
+                          onClick={() => togglePremiumMutation.mutate({ businessId: biz.id, activate: !biz.premium })}
+                          disabled={togglePremiumMutation.isPending}
+                          title={biz.premium ? "Remove premium status" : "Grant premium status"}
+                          data-testid={`button-toggle-premium-${biz.id}`}
+                        >
+                          <BadgeCheck className="w-4 h-4 mr-1" />
+                          {biz.premium ? "Premium" : "Set Premium"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => deleteBizMutation.mutate(biz.id)}
+                          disabled={deleteBizMutation.isPending}
+                          data-testid={`button-delete-biz-${biz.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
                     }
                   />
                 ))}

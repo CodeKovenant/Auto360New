@@ -29,6 +29,7 @@ export interface IStorage {
   getBusinessByOwnerId(ownerId: string): Promise<Business | undefined>;
   getAllBusinesses(filters?: { category?: string; city?: string; q?: string; minRating?: number }): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   getFeaturedBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
+  getPremiumBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   createBusiness(biz: InsertBusiness): Promise<Business>;
   updateBusiness(id: string, data: Partial<Business>): Promise<Business>;
   deleteBusiness(id: string): Promise<void>;
@@ -156,6 +157,23 @@ export class DatabaseStorage implements IStorage {
       return bizWithRatings.filter(b => b.avgRating >= filters.minRating!);
     }
     return bizWithRatings;
+  }
+
+  async getPremiumBusinesses() {
+    const now = new Date();
+    const bizList = await db.select().from(businesses).where(
+      and(eq(businesses.status, "approved"), eq(businesses.premium, true))
+    ).orderBy(businesses.createdAt);
+    return Promise.all(
+      bizList.map(async (biz) => {
+        if (biz.premiumExpiresAt && new Date(biz.premiumExpiresAt) < now) {
+          await db.update(businesses).set({ premium: false }).where(eq(businesses.id, biz.id));
+          return null;
+        }
+        const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
+        return { ...biz, avgRating, reviewCount };
+      })
+    ).then(results => results.filter(Boolean) as (Business & { avgRating: number; reviewCount: number })[]);
   }
 
   async getFeaturedBusinesses() {

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { MapPin, Phone, MessageCircle, Building2 } from "lucide-react";
+import { MapPin, MessageCircle, Building2, BadgeCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,12 @@ export default function BusinessCard({ business }: BusinessCardProps) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2 flex-wrap">
-                <h3 className="font-semibold text-gray-900 dark:text-white text-base leading-tight">{business.name}</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-semibold text-gray-900 dark:text-white text-base leading-tight">{business.name}</h3>
+                  {business.premium && (
+                    <BadgeCheck className="w-4 h-4 text-blue-500 flex-shrink-0" title="Premium Business" data-testid={`icon-premium-${business.id}`} />
+                  )}
+                </div>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${getCategoryColor(business.category)}`}>
                   {getCategoryLabel(business.category)}
                 </span>
