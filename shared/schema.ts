@@ -77,6 +77,8 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const carConditionEnum = pgEnum("car_condition", ["new", "used"]);
+
 export const cars = pgTable("cars", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   dealerId: varchar("dealer_id").notNull().references(() => businesses.id),
@@ -91,6 +93,7 @@ export const cars = pgTable("cars", {
   description: text("description"),
   images: text("images").array(),
   location: text("location").notNull(),
+  condition: carConditionEnum("condition").notNull().default("used"),
   featured: boolean("featured").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -188,6 +191,16 @@ export const FUEL_TYPES = [
 export const TRANSMISSIONS = [
   { value: "automatic", label: "Automatic" },
   { value: "manual", label: "Manual" },
+] as const;
+
+export const CAR_CONDITIONS = [
+  { value: "new", label: "Brand New" },
+  { value: "used", label: "Used" },
+] as const;
+
+export const PART_CONDITIONS = [
+  { value: "new", label: "New" },
+  { value: "used", label: "Used" },
 ] as const;
 
 export type BusinessCategory = typeof BUSINESS_CATEGORIES[number]["value"];

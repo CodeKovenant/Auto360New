@@ -53,7 +53,7 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
 
   // Cars
-  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string }): Promise<(Car & { dealerName: string; dealerWhatsapp: string })[]>;
+  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string }): Promise<(Car & { dealerName: string; dealerWhatsapp: string })[]>;
   getFeaturedCars(): Promise<(Car & { dealerName: string; dealerWhatsapp: string })[]>;
   getCarById(id: string): Promise<(Car & { dealerName: string; dealerWhatsapp: string }) | undefined>;
   getCarsByDealerId(dealerId: string): Promise<Car[]>;
@@ -249,7 +249,7 @@ export class DatabaseStorage implements IStorage {
     return { ...car, dealerName: dealer?.name || "Unknown", dealerWhatsapp: dealer?.whatsapp || "" };
   }
 
-  async getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string }) {
+  async getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string }) {
     const conditions: any[] = [];
     if (filters?.brand) conditions.push(ilike(cars.brand, `%${filters.brand}%`));
     if (filters?.location) conditions.push(ilike(cars.location, `%${filters.location}%`));
@@ -258,6 +258,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.maxPrice) conditions.push(lte(cars.price, String(filters.maxPrice)));
     if (filters?.minYear) conditions.push(gte(cars.year, filters.minYear));
     if (filters?.maxYear) conditions.push(lte(cars.year, filters.maxYear));
+    if (filters?.condition) conditions.push(eq(cars.condition, filters.condition as any));
     if (filters?.q) {
       conditions.push(
         or(

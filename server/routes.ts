@@ -383,9 +383,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/cars", async (req, res) => {
     try {
-      const { q, brand, fuelType, transmission, minYear, maxYear, maxPrice, minPrice, location, dealerId } = req.query as Record<string, string>;
+      const { q, brand, fuelType, transmission, minYear, maxYear, maxPrice, minPrice, location, dealerId, condition } = req.query as Record<string, string>;
       const carsData = await storage.getCars({
         q, brand, location, dealerId,
+        condition: condition || undefined,
         minPrice: minPrice ? Number(minPrice) : undefined,
         maxPrice: maxPrice ? Number(maxPrice) : undefined,
         minYear: minYear ? Number(minYear) : undefined,

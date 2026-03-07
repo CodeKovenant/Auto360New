@@ -18,7 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Business, Message, Review, SparePart, Car as CarType, GarageService } from "@shared/schema";
-import { BUSINESS_CATEGORIES, FUEL_TYPES, TRANSMISSIONS } from "@shared/schema";
+import { BUSINESS_CATEGORIES, FUEL_TYPES, TRANSMISSIONS, CAR_CONDITIONS, PART_CONDITIONS } from "@shared/schema";
 
 interface DashboardData {
   business: Business;
@@ -35,7 +35,6 @@ function statusBadge(status: string) {
   return <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300"><Clock className="w-3 h-3 mr-1" />Pending Approval</Badge>;
 }
 
-const PART_CONDITIONS = [{ value: "new", label: "New" }, { value: "used", label: "Used" }];
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -56,7 +55,7 @@ export default function Dashboard() {
   // Car state
   const [showAddCar, setShowAddCar] = useState(false);
   const [editingCar, setEditingCar] = useState<CarType | null>(null);
-  const [newCar, setNewCar] = useState({ title: "", brand: "", model: "", year: new Date().getFullYear(), price: "", mileage: "", fuelType: "petrol", transmission: "automatic", description: "", location: "", images: "" });
+  const [newCar, setNewCar] = useState({ title: "", brand: "", model: "", year: new Date().getFullYear(), price: "", mileage: "", fuelType: "petrol", transmission: "automatic", condition: "used", description: "", location: "", images: "" });
 
   // Service state
   const [showAddService, setShowAddService] = useState(false);
@@ -97,7 +96,7 @@ export default function Dashboard() {
       const res = await apiRequest("POST", "/api/cars", payload);
       return res.json();
     },
-    onSuccess: () => { toast({ title: "Car listing added!" }); setShowAddCar(false); setNewCar({ title: "", brand: "", model: "", year: new Date().getFullYear(), price: "", mileage: "", fuelType: "petrol", transmission: "automatic", description: "", location: "", images: "" }); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    onSuccess: () => { toast({ title: "Car listing added!" }); setShowAddCar(false); setNewCar({ title: "", brand: "", model: "", year: new Date().getFullYear(), price: "", mileage: "", fuelType: "petrol", transmission: "automatic", condition: "used", description: "", location: "", images: "" }); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -281,6 +280,13 @@ export default function Dashboard() {
                         <Input value={newCar.location} onChange={e => setNewCar(p => ({ ...p, location: e.target.value }))} placeholder="Nairobi" className="mt-1" />
                       </div>
                       <div>
+                        <Label className="text-xs">Condition <span className="text-red-500">*</span></Label>
+                        <Select value={newCar.condition} onValueChange={v => setNewCar(p => ({ ...p, condition: v }))}>
+                          <SelectTrigger className="mt-1" data-testid="select-car-condition"><SelectValue /></SelectTrigger>
+                          <SelectContent>{CAR_CONDITIONS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div>
                         <Label className="text-xs">Fuel Type</Label>
                         <Select value={newCar.fuelType} onValueChange={v => setNewCar(p => ({ ...p, fuelType: v }))}>
                           <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
@@ -327,6 +333,13 @@ export default function Dashboard() {
                               <div><Label className="text-xs">Price</Label><Input type="number" value={Number(editingCar.price)} onChange={e => setEditingCar(p => p ? { ...p, price: e.target.value } : null)} className="mt-1" /></div>
                               <div><Label className="text-xs">Mileage</Label><Input type="number" value={editingCar.mileage || ""} onChange={e => setEditingCar(p => p ? { ...p, mileage: Number(e.target.value) || null } : null)} className="mt-1" /></div>
                               <div><Label className="text-xs">Location</Label><Input value={editingCar.location} onChange={e => setEditingCar(p => p ? { ...p, location: e.target.value } : null)} className="mt-1" /></div>
+                              <div>
+                                <Label className="text-xs">Condition</Label>
+                                <Select value={editingCar.condition || "used"} onValueChange={v => setEditingCar(p => p ? { ...p, condition: v as any } : null)}>
+                                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                                  <SelectContent>{CAR_CONDITIONS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                                </Select>
+                              </div>
                             </div>
                             <div className="flex gap-2">
                               <Button size="sm" onClick={() => updateCarMutation.mutate(editingCar!)} disabled={updateCarMutation.isPending} className="bg-blue-600 text-white">Save</Button>
@@ -336,7 +349,14 @@ export default function Dashboard() {
                         ) : (
                           <div className="flex items-start justify-between gap-2 flex-wrap">
                             <div>
-                              <p className="font-semibold text-gray-900 dark:text-white">{car.title}</p>
+                              <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                                <p className="font-semibold text-gray-900 dark:text-white">{car.title}</p>
+                                {car.condition && (
+                                  <Badge className={`text-xs ${car.condition === "new" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>
+                                    {car.condition === "new" ? "Brand New" : "Used"}
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground">{car.brand} {car.model} • {car.year} • {car.location}</p>
                               <p className="text-base font-bold text-blue-600 dark:text-blue-400 mt-0.5">KSh {Number(car.price).toLocaleString()}</p>
                             </div>

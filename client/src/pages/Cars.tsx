@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import CarCard from "@/components/CarCard";
 import type { Car as CarType } from "@shared/schema";
-import { FUEL_TYPES, TRANSMISSIONS } from "@shared/schema";
+import { FUEL_TYPES, TRANSMISSIONS, CAR_CONDITIONS } from "@shared/schema";
 
 const CAR_BRANDS = ["Toyota", "Honda", "Nissan", "Subaru", "Mazda", "Mercedes", "BMW", "Audi", "Volkswagen", "Mitsubishi", "Land Rover", "Ford", "Hyundai", "Kia"];
 
@@ -20,8 +20,9 @@ export default function Cars() {
   const [brand, setBrand] = useState("all");
   const [fuelType, setFuelType] = useState("all");
   const [transmission, setTransmission] = useState("all");
-  const [minYear, setMinYear] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
+  const [condition, setCondition] = useState("all");
+  const [minYear, setMinYear] = useState("any");
+  const [maxPrice, setMaxPrice] = useState("any");
   const [showFilters, setShowFilters] = useState(false);
 
   const queryString = new URLSearchParams({
@@ -29,18 +30,19 @@ export default function Cars() {
     ...(brand !== "all" ? { brand } : {}),
     ...(fuelType !== "all" ? { fuelType } : {}),
     ...(transmission !== "all" ? { transmission } : {}),
-    ...(minYear ? { minYear } : {}),
-    ...(maxPrice ? { maxPrice } : {}),
+    ...(condition !== "all" ? { condition } : {}),
+    ...(minYear && minYear !== "any" ? { minYear } : {}),
+    ...(maxPrice && maxPrice !== "any" ? { maxPrice } : {}),
   }).toString();
 
   const { data: carList, isLoading } = useQuery<(CarType & { dealerName: string; dealerWhatsapp: string })[]>({
     queryKey: [`/api/cars?${queryString}`],
   });
 
-  const hasFilters = search || brand !== "all" || fuelType !== "all" || transmission !== "all" || minYear || maxPrice;
+  const hasFilters = search || brand !== "all" || fuelType !== "all" || transmission !== "all" || condition !== "all" || (minYear !== "any") || (maxPrice !== "any");
 
   function clearFilters() {
-    setSearch(""); setBrand("all"); setFuelType("all"); setTransmission("all"); setMinYear(""); setMaxPrice("");
+    setSearch(""); setBrand("all"); setFuelType("all"); setTransmission("all"); setCondition("all"); setMinYear("any"); setMaxPrice("any");
   }
 
   const currentYear = new Date().getFullYear();
@@ -106,10 +108,18 @@ export default function Cars() {
                 </SelectContent>
               </Select>
 
+              <Select value={condition} onValueChange={setCondition}>
+                <SelectTrigger data-testid="select-condition-filter"><SelectValue placeholder="Condition" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Conditions</SelectItem>
+                  {CAR_CONDITIONS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+
               <Select value={minYear} onValueChange={setMinYear}>
                 <SelectTrigger><SelectValue placeholder="Min Year" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any Year</SelectItem>
+                  <SelectItem value="any">Any Year</SelectItem>
                   {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -117,7 +127,7 @@ export default function Cars() {
               <Select value={maxPrice} onValueChange={setMaxPrice}>
                 <SelectTrigger><SelectValue placeholder="Max Price" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any Price</SelectItem>
+                  <SelectItem value="any">Any Price</SelectItem>
                   <SelectItem value="500000">Up to KSh 500K</SelectItem>
                   <SelectItem value="1000000">Up to KSh 1M</SelectItem>
                   <SelectItem value="2000000">Up to KSh 2M</SelectItem>
