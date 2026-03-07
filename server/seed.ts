@@ -1,12 +1,19 @@
 import { db } from "./storage";
-import { users, businesses, spareParts, reviews, messages } from "@shared/schema";
+import { users, businesses, spareParts, reviews, messages, cars, garageServices } from "@shared/schema";
 import { eq, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export async function seedDatabase() {
   try {
     const [{ cnt }] = await db.select({ cnt: count() }).from(users);
-    if (Number(cnt) > 0) return;
+    if (Number(cnt) > 0) {
+      // Always ensure cars and services are seeded even after initial user seed
+      const [{ carCnt }] = await db.select({ carCnt: count() }).from(cars);
+      if (Number(carCnt) > 0) return;
+      // Seed cars and services only
+      await seedCarsAndServices();
+      return;
+    }
 
     console.log("Seeding database...");
 
@@ -191,8 +198,154 @@ export async function seedDatabase() {
       { businessId: biz3.id, name: "Tom Gitau", phone: "+254 734 333 666", message: "Do you have brake discs for a 2018 Mazda CX-5? How much would they cost?" },
     ]);
 
+    // Seed cars and garage services
+    await seedCarsAndServicesWithIds(biz1.id, biz2.id);
+
     console.log("Database seeded successfully!");
   } catch (err) {
     console.error("Seed error:", err);
   }
+}
+
+async function seedCarsAndServices() {
+  // Find dealer and garage
+  const dealerList = await db.select().from(businesses).where(eq(businesses.category, "car_dealer")).limit(1);
+  const garageList = await db.select().from(businesses).where(eq(businesses.category, "garage")).limit(1);
+  if (dealerList.length > 0 && garageList.length > 0) {
+    await seedCarsAndServicesWithIds(dealerList[0].id, garageList[0].id);
+  }
+}
+
+async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
+  await db.insert(cars).values([
+    {
+      dealerId,
+      title: "Toyota Land Cruiser V8 2021",
+      brand: "Toyota",
+      model: "Land Cruiser",
+      year: 2021,
+      price: "12500000",
+      mileage: 28000,
+      fuelType: "diesel",
+      transmission: "automatic",
+      description: "Well-maintained Toyota Land Cruiser V8. Full leather interior, sunroof, rear entertainment, and full service history. Single owner.",
+      location: "Nairobi",
+      featured: true,
+    },
+    {
+      dealerId,
+      title: "Toyota Prado TX 2019",
+      brand: "Toyota",
+      model: "Prado",
+      year: 2019,
+      price: "6800000",
+      mileage: 45000,
+      fuelType: "diesel",
+      transmission: "automatic",
+      description: "Toyota Prado TX-L in excellent condition. Sunroof, leather seats, rear camera. All service records available.",
+      location: "Nairobi",
+      featured: true,
+    },
+    {
+      dealerId,
+      title: "Subaru Outback 2020",
+      brand: "Subaru",
+      model: "Outback",
+      year: 2020,
+      price: "3200000",
+      mileage: 32000,
+      fuelType: "petrol",
+      transmission: "automatic",
+      description: "Subaru Outback AWD with eye-sight assist, heated seats and sunroof. Clean accident-free history.",
+      location: "Nairobi",
+      featured: true,
+    },
+    {
+      dealerId,
+      title: "Honda CRV 2018",
+      brand: "Honda",
+      model: "CRV",
+      year: 2018,
+      price: "2700000",
+      mileage: 58000,
+      fuelType: "petrol",
+      transmission: "automatic",
+      description: "Honda CRV in very good condition. Honda Sensing safety features, keyless entry, heated front seats.",
+      location: "Mombasa",
+      featured: false,
+    },
+    {
+      dealerId,
+      title: "Mazda CX-5 2020",
+      brand: "Mazda",
+      model: "CX-5",
+      year: 2020,
+      price: "3500000",
+      mileage: 41000,
+      fuelType: "diesel",
+      transmission: "automatic",
+      description: "Mazda CX-5 diesel AWD, Bose sound system, navigation, blind spot monitoring. Excellent fuel economy.",
+      location: "Nairobi",
+      featured: true,
+    },
+    {
+      dealerId,
+      title: "Toyota Premio X 2017",
+      brand: "Toyota",
+      model: "Premio",
+      year: 2017,
+      price: "1850000",
+      mileage: 72000,
+      fuelType: "petrol",
+      transmission: "automatic",
+      description: "Toyota Premio in good condition. Low mileage for the year, well-maintained interior. Great fuel economy.",
+      location: "Kisumu",
+      featured: false,
+    },
+  ]);
+
+  await db.insert(garageServices).values([
+    {
+      garageId,
+      name: "Full Engine Overhaul",
+      description: "Complete engine rebuild including valve work, piston rings, gaskets, and timing belt replacement. All work comes with a 6-month warranty.",
+      price: "KSh 45,000+",
+      popular: true,
+    },
+    {
+      garageId,
+      name: "Oil Change & Filter Service",
+      description: "Full synthetic or semi-synthetic oil change with filter replacement. Includes free 20-point vehicle inspection.",
+      price: "KSh 2,500",
+      popular: true,
+    },
+    {
+      garageId,
+      name: "Brake Service",
+      description: "Brake pad and disc replacement for all four wheels. Includes brake fluid flush and bleeding.",
+      price: "KSh 8,000+",
+      popular: true,
+    },
+    {
+      garageId,
+      name: "AC Service & Recharge",
+      description: "Air conditioning diagnosis, refrigerant recharge, compressor check, and cabin filter replacement.",
+      price: "KSh 4,500",
+      popular: true,
+    },
+    {
+      garageId,
+      name: "Wheel Alignment & Balancing",
+      description: "Computer-aided wheel alignment and balancing for all four wheels. Includes tire rotation.",
+      price: "KSh 3,000",
+      popular: false,
+    },
+    {
+      garageId,
+      name: "Electrical Diagnostics",
+      description: "Full vehicle electrical system scan using OBD-II diagnostics. Covers ECU, sensors, and warning lights.",
+      price: "KSh 1,500",
+      popular: true,
+    },
+  ]);
 }

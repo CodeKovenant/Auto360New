@@ -1,11 +1,13 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, pgEnum, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const userRoleEnum = pgEnum("user_role", ["admin", "owner"]);
 export const businessStatusEnum = pgEnum("business_status", ["pending", "approved", "rejected"]);
 export const partConditionEnum = pgEnum("part_condition", ["new", "used"]);
+export const fuelTypeEnum = pgEnum("fuel_type", ["petrol", "diesel", "hybrid", "electric", "other"]);
+export const transmissionEnum = pgEnum("transmission", ["automatic", "manual"]);
 
 export const businessCategoryEnum = pgEnum("business_category", [
   "car_dealer",
@@ -72,11 +74,41 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const cars = pgTable("cars", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  dealerId: varchar("dealer_id").notNull().references(() => businesses.id),
+  title: text("title").notNull(),
+  brand: text("brand").notNull(),
+  model: text("model").notNull(),
+  year: integer("year").notNull(),
+  price: numeric("price", { precision: 15, scale: 2 }).notNull(),
+  mileage: integer("mileage"),
+  fuelType: fuelTypeEnum("fuel_type").notNull().default("petrol"),
+  transmission: transmissionEnum("transmission").notNull().default("automatic"),
+  description: text("description"),
+  images: text("images").array(),
+  location: text("location").notNull(),
+  featured: boolean("featured").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const garageServices = pgTable("garage_services", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  garageId: varchar("garage_id").notNull().references(() => businesses.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  price: text("price"),
+  popular: boolean("popular").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertBusinessSchema = createInsertSchema(businesses).omit({ id: true, createdAt: true, status: true });
 export const insertSparePartSchema = createInsertSchema(spareParts).omit({ id: true, createdAt: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true });
+export const insertCarSchema = createInsertSchema(cars).omit({ id: true, createdAt: true });
+export const insertGarageServiceSchema = createInsertSchema(garageServices).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -88,6 +120,10 @@ export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Car = typeof cars.$inferSelect;
+export type InsertCar = z.infer<typeof insertCarSchema>;
+export type GarageService = typeof garageServices.$inferSelect;
+export type InsertGarageService = z.infer<typeof insertGarageServiceSchema>;
 
 export const BUSINESS_CATEGORIES = [
   { value: "car_dealer", label: "Car Dealer" },
@@ -96,6 +132,19 @@ export const BUSINESS_CATEGORIES = [
   { value: "car_wash", label: "Car Wash" },
   { value: "insurance", label: "Insurance" },
   { value: "other", label: "Other Automotive Services" },
+] as const;
+
+export const FUEL_TYPES = [
+  { value: "petrol", label: "Petrol" },
+  { value: "diesel", label: "Diesel" },
+  { value: "hybrid", label: "Hybrid" },
+  { value: "electric", label: "Electric" },
+  { value: "other", label: "Other" },
+] as const;
+
+export const TRANSMISSIONS = [
+  { value: "automatic", label: "Automatic" },
+  { value: "manual", label: "Manual" },
 ] as const;
 
 export type BusinessCategory = typeof BUSINESS_CATEGORIES[number]["value"];

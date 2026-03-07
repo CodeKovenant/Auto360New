@@ -12,6 +12,9 @@ AutoDirectory is a SaaS directory platform for car-related businesses, targeting
 - Customer-facing business profiles with contact forms and WhatsApp links
 - Star ratings and reviews system
 - Spare parts catalog linked to car brands/models
+- **Car Dealer Listings:** Car dealers can add individual car listings (brand/model/year/price/mileage/fuel/transmission/images), displayed on `/cars` with filters and detail view at `/cars/:id`
+- **Garage Service Cards:** Garages can add service listings (name/description/price), displayed on `/garages/services` with quick-filter chips; WhatsApp booking CTA on each card
+- Homepage features "Featured Cars for Sale" and "Popular Garage Services" sections
 
 The stack is a monorepo: React (Vite) frontend + Express backend, sharing TypeScript types via a `/shared` folder.
 
@@ -37,13 +40,16 @@ Preferred communication style: Simple, everyday language.
 **Pages:**
 | Route | Component | Purpose |
 |---|---|---|
-| `/` | Home | Hero, featured businesses, category links |
+| `/` | Home | Hero, featured cars, popular services, featured businesses, category links |
 | `/businesses` | Businesses | Searchable/filterable directory |
 | `/business/:id` | BusinessProfile | Detail, reviews, spare parts, contact form |
+| `/cars` | Cars | Car listings with brand/price/year/fuel/transmission filters |
+| `/cars/:id` | CarDetail | Full car detail with dealer WhatsApp CTA |
+| `/garages/services` | GarageServices | Service cards with quick-filter chips |
 | `/login` | Login | JWT login |
 | `/register` | Register | User registration (owner role) |
 | `/register-business` | RegisterBusiness | Submit a new business listing |
-| `/dashboard` | Dashboard | Owner: manage listing, spare parts, view messages/reviews |
+| `/dashboard` | Dashboard | Owner: manage listing, cars (dealers)/services (garages)/parts, view messages/reviews |
 | `/admin` | Admin | Admin: approve/reject businesses, manage reviews/users |
 
 ### Backend (Express + Node.js)

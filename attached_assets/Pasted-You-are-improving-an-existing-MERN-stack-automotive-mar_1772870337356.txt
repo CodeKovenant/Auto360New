@@ -1,0 +1,251 @@
+You are improving an existing MERN stack automotive marketplace SaaS.
+
+The platform already includes:
+
+User authentication (JWT)
+
+Business registration
+
+Admin approval system
+
+Business profiles
+
+Spare part listings
+
+Reviews
+
+Search with filters
+
+Contact via WhatsApp or form
+
+However, two important features are missing:
+
+Car dealers cannot display cars as listing cards
+
+Garages cannot display services as listing cards
+
+Your task is to implement these features fully.
+
+FEATURE 1 — CAR DEALER LISTINGS (CARD VIEW)
+
+Each car dealer business must be able to add and display cars for sale.
+
+Create Car Schema (MongoDB)
+Car {
+  title: String
+  brand: String
+  model: String
+  year: Number
+  price: Number
+  mileage: Number
+  fuelType: String
+  transmission: String
+  images: [String]
+  dealerId: ObjectId
+  location: String
+  createdAt: Date
+}
+Backend Routes
+
+Create API endpoints:
+
+POST /api/cars
+GET /api/cars
+GET /api/cars/:id
+GET /api/cars/dealer/:dealerId
+
+Only approved car dealers can create listings.
+
+CarCard React Component
+
+Create component:
+
+/client/src/components/CarCard.jsx
+
+Design:
+
+ -----------------------------
+|           IMAGE             |
+|-----------------------------|
+| Toyota Prado 2020           |
+| Price: KSh 6,500,000        |
+| Mileage: 35,000 km          |
+| Dealer: Premium Motors      |
+| Location: Nairobi           |
+|-----------------------------|
+| [View Details] [WhatsApp]   |
+ -----------------------------
+
+Fields shown:
+
+Image
+
+Car name
+
+Price
+
+Mileage
+
+Dealer name
+
+Location
+
+Use TailwindCSS.
+
+Car Listings Page
+
+Route:
+
+/cars
+
+Fetch:
+
+GET /api/cars
+
+Render cards:
+
+grid md:grid-cols-3 gap-6
+
+Filters:
+
+Brand
+
+Price range
+
+Year
+
+Location
+
+FEATURE 2 — GARAGE SERVICES CARDS
+
+Each garage business must be able to list services they provide.
+
+Example services:
+
+Engine repair
+
+Oil change
+
+Tire replacement
+
+Car diagnostics
+
+Service Schema
+Service {
+  name: String
+  description: String
+  price: Number
+  garageId: ObjectId
+  location: String
+  createdAt: Date
+}
+Backend Routes
+POST /api/services
+GET /api/services
+GET /api/services/:id
+GET /api/services/garage/:garageId
+
+Only approved garages can add services.
+
+GarageServiceCard Component
+
+Create component:
+
+/client/src/components/GarageServiceCard.jsx
+
+Design:
+
+ -----------------------------
+| Oil Change Service          |
+| Garage: AutoFix Garage      |
+| Price: From KSh 2,000       |
+| Location: Nairobi           |
+|-----------------------------|
+| [Contact Garage] [WhatsApp] |
+ -----------------------------
+
+Fields:
+
+Service name
+
+Garage name
+
+Price
+
+Location
+
+Garage Services Page
+
+Route:
+
+/garages/services
+
+Fetch:
+
+GET /api/services
+
+Render:
+
+grid md:grid-cols-3 gap-6
+
+Filters:
+
+Service type
+
+Price range
+
+Location
+
+BUSINESS DASHBOARD UPDATE
+
+Add dashboard sections:
+
+For Car Dealers
+My Cars
+Add Car
+Edit Car
+Delete Car
+For Garages
+My Services
+Add Service
+Edit Service
+Delete Service
+HOMEPAGE UPDATE
+
+Add two sections.
+
+Featured Cars
+GET /api/cars?featured=true
+
+Display CarCard components.
+
+Popular Garage Services
+GET /api/services?popular=true
+
+Display GarageServiceCard components.
+
+DESIGN REQUIREMENTS
+
+Use TailwindCSS with:
+
+rounded-xl
+shadow
+hover:shadow-lg
+hover:scale-105
+transition
+
+Cards must be mobile responsive.
+
+FINAL RESULT
+
+Users should now be able to:
+
+Browse cars for sale as cards
+
+Browse garage services as cards
+
+Filter listings
+
+Contact businesses via WhatsApp or form
+
+View only admin-approved businesses

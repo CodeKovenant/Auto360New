@@ -4,8 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import BusinessCard from "@/components/BusinessCard";
-import type { Business } from "@shared/schema";
+import CarCard from "@/components/CarCard";
+import GarageServiceCard from "@/components/GarageServiceCard";
+import type { Business, Car as CarType, GarageService } from "@shared/schema";
 
 const CATEGORIES = [
   { value: "car_dealer", label: "Car Dealers", icon: Car, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800" },
@@ -22,12 +25,23 @@ const STEPS = [
   { num: "03", title: "Customers Connect", desc: "Users find and contact your business via phone or WhatsApp." },
 ];
 
+type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string };
+type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string };
+
 export default function Home() {
   const [search, setSearch] = useState("");
   const [, navigate] = useLocation();
 
   const { data: businesses } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
     queryKey: ["/api/businesses/featured"],
+  });
+
+  const { data: featuredCars, isLoading: carsLoading } = useQuery<CarWithDealer[]>({
+    queryKey: ["/api/cars/featured"],
+  });
+
+  const { data: popularServices, isLoading: servicesLoading } = useQuery<ServiceWithGarage[]>({
+    queryKey: ["/api/services/popular"],
   });
 
   function handleSearch(e: React.FormEvent) {
@@ -79,6 +93,12 @@ export default function Home() {
                   Browse Businesses
                 </Button>
               </Link>
+              <Link href="/cars">
+                <Button variant="outline" className="border-white/30 text-white bg-white/10 backdrop-blur-sm" data-testid="button-browse-cars-hero">
+                  <Car className="w-4 h-4 mr-1.5" />
+                  Cars for Sale
+                </Button>
+              </Link>
               <Link href="/register-business">
                 <Button className="bg-orange-500 text-white" data-testid="button-register-hero">
                   Register Your Business
@@ -109,6 +129,74 @@ export default function Home() {
               </div>
             </Link>
           ))}
+        </div>
+      </section>
+
+      {/* Featured Cars */}
+      <section className="py-14 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="featured-cars-heading">Featured Cars for Sale</h2>
+              <p className="text-muted-foreground">Browse verified vehicles from trusted dealers</p>
+            </div>
+            <Link href="/cars">
+              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-cars">
+                View All Cars <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+          {carsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-72 rounded-md" />)}
+            </div>
+          ) : featuredCars && featuredCars.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {featuredCars.slice(0, 6).map(car => <CarCard key={car.id} car={car} />)}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Car className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+              <p className="text-muted-foreground">No car listings yet. Check back soon!</p>
+              <Link href="/businesses?category=car_dealer">
+                <Button variant="outline" className="mt-4">Browse Car Dealers</Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Popular Garage Services */}
+      <section className="py-14">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="popular-services-heading">Popular Garage Services</h2>
+              <p className="text-muted-foreground">Find trusted mechanics and garage services near you</p>
+            </div>
+            <Link href="/garages/services">
+              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-services">
+                All Services <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+          {servicesLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-md" />)}
+            </div>
+          ) : popularServices && popularServices.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {popularServices.slice(0, 6).map(svc => <GarageServiceCard key={svc.id} service={svc} />)}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Wrench className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+              <p className="text-muted-foreground">No garage services listed yet.</p>
+              <Link href="/businesses?category=garage">
+                <Button variant="outline" className="mt-4">Browse Garages</Button>
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
@@ -187,6 +275,11 @@ export default function Home() {
               <Car className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-gray-900 dark:text-white">AutoDirectory</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <Link href="/cars" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Cars for Sale</Link>
+            <Link href="/garages/services" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Garage Services</Link>
+            <Link href="/businesses" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Businesses</Link>
           </div>
           <p className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} AutoDirectory. All rights reserved.

@@ -1,13 +1,15 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, like, ilike, and, or, sql, gte } from "drizzle-orm";
+import { eq, ilike, and, or, sql, gte, lte, desc } from "drizzle-orm";
 import {
-  users, businesses, spareParts, reviews, messages,
+  users, businesses, spareParts, reviews, messages, cars, garageServices,
   type User, type InsertUser,
   type Business, type InsertBusiness,
   type SparePart, type InsertSparePart,
   type Review, type InsertReview,
   type Message, type InsertMessage,
+  type Car, type InsertCar,
+  type GarageService, type InsertGarageService,
 } from "@shared/schema";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -46,6 +48,23 @@ export interface IStorage {
   // Messages
   getMessagesByBusinessId(businessId: string): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
+
+  // Cars
+  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string }): Promise<(Car & { dealerName: string; dealerWhatsapp: string })[]>;
+  getFeaturedCars(): Promise<(Car & { dealerName: string; dealerWhatsapp: string })[]>;
+  getCarById(id: string): Promise<(Car & { dealerName: string; dealerWhatsapp: string }) | undefined>;
+  getCarsByDealerId(dealerId: string): Promise<Car[]>;
+  createCar(car: InsertCar): Promise<Car>;
+  updateCar(id: string, data: Partial<Car>): Promise<Car>;
+  deleteCar(id: string): Promise<void>;
+
+  // Garage Services
+  getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string })[]>;
+  getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string })[]>;
+  getGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
+  createGarageService(service: InsertGarageService): Promise<GarageService>;
+  updateGarageService(id: string, data: Partial<GarageService>): Promise<GarageService>;
+  deleteGarageService(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -94,7 +113,6 @@ export class DatabaseStorage implements IStorage {
 
   async getAllBusinesses(filters?: { category?: string; city?: string; q?: string; minRating?: number }) {
     const conditions = [eq(businesses.status, "approved")];
-
     if (filters?.category) conditions.push(eq(businesses.category, filters.category as any));
     if (filters?.city) conditions.push(ilike(businesses.city, `%${filters.city}%`));
     if (filters?.q) {
@@ -107,20 +125,16 @@ export class DatabaseStorage implements IStorage {
         )!
       );
     }
-
     const bizList = await db.select().from(businesses).where(and(...conditions)).orderBy(businesses.createdAt);
-
     const bizWithRatings = await Promise.all(
       bizList.map(async (biz) => {
         const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
         return { ...biz, avgRating, reviewCount };
       })
     );
-
     if (filters?.minRating && filters.minRating > 0) {
       return bizWithRatings.filter(b => b.avgRating >= filters.minRating!);
     }
-
     return bizWithRatings;
   }
 
@@ -148,6 +162,8 @@ export class DatabaseStorage implements IStorage {
     await db.delete(spareParts).where(eq(spareParts.businessId, id));
     await db.delete(reviews).where(eq(reviews.businessId, id));
     await db.delete(messages).where(eq(messages.businessId, id));
+    await db.delete(cars).where(eq(cars.dealerId, id));
+    await db.delete(garageServices).where(eq(garageServices.garageId, id));
     await db.delete(businesses).where(eq(businesses.id, id));
   }
 
@@ -209,6 +225,145 @@ export class DatabaseStorage implements IStorage {
   async createMessage(message: InsertMessage) {
     const [created] = await db.insert(messages).values(message).returning();
     return created;
+  }
+
+  // Cars
+  private async enrichCar(car: Car): Promise<Car & { dealerName: string; dealerWhatsapp: string }> {
+    const [dealer] = await db.select({ name: businesses.name, whatsapp: businesses.whatsapp }).from(businesses).where(eq(businesses.id, car.dealerId));
+    return { ...car, dealerName: dealer?.name || "Unknown", dealerWhatsapp: dealer?.whatsapp || "" };
+  }
+
+  async getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string }) {
+    const conditions: any[] = [];
+    if (filters?.brand) conditions.push(ilike(cars.brand, `%${filters.brand}%`));
+    if (filters?.location) conditions.push(ilike(cars.location, `%${filters.location}%`));
+    if (filters?.dealerId) conditions.push(eq(cars.dealerId, filters.dealerId));
+    if (filters?.minPrice) conditions.push(gte(cars.price, String(filters.minPrice)));
+    if (filters?.maxPrice) conditions.push(lte(cars.price, String(filters.maxPrice)));
+    if (filters?.minYear) conditions.push(gte(cars.year, filters.minYear));
+    if (filters?.maxYear) conditions.push(lte(cars.year, filters.maxYear));
+    if (filters?.q) {
+      conditions.push(
+        or(
+          ilike(cars.title, `%${filters.q}%`),
+          ilike(cars.brand, `%${filters.q}%`),
+          ilike(cars.model, `%${filters.q}%`),
+          ilike(cars.location, `%${filters.q}%`)
+        )!
+      );
+    }
+
+    // Only show cars from approved dealers
+    const approvedDealers = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.category, "car_dealer")));
+    const dealerIds = approvedDealers.map(d => d.id);
+    if (dealerIds.length === 0) return [];
+
+    const carList = await db.select().from(cars)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(cars.createdAt));
+
+    const filtered = carList.filter(c => dealerIds.includes(c.dealerId));
+    return Promise.all(filtered.map(c => this.enrichCar(c)));
+  }
+
+  async getFeaturedCars() {
+    const approvedDealers = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.category, "car_dealer")));
+    const dealerIds = approvedDealers.map(d => d.id);
+    if (dealerIds.length === 0) return [];
+    const carList = await db.select().from(cars).where(eq(cars.featured, true)).orderBy(desc(cars.createdAt)).limit(6);
+    const filtered = carList.filter(c => dealerIds.includes(c.dealerId));
+    if (filtered.length < 4) {
+      const all = await db.select().from(cars).orderBy(desc(cars.createdAt)).limit(6);
+      const allFiltered = all.filter(c => dealerIds.includes(c.dealerId));
+      return Promise.all(allFiltered.slice(0, 6).map(c => this.enrichCar(c)));
+    }
+    return Promise.all(filtered.map(c => this.enrichCar(c)));
+  }
+
+  async getCarById(id: string) {
+    const [car] = await db.select().from(cars).where(eq(cars.id, id));
+    if (!car) return undefined;
+    return this.enrichCar(car);
+  }
+
+  async getCarsByDealerId(dealerId: string) {
+    return db.select().from(cars).where(eq(cars.dealerId, dealerId)).orderBy(desc(cars.createdAt));
+  }
+
+  async createCar(car: InsertCar) {
+    const [created] = await db.insert(cars).values(car).returning();
+    return created;
+  }
+
+  async updateCar(id: string, data: Partial<Car>) {
+    const [updated] = await db.update(cars).set(data).where(eq(cars.id, id)).returning();
+    return updated;
+  }
+
+  async deleteCar(id: string) {
+    await db.delete(cars).where(eq(cars.id, id));
+  }
+
+  // Garage Services
+  private async enrichService(svc: GarageService): Promise<GarageService & { garageName: string; garageWhatsapp: string; garageCity: string }> {
+    const [garage] = await db.select({ name: businesses.name, whatsapp: businesses.whatsapp, city: businesses.city }).from(businesses).where(eq(businesses.id, svc.garageId));
+    return { ...svc, garageName: garage?.name || "Unknown", garageWhatsapp: garage?.whatsapp || "", garageCity: garage?.city || "" };
+  }
+
+  async getGarageServices(filters?: { q?: string; location?: string; garageId?: string }) {
+    const conditions: any[] = [];
+    if (filters?.garageId) conditions.push(eq(garageServices.garageId, filters.garageId));
+    if (filters?.q) {
+      conditions.push(or(ilike(garageServices.name, `%${filters.q}%`), ilike(garageServices.description, `%${filters.q}%`))!);
+    }
+
+    const approvedGarages = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.category, "garage")));
+    const garageIds = approvedGarages.map(g => g.id);
+    if (garageIds.length === 0) return [];
+
+    const svcList = await db.select().from(garageServices)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(garageServices.createdAt));
+
+    let filtered = svcList.filter(s => garageIds.includes(s.garageId));
+    if (filters?.location) {
+      const loc = filters.location.toLowerCase();
+      const enriched = await Promise.all(filtered.map(s => this.enrichService(s)));
+      return enriched.filter(s => s.garageCity.toLowerCase().includes(loc));
+    }
+    return Promise.all(filtered.map(s => this.enrichService(s)));
+  }
+
+  async getPopularGarageServices() {
+    const approvedGarages = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.category, "garage")));
+    const garageIds = approvedGarages.map(g => g.id);
+    if (garageIds.length === 0) return [];
+
+    const svcList = await db.select().from(garageServices).where(eq(garageServices.popular, true)).orderBy(desc(garageServices.createdAt)).limit(6);
+    let filtered = svcList.filter(s => garageIds.includes(s.garageId));
+    if (filtered.length < 3) {
+      const all = await db.select().from(garageServices).orderBy(desc(garageServices.createdAt)).limit(6);
+      filtered = all.filter(s => garageIds.includes(s.garageId)).slice(0, 6);
+    }
+    return Promise.all(filtered.map(s => this.enrichService(s)));
+  }
+
+  async getGarageServicesByGarageId(garageId: string) {
+    return db.select().from(garageServices).where(eq(garageServices.garageId, garageId)).orderBy(desc(garageServices.createdAt));
+  }
+
+  async createGarageService(service: InsertGarageService) {
+    const [created] = await db.insert(garageServices).values(service).returning();
+    return created;
+  }
+
+  async updateGarageService(id: string, data: Partial<GarageService>) {
+    const [updated] = await db.update(garageServices).set(data).where(eq(garageServices.id, id)).returning();
+    return updated;
+  }
+
+  async deleteGarageService(id: string) {
+    await db.delete(garageServices).where(eq(garageServices.id, id));
   }
 }
 
