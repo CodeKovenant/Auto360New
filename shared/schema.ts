@@ -38,6 +38,8 @@ export const businesses = pgTable("businesses", {
   address: text("address").notNull(),
   city: text("city").notNull(),
   logo: text("logo"),
+  latitude: numeric("latitude"),
+  longitude: numeric("longitude"),
   status: businessStatusEnum("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -102,6 +104,15 @@ export const garageServices = pgTable("garage_services", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const supportServices = pgTable("support_services", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessId: varchar("business_id").notNull().references(() => businesses.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  startingPrice: text("starting_price"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const reportReasonEnum = pgEnum("report_reason", [
   "fake_listing",
   "scam",
@@ -126,6 +137,7 @@ export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, c
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true });
 export const insertCarSchema = createInsertSchema(cars).omit({ id: true, createdAt: true });
 export const insertGarageServiceSchema = createInsertSchema(garageServices).omit({ id: true, createdAt: true });
+export const insertSupportServiceSchema = createInsertSchema(supportServices).omit({ id: true, createdAt: true });
 export const insertBusinessReportSchema = createInsertSchema(businessReports).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
@@ -142,6 +154,8 @@ export type Car = typeof cars.$inferSelect;
 export type InsertCar = z.infer<typeof insertCarSchema>;
 export type GarageService = typeof garageServices.$inferSelect;
 export type InsertGarageService = z.infer<typeof insertGarageServiceSchema>;
+export type SupportService = typeof supportServices.$inferSelect;
+export type InsertSupportService = z.infer<typeof insertSupportServiceSchema>;
 export type BusinessReport = typeof businessReports.$inferSelect;
 export type InsertBusinessReport = z.infer<typeof insertBusinessReportSchema>;
 
@@ -153,9 +167,10 @@ export const REPORT_REASONS = [
 ] as const;
 
 export const BUSINESS_CATEGORIES = [
-  { value: "car_dealer", label: "Car Dealer" },
-  { value: "garage", label: "Professional Garage" },
-  { value: "spare_parts", label: "Spare Parts Dealer" },
+  { value: "car_dealer", label: "Automobile Dealers" },
+  { value: "spare_parts", label: "Auto Spare Part Dealers" },
+  { value: "garage", label: "Auto Garage" },
+  { value: "automotive_support", label: "Automotive Support" },
   { value: "car_wash", label: "Car Wash" },
   { value: "insurance", label: "Insurance" },
   { value: "other", label: "Other Automotive Services" },

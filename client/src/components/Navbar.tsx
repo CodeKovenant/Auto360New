@@ -1,9 +1,16 @@
 import { Link, useLocation } from "wouter";
-import { Car, Menu, X, LogOut, LayoutDashboard, Shield, Wrench } from "lucide-react";
+import { Car, Menu, X, LogOut, LayoutDashboard, Shield, Wrench, Store, Settings } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import TopBar from "./TopBar";
+
+const NAV_CATEGORIES = [
+  { label: "Automobile Dealers", href: "/businesses?category=car_dealer", icon: Car },
+  { label: "Spare Parts", href: "/businesses?category=spare_parts", icon: Store },
+  { label: "Auto Garage", href: "/businesses?category=garage", icon: Wrench },
+  { label: "Automotive Support", href: "/businesses?category=automotive_support", icon: Settings },
+];
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -29,28 +36,21 @@ export default function Navbar() {
               <span className="font-bold text-lg text-gray-900 dark:text-white">AutoDirectory</span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-1">
-              <Link href="/businesses">
-                <Button variant="ghost" size="sm" data-testid="nav-businesses">Businesses</Button>
-              </Link>
-              <Link href="/cars">
-                <Button variant="ghost" size="sm" data-testid="nav-cars">
-                  <Car className="w-4 h-4 mr-1" />
-                  Cars
-                </Button>
-              </Link>
-              <Link href="/garages/services">
-                <Button variant="ghost" size="sm" data-testid="nav-services">
-                  <Wrench className="w-4 h-4 mr-1" />
-                  Services
-                </Button>
-              </Link>
+            <div className="hidden lg:flex items-center gap-0.5">
+              {NAV_CATEGORIES.map(({ label, href, icon: Icon }) => (
+                <Link key={href} href={href}>
+                  <Button variant="ghost" size="sm" className="text-xs gap-1.5" data-testid={`nav-cat-${label.toLowerCase().replace(/\s+/g, "-")}`}>
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </Button>
+                </Link>
+              ))}
               <Link href="/register-business">
-                <Button variant="ghost" size="sm" data-testid="nav-register">Register Business</Button>
+                <Button variant="ghost" size="sm" className="text-xs" data-testid="nav-register">Register Business</Button>
               </Link>
             </div>
 
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               {user ? (
                 <>
                   {user.role === "admin" ? (
@@ -88,7 +88,7 @@ export default function Navbar() {
             </div>
 
             <button
-              className="md:hidden p-2 rounded-md text-gray-600 dark:text-gray-300"
+              className="lg:hidden p-2 rounded-md text-gray-600 dark:text-gray-300"
               onClick={() => setOpen(!open)}
               data-testid="nav-mobile-toggle"
             >
@@ -98,16 +98,16 @@ export default function Navbar() {
         </div>
 
         {open && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3 space-y-1">
-            <Link href="/businesses" onClick={() => setOpen(false)}>
-              <div className="block py-2 text-gray-700 dark:text-gray-300 font-medium">Businesses</div>
-            </Link>
-            <Link href="/cars" onClick={() => setOpen(false)}>
-              <div className="block py-2 text-gray-700 dark:text-gray-300 font-medium">Cars for Sale</div>
-            </Link>
-            <Link href="/garages/services" onClick={() => setOpen(false)}>
-              <div className="block py-2 text-gray-700 dark:text-gray-300 font-medium">Garage Services</div>
-            </Link>
+          <div className="lg:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3 space-y-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 pt-1 pb-0.5">Browse</p>
+            {NAV_CATEGORIES.map(({ label, href, icon: Icon }) => (
+              <Link key={href} href={href} onClick={() => setOpen(false)}>
+                <div className="flex items-center gap-2 py-2 text-gray-700 dark:text-gray-300 font-medium">
+                  <Icon className="w-4 h-4 text-blue-600" />
+                  {label}
+                </div>
+              </Link>
+            ))}
             <Link href="/register-business" onClick={() => setOpen(false)}>
               <div className="block py-2 text-gray-700 dark:text-gray-300 font-medium">Register Business</div>
             </Link>

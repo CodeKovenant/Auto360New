@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   MapPin, Phone, MessageCircle, Building2, Package, Star, Send,
-  Car, Wrench, Shield, AlertTriangle, Share2, Flag,
+  Car, Wrench, Shield, AlertTriangle, Share2, Flag, Settings,
 } from "lucide-react";
 import { SiFacebook, SiX, SiInstagram, SiWhatsapp } from "react-icons/si";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,16 +17,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import StarRating from "@/components/StarRating";
 import CarCard from "@/components/CarCard";
 import GarageServiceCard from "@/components/GarageServiceCard";
+import SupportServiceCard from "@/components/SupportServiceCard";
+import BusinessMap from "@/components/BusinessMap";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import type { Business, SparePart, Review, Car as CarType, GarageService } from "@shared/schema";
+import type { Business, SparePart, Review, Car as CarType, GarageService, SupportService } from "@shared/schema";
 import { BUSINESS_CATEGORIES, REPORT_REASONS } from "@shared/schema";
 
 interface BusinessData {
   business: Business & { avgRating: number; reviewCount: number };
   reviews: Review[];
   spareParts: SparePart[];
+  supportServices: SupportService[];
 }
 
 type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string };
@@ -250,6 +253,7 @@ export default function BusinessProfile() {
 
   const isDealer = data?.business.category === "car_dealer";
   const isGarage = data?.business.category === "garage";
+  const isSupport = data?.business.category !== undefined && ["insurance", "car_wash", "other"].includes(data.business.category);
 
   const { data: carListings } = useQuery<CarWithDealer[]>({
     queryKey: [`/api/cars?dealerId=${params.id}`],
@@ -316,9 +320,10 @@ export default function BusinessProfile() {
     );
   }
 
-  const { business, reviews, spareParts } = data;
+  const { business, reviews, spareParts, supportServices } = data;
   const categoryLabel = BUSINESS_CATEGORIES.find(c => c.value === business.category)?.label || business.category;
   const avgRating = business.avgRating || 0;
+  const hasMap = business.latitude && business.longitude;
 
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen pb-12">
@@ -382,6 +387,36 @@ export default function BusinessProfile() {
             <p className="text-sm text-muted-foreground leading-relaxed" data-testid="business-description">{business.description}</p>
           </CardContent>
         </Card>
+
+        {/* Automotive Support — Support services */}
+        {isSupport && (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Services Offered {supportServices && supportServices.length > 0 && `(${supportServices.length})`}
+              </h2>
+            </div>
+            {!supportServices || supportServices.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
+                <Settings className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No services listed yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {supportServices.map(svc => (
+                  <SupportServiceCard
+                    key={svc.id}
+                    service={svc}
+                    businessName={business.name}
+                    businessPhone={business.phone}
+                    businessWhatsapp={business.whatsapp}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Car Dealer — Car listings */}
         {isDealer && (
@@ -483,6 +518,16 @@ export default function BusinessProfile() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Map Section */}
+        {hasMap && (
+          <BusinessMap
+            lat={parseFloat(business.latitude as string)}
+            lng={parseFloat(business.longitude as string)}
+            name={business.name}
+            address={`${business.address}, ${business.city}`}
+          />
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

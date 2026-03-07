@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { eq, ilike, and, or, sql, gte, lte, desc, inArray } from "drizzle-orm";
 import {
-  users, businesses, spareParts, reviews, messages, cars, garageServices, businessReports,
+  users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports,
   type User, type InsertUser,
   type Business, type InsertBusiness,
   type SparePart, type InsertSparePart,
@@ -10,6 +10,7 @@ import {
   type Message, type InsertMessage,
   type Car, type InsertCar,
   type GarageService, type InsertGarageService,
+  type SupportService, type InsertSupportService,
   type BusinessReport, type InsertBusinessReport,
 } from "@shared/schema";
 
@@ -67,6 +68,12 @@ export interface IStorage {
   updateGarageService(id: string, data: Partial<GarageService>): Promise<GarageService>;
   deleteGarageService(id: string): Promise<void>;
 
+  // Support Services
+  getSupportServicesByBusinessId(businessId: string): Promise<SupportService[]>;
+  createSupportService(service: InsertSupportService): Promise<SupportService>;
+  updateSupportService(id: string, data: Partial<SupportService>): Promise<SupportService>;
+  deleteSupportService(id: string): Promise<void>;
+
   // Reports
   createReport(report: InsertBusinessReport): Promise<BusinessReport>;
   getAllReports(): Promise<(BusinessReport & { businessName: string })[]>;
@@ -118,7 +125,13 @@ export class DatabaseStorage implements IStorage {
 
   async getAllBusinesses(filters?: { category?: string; city?: string; q?: string; minRating?: number }) {
     const conditions = [eq(businesses.status, "approved")];
-    if (filters?.category) conditions.push(eq(businesses.category, filters.category as any));
+    if (filters?.category) {
+      if (filters.category === "automotive_support") {
+        conditions.push(inArray(businesses.category, ["insurance", "car_wash", "other"]));
+      } else {
+        conditions.push(eq(businesses.category, filters.category as any));
+      }
+    }
     if (filters?.city) conditions.push(ilike(businesses.city, `%${filters.city}%`));
     if (filters?.q) {
       conditions.push(
@@ -169,6 +182,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(messages).where(eq(messages.businessId, id));
     await db.delete(cars).where(eq(cars.dealerId, id));
     await db.delete(garageServices).where(eq(garageServices.garageId, id));
+    await db.delete(supportServices).where(eq(supportServices.businessId, id));
     await db.delete(businesses).where(eq(businesses.id, id));
   }
 
@@ -361,6 +375,25 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGarageService(id: string) {
     await db.delete(garageServices).where(eq(garageServices.id, id));
+  }
+
+  // Support Services
+  async getSupportServicesByBusinessId(businessId: string) {
+    return db.select().from(supportServices).where(eq(supportServices.businessId, businessId)).orderBy(desc(supportServices.createdAt));
+  }
+
+  async createSupportService(service: InsertSupportService) {
+    const [created] = await db.insert(supportServices).values(service).returning();
+    return created;
+  }
+
+  async updateSupportService(id: string, data: Partial<SupportService>) {
+    const [updated] = await db.update(supportServices).set(data).where(eq(supportServices.id, id)).returning();
+    return updated;
+  }
+
+  async deleteSupportService(id: string) {
+    await db.delete(supportServices).where(eq(supportServices.id, id));
   }
 
   async createReport(report: InsertBusinessReport) {

@@ -1,5 +1,5 @@
 import { db } from "./storage";
-import { users, businesses, spareParts, reviews, messages, cars, garageServices } from "@shared/schema";
+import { users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices } from "@shared/schema";
 import { eq, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -72,6 +72,8 @@ export async function seedDatabase() {
       address: "14 Mombasa Road, Industrial Area",
       city: "Nairobi",
       logo: "/images/biz1.png",
+      latitude: "-1.3049",
+      longitude: "36.8395",
       status: "approved",
     }).returning();
 
@@ -85,6 +87,8 @@ export async function seedDatabase() {
       address: "Plot 7, Westlands Commercial Zone",
       city: "Nairobi",
       logo: "/images/biz2.png",
+      latitude: "-1.2670",
+      longitude: "36.8145",
       status: "approved",
     }).returning();
 
@@ -98,6 +102,8 @@ export async function seedDatabase() {
       address: "River Road, Shop 24",
       city: "Nairobi",
       logo: "/images/biz3.png",
+      latitude: "-1.2841",
+      longitude: "36.8218",
       status: "approved",
     }).returning();
 
@@ -111,6 +117,8 @@ export async function seedDatabase() {
       address: "Westlands Road, Opposite Sarit Centre",
       city: "Nairobi",
       logo: "/images/biz4.png",
+      latitude: "-1.2674",
+      longitude: "36.8068",
       status: "approved",
     }).returning();
 
@@ -124,6 +132,8 @@ export async function seedDatabase() {
       address: "Upper Hill, Finance House, 3rd Floor",
       city: "Nairobi",
       logo: "/images/biz5.png",
+      latitude: "-1.2921",
+      longitude: "36.7915",
       status: "approved",
     }).returning();
 
@@ -200,6 +210,18 @@ export async function seedDatabase() {
 
     // Seed cars and garage services
     await seedCarsAndServicesWithIds(biz1.id, biz2.id);
+
+    // Seed support services for car wash and insurance businesses
+    await db.insert(supportServices).values([
+      { businessId: biz4.id, name: "Full Hand Wash", description: "Complete exterior hand wash with microfibre cloths, rinse and dry.", startingPrice: "500" },
+      { businessId: biz4.id, name: "Interior Detailing", description: "Deep vacuum, dashboard wipe, seat shampoo and odour removal.", startingPrice: "1,500" },
+      { businessId: biz4.id, name: "Ceramic Coating", description: "Professional ceramic coat for long-lasting paint protection (up to 2 years).", startingPrice: "25,000" },
+      { businessId: biz4.id, name: "Wax & Polish", description: "Premium carnauba wax application for a high-gloss finish.", startingPrice: "3,000" },
+      { businessId: biz5.id, name: "Comprehensive Insurance", description: "Full coverage: accident, fire, theft, and third-party liability.", startingPrice: "18,000" },
+      { businessId: biz5.id, name: "Third Party Insurance", description: "Mandatory minimum coverage — covers damage to third parties.", startingPrice: "5,500" },
+      { businessId: biz5.id, name: "PSV Insurance", description: "Cover for matatus, buses, and other public service vehicles.", startingPrice: "35,000" },
+      { businessId: biz5.id, name: "Fleet Insurance", description: "Discounted bulk cover for 5+ vehicles — ideal for corporates.", startingPrice: "90,000" },
+    ]);
 
     console.log("Database seeded successfully!");
   } catch (err) {

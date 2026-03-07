@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertBusinessReportSchema } from "@shared/schema";
+import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema } from "@shared/schema";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "autodirectory-secret-key";
 
@@ -90,12 +90,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const business = await storage.getBusinessById(req.params.id);
       if (!business) return res.status(404).json({ message: "Business not found" });
-      const [revs, parts, { avgRating, reviewCount }] = await Promise.all([
+      const [revs, parts, { avgRating, reviewCount }, supportSvcs] = await Promise.all([
         storage.getReviewsByBusinessId(req.params.id),
         storage.getSparePartsByBusinessId(req.params.id),
         storage.getAvgRating(req.params.id),
+        storage.getSupportServicesByBusinessId(req.params.id),
       ]);
-      res.json({ business: { ...business, avgRating, reviewCount }, reviews: revs, spareParts: parts });
+      res.json({ business: { ...business, avgRating, reviewCount }, reviews: revs, spareParts: parts, supportServices: supportSvcs });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -130,15 +131,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const user = (req as any).user;
       const business = await storage.getBusinessByOwnerId(user.id);
-      if (!business) return res.json({ business: null, messages: [], reviews: [], spareParts: [], cars: [], garageServices: [] });
-      const [msgs, revs, parts, carsData, servicesData] = await Promise.all([
+      if (!business) return res.json({ business: null, messages: [], reviews: [], spareParts: [], cars: [], garageServices: [], supportServices: [] });
+      const isSupport = ["insurance", "car_wash", "other"].includes(business.category);
+      const [msgs, revs, parts, carsData, servicesData, supportSvcs] = await Promise.all([
         storage.getMessagesByBusinessId(business.id),
         storage.getReviewsByBusinessId(business.id),
         storage.getSparePartsByBusinessId(business.id),
         business.category === "car_dealer" ? storage.getCarsByDealerId(business.id) : Promise.resolve([]),
         business.category === "garage" ? storage.getGarageServicesByGarageId(business.id) : Promise.resolve([]),
+        isSupport ? storage.getSupportServicesByBusinessId(business.id) : Promise.resolve([]),
       ]);
-      res.json({ business, messages: msgs, reviews: revs, spareParts: parts, cars: carsData, garageServices: servicesData });
+      res.json({ business, messages: msgs, reviews: revs, spareParts: parts, cars: carsData, garageServices: servicesData, supportServices: supportSvcs });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -405,6 +408,50 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/services/:id", ownerMiddleware, async (req, res) => {
     try {
       await storage.deleteGarageService(req.params.id);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // Support Services (insurance, car wash, other automotive)
+  app.get("/api/support-services/:businessId", async (req, res) => {
+    try {
+      const svcs = await storage.getSupportServicesByBusinessId(req.params.businessId);
+      res.json(svcs);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/support-services", ownerMiddleware, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const biz = await storage.getBusinessByOwnerId(user.id);
+      const supportCategories = ["insurance", "car_wash", "other"];
+      if (!biz || !supportCategories.includes(biz.category)) return res.status(403).json({ message: "Only automotive support businesses can add support services" });
+      if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
+      const body = insertSupportServiceSchema.parse({ ...req.body, businessId: biz.id });
+      const svc = await storage.createSupportService(body);
+      res.json(svc);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/support-services/:id", ownerMiddleware, async (req, res) => {
+    try {
+      const { id, businessId, createdAt, ...data } = req.body;
+      const svc = await storage.updateSupportService(req.params.id, data);
+      res.json(svc);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/support-services/:id", ownerMiddleware, async (req, res) => {
+    try {
+      await storage.deleteSupportService(req.params.id);
       res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ message: e.message });

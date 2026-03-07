@@ -121,7 +121,7 @@ export default function RegisterBusiness() {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {BUSINESS_CATEGORIES.map(c => (
+                      {BUSINESS_CATEGORIES.filter(c => c.value !== "automotive_support").map(c => (
                         <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                       ))}
                     </SelectContent>

@@ -18,6 +18,10 @@ AutoDirectory is a SaaS directory platform for car-related businesses, targeting
 - **Social Sharing:** Business profiles have share buttons (Facebook, X, Instagram, WhatsApp) that generate pre-filled share messages
 - **Safety Tips:** An amber-styled Safety Tips section appears below reviews on every business profile
 - **Report Business:** Visitors can submit a report on any business (reason + description); reports are stored in `business_reports` table and visible in the Admin panel under a dedicated Reports tab
+- **Navigation overhaul:** Navbar now shows 4 category top-level links: Automobile Dealers, Auto Spare Parts, Auto Garage, Automotive Support — each links to filtered `/businesses?category=...` listing
+- **Interactive Map:** Business profiles show a Leaflet.js map with a location marker when `latitude`/`longitude` are set; all seeded businesses have Nairobi coordinates
+- **Automotive Support Services:** Insurance, Car Wash, and Other businesses can list their services via a new `support_services` table; displayed as cards (name, description, KSh price, Call/WhatsApp CTAs) on business profiles
+- **`automotive_support` meta-category:** A virtual category in the URL (`/businesses?category=automotive_support`) that filters for insurance + car_wash + other businesses combined
 
 The stack is a monorepo: React (Vite) frontend + Express backend, sharing TypeScript types via a `/shared` folder.
 
