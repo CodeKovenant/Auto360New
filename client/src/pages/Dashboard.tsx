@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import StarRating from "@/components/StarRating";
 import LogoUpload from "@/components/LogoUpload";
+import PartImageUpload from "@/components/PartImageUpload";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -49,7 +50,7 @@ export default function Dashboard() {
   const [editForm, setEditForm] = useState<Partial<Business>>({});
 
   // Spare parts state
-  const [newPart, setNewPart] = useState({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "" });
+  const [newPart, setNewPart] = useState({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "", image: "" });
   const [showAddPart, setShowAddPart] = useState(false);
 
   // Car state
@@ -74,7 +75,7 @@ export default function Dashboard() {
 
   const addPartMutation = useMutation({
     mutationFn: async () => { const res = await apiRequest("POST", "/api/parts", { ...newPart, businessId: data?.business.id }); return res.json(); },
-    onSuccess: () => { toast({ title: "Part added!" }); setNewPart({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "" }); setShowAddPart(false); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    onSuccess: () => { toast({ title: "Part added!" }); setNewPart({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "", image: "" }); setShowAddPart(false); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -506,6 +507,10 @@ export default function Dashboard() {
                         </Select>
                       </div>
                       <div><Label className="text-xs">Price</Label><Input value={newPart.price} onChange={e => setNewPart(p => ({ ...p, price: e.target.value }))} placeholder="KSh 2,500" className="mt-1" /></div>
+                      <div className="sm:col-span-2">
+                        <Label className="text-xs">Part Image (optional)</Label>
+                        <PartImageUpload value={newPart.image} onChange={url => setNewPart(p => ({ ...p, image: url }))} />
+                      </div>
                     </div>
                     <div className="flex gap-2 mt-4">
                       <Button onClick={() => addPartMutation.mutate()} disabled={addPartMutation.isPending || !newPart.partName || !newPart.carBrand || !newPart.carModel} className="bg-blue-600 text-white" data-testid="button-save-part">
@@ -523,15 +528,25 @@ export default function Dashboard() {
                   {spareParts.map(part => (
                     <Card key={part.id} data-testid={`dash-part-${part.id}`}>
                       <CardContent className="pt-4 pb-4">
-                        <div className="flex items-start justify-between gap-2 flex-wrap">
-                          <div>
-                            <p className="font-medium text-sm text-gray-900 dark:text-white">{part.partName}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">{part.carBrand} {part.carModel} {part.year && `• ${part.year}`}</p>
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">{part.condition === "new" ? "New" : "Used"}</Badge>
-                            {part.price && <span className="text-sm font-semibold text-orange-600">{part.price}</span>}
-                            <Button size="sm" variant="ghost" className="text-red-500 text-xs h-7" onClick={() => deletePartMutation.mutate(part.id)} data-testid={`button-delete-part-${part.id}`}>Remove</Button>
+                        <div className="flex items-start gap-3">
+                          {part.image && (
+                            <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0 border border-gray-200 dark:border-gray-700">
+                              <img src={part.image} alt={part.partName} className="w-full h-full object-cover" data-testid={`img-part-${part.id}`} />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 flex-wrap">
+                              <div>
+                                <p className="font-medium text-sm text-gray-900 dark:text-white">{part.partName}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{part.carBrand} {part.carModel} {part.year && `• ${part.year}`}</p>
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">{part.condition === "new" ? "New" : "Used"}</Badge>
+                                {part.price && <span className="text-sm font-semibold text-orange-600">{part.price}</span>}
+                                <Button size="sm" variant="ghost" className="text-red-500 text-xs h-7" onClick={() => deletePartMutation.mutate(part.id)} data-testid={`button-delete-part-${part.id}`}>Remove</Button>
+                              </div>
+                            </div>
+                            {part.description && <p className="text-xs text-muted-foreground mt-1">{part.description}</p>}
                           </div>
                         </div>
                       </CardContent>

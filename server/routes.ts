@@ -9,24 +9,31 @@ import path from "path";
 import fs from "fs";
 import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema } from "@shared/schema";
 
-// Ensure uploads directory exists
-const uploadsDir = path.resolve(process.cwd(), "uploads/logos");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+// Ensure uploads directories exist
+const logosDir = path.resolve(process.cwd(), "uploads/logos");
+const partsDir = path.resolve(process.cwd(), "uploads/parts");
+if (!fs.existsSync(logosDir)) fs.mkdirSync(logosDir, { recursive: true });
+if (!fs.existsSync(partsDir)) fs.mkdirSync(partsDir, { recursive: true });
 
-const logoUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, uploadsDir),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      cb(null, `logo-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+function makeUpload(dest: string, prefix: string) {
+  return multer({
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, dest),
+      filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+      },
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype.startsWith("image/")) cb(null, true);
+      else cb(new Error("Only image files are allowed"));
     },
-  }),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) cb(null, true);
-    else cb(new Error("Only image files are allowed"));
-  },
-});
+  });
+}
+
+const logoUpload = makeUpload(logosDir, "logo");
+const partImageUpload = makeUpload(partsDir, "part");
 
 const JWT_SECRET = process.env.SESSION_SECRET || "autodirectory-secret-key";
 
@@ -66,6 +73,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/upload/logo", authMiddleware, logoUpload.single("logo"), (req: any, res) => {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
     const url = `/uploads/logos/${req.file.filename}`;
+    res.json({ url });
+  });
+
+  // Spare part image upload endpoint
+  app.post("/api/upload/part-image", authMiddleware, partImageUpload.single("image"), (req: any, res) => {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    const url = `/uploads/parts/${req.file.filename}`;
     res.json({ url });
   });
 

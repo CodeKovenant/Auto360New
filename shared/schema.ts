@@ -54,6 +54,7 @@ export const spareParts = pgTable("spare_parts", {
   condition: partConditionEnum("condition").notNull(),
   price: text("price"),
   description: text("description"),
+  image: text("image"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

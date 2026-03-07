@@ -484,7 +484,13 @@ export default function BusinessProfile() {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {spareParts.map(part => (
-                  <div key={part.id} className="p-3 rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" data-testid={`part-${part.id}`}>
+                  <div key={part.id} className="rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden" data-testid={`part-${part.id}`}>
+                    {part.image && (
+                      <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                        <img src={part.image} alt={part.partName} className="w-full h-full object-cover" data-testid={`img-part-${part.id}`} />
+                      </div>
+                    )}
+                    <div className="p-3">
                     <div className="flex items-start justify-between gap-2 flex-wrap">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-gray-900 dark:text-white">{part.partName}</p>
@@ -512,6 +518,7 @@ export default function BusinessProfile() {
                           <MessageCircle className="w-3 h-3 mr-1" />WhatsApp
                         </Button>
                       </a>
+                    </div>
                     </div>
                   </div>
                 ))}
