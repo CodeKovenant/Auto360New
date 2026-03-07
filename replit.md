@@ -1,0 +1,123 @@
+# AutoDirectory — Replit Project Guide
+
+## Overview
+
+AutoDirectory is a SaaS directory platform for car-related businesses, targeting the Kenyan market. It allows car businesses (dealers, garages, spare parts shops, car washes, insurers) to register, get admin-approved, and be discovered by customers.
+
+**Core features:**
+- Public business directory with search and filters (category, city, rating)
+- Business registration with admin approval workflow
+- Business owner dashboard (manage listing, spare parts inventory, view reviews and messages)
+- Admin panel (approve/reject businesses, manage reviews and users)
+- Customer-facing business profiles with contact forms and WhatsApp links
+- Star ratings and reviews system
+- Spare parts catalog linked to car brands/models
+
+The stack is a monorepo: React (Vite) frontend + Express backend, sharing TypeScript types via a `/shared` folder.
+
+---
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+---
+
+## System Architecture
+
+### Frontend (React + Vite)
+- **Framework:** React 18, TypeScript, Vite
+- **Routing:** `wouter` (lightweight client-side routing)
+- **State/data fetching:** TanStack Query (React Query v5) for all server state; no Redux or global state store
+- **UI library:** shadcn/ui (Radix UI primitives + Tailwind CSS), "new-york" style
+- **Forms:** React Hook Form with Zod resolvers
+- **Styling:** Tailwind CSS with CSS variables for theming, supporting light/dark mode
+- **Auth state:** JWT token + user object stored in `localStorage`, read via a `useAuth` hook backed by the `auth.ts` lib
+
+**Pages:**
+| Route | Component | Purpose |
+|---|---|---|
+| `/` | Home | Hero, featured businesses, category links |
+| `/businesses` | Businesses | Searchable/filterable directory |
+| `/business/:id` | BusinessProfile | Detail, reviews, spare parts, contact form |
+| `/login` | Login | JWT login |
+| `/register` | Register | User registration (owner role) |
+| `/register-business` | RegisterBusiness | Submit a new business listing |
+| `/dashboard` | Dashboard | Owner: manage listing, spare parts, view messages/reviews |
+| `/admin` | Admin | Admin: approve/reject businesses, manage reviews/users |
+
+### Backend (Express + Node.js)
+- **Framework:** Express.js, TypeScript, running via `tsx` in dev
+- **Auth:** JWT (`jsonwebtoken`) — stateless, token passed as `Authorization: Bearer <token>` header
+- **Password hashing:** `bcryptjs`
+- **Middleware roles:** `authMiddleware`, `adminMiddleware`, `ownerMiddleware` guard routes
+- **API style:** REST, all routes under `/api/`
+- **Dev server:** Vite middleware mode integrated into Express for SSR-free HMR
+- **Prod build:** esbuild bundles the server to `dist/index.cjs`; Vite builds client to `dist/public`
+
+**Key API groups:**
+- `POST /api/auth/register`, `POST /api/auth/login`
+- `GET/POST /api/businesses`, `GET /api/businesses/featured`, `GET /api/businesses/:id`
+- `PUT /api/admin/businesses/:id/approve|reject`, `DELETE /api/admin/...`
+- `GET /api/dashboard` (owner's own data)
+- `POST /api/reviews`, `POST /api/messages`
+- `GET /api/admin` (admin stats + all data)
+- `GET/POST/DELETE /api/spare-parts`
+
+### Shared Layer (`/shared/schema.ts`)
+- Single source of truth for DB schema (Drizzle ORM) and TypeScript types
+- Zod validation schemas generated with `drizzle-zod` (`createInsertSchema`)
+- Enums: `userRoleEnum` (admin, owner), `businessStatusEnum` (pending, approved, rejected), `businessCategoryEnum`, `partConditionEnum`
+- Exported constants like `BUSINESS_CATEGORIES` are used by both frontend and backend
+
+### Database
+- **ORM:** Drizzle ORM (PostgreSQL dialect)
+- **Driver:** `pg` (node-postgres)
+- **Tables:** `users`, `businesses`, `spare_parts`, `reviews`, `messages`
+- **Migrations:** `drizzle-kit push` (schema push), migration files in `/migrations`
+- **Connection:** Pool via `DATABASE_URL` env variable
+- **Seeding:** `server/seed.ts` seeds an admin user, several owner users, and sample businesses/parts/reviews on first boot (runs when `users` table is empty)
+
+**Schema highlights:**
+- All primary keys are UUIDs via `gen_random_uuid()`
+- Businesses have `status` (pending/approved/rejected) and `ownerId` FK to users
+- Spare parts link to a business and carry `carBrand`, `carModel`, `year`, `condition`
+- Reviews carry `name` (public display name, no user FK), `rating` (1–5), `comment`
+- Messages carry sender contact info and message text
+
+### Authentication & Authorization
+- **Mechanism:** JWT issued on login/register, stored client-side in `localStorage`
+- **Token lifetime:** 30 days
+- **Roles:** `admin` (full access), `owner` (can manage their own business)
+- **No session cookies** — fully stateless (connect-pg-simple is a dependency but not actively used for session storage in the current implementation)
+- Frontend redirects unauthenticated users to `/login` in protected pages
+
+### Build System
+- `script/build.ts` orchestrates: clean `dist/`, Vite build (client), esbuild bundle (server)
+- Server bundle uses an allowlist of deps to bundle (reduces cold-start syscalls), externalizes the rest
+
+---
+
+## External Dependencies
+
+| Dependency | Purpose |
+|---|---|
+| **PostgreSQL** | Primary database (requires `DATABASE_URL` env var) |
+| **Drizzle ORM** | Type-safe SQL query builder + schema definition |
+| **TanStack Query** | Client-side server state management and caching |
+| **shadcn/ui + Radix UI** | Accessible headless UI primitives |
+| **Tailwind CSS** | Utility-first styling |
+| **wouter** | Lightweight React router |
+| **jsonwebtoken** | JWT creation and verification |
+| **bcryptjs** | Password hashing |
+| **Vite** | Frontend build tool and dev server |
+| **esbuild** | Server production bundler |
+| **Zod** | Schema validation (shared between client and server) |
+| **drizzle-zod** | Auto-generates Zod schemas from Drizzle table definitions |
+| **Google Fonts** | DM Sans, Geist Mono, Fira Code (loaded in `index.html`) |
+| **Replit plugins** | `@replit/vite-plugin-runtime-error-modal`, `@replit/vite-plugin-cartographer`, `@replit/vite-plugin-dev-banner` (dev only) |
+
+**Environment variables required:**
+- `DATABASE_URL` — PostgreSQL connection string (required at startup)
+- `SESSION_SECRET` — JWT signing secret (falls back to hardcoded default if not set; set this in production)
+- `NODE_ENV` — `development` or `production`
