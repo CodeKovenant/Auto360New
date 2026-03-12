@@ -87,6 +87,13 @@ export interface IStorage {
   addGalleryImage(image: InsertGalleryImage): Promise<GalleryImage>;
   deleteGalleryImage(id: string): Promise<void>;
   getGalleryImageById(id: string): Promise<GalleryImage | undefined>;
+
+  // Brand page
+  getBusinessesByBrand(brand: string): Promise<{
+    dealers: (Business & { avgRating: number; reviewCount: number })[];
+    spareParts: (Business & { avgRating: number; reviewCount: number })[];
+    garages: (Business & { avgRating: number; reviewCount: number })[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -477,6 +484,50 @@ export class DatabaseStorage implements IStorage {
   async getGalleryImageById(id: string) {
     const [img] = await db.select().from(galleryImages).where(eq(galleryImages.id, id));
     return img;
+  }
+
+  async getBusinessesByBrand(brand: string) {
+    // Car dealers: have car listings with this brand
+    const dealerCars = await db.select({ dealerId: cars.dealerId })
+      .from(cars)
+      .where(ilike(cars.brand, `%${brand}%`));
+    const dealerIds = [...new Set(dealerCars.map(c => c.dealerId))];
+
+    const dealerList = dealerIds.length > 0
+      ? await db.select().from(businesses).where(
+          and(eq(businesses.status, "approved"), inArray(businesses.id, dealerIds))
+        )
+      : [];
+
+    // Spare parts dealers with this brand in carBrands
+    const sparePartsList = await db.select().from(businesses).where(
+      and(
+        eq(businesses.status, "approved"),
+        eq(businesses.category, "spare_parts"),
+        sql`${businesses.carBrands} @> ARRAY[${brand}]::text[]`
+      )
+    );
+
+    // Garages with this brand in carBrands
+    const garageList = await db.select().from(businesses).where(
+      and(
+        eq(businesses.status, "approved"),
+        eq(businesses.category, "garage"),
+        sql`${businesses.carBrands} @> ARRAY[${brand}]::text[]`
+      )
+    );
+
+    const withRatings = async (list: Business[]) =>
+      Promise.all(list.map(async b => {
+        const { avgRating, reviewCount } = await this.getAvgRating(b.id);
+        return { ...b, avgRating, reviewCount };
+      }));
+
+    return {
+      dealers: await withRatings(dealerList),
+      spareParts: await withRatings(sparePartsList),
+      garages: await withRatings(garageList),
+    };
   }
 }
 

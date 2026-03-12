@@ -97,10 +97,11 @@ Preferred communication style: Simple, everyday language.
 
 **Schema highlights:**
 - All primary keys are UUIDs via `gen_random_uuid()`
-- Businesses have `status` (pending/approved/rejected) and `ownerId` FK to users
+- Businesses have `status` (pending/approved/rejected), `ownerId` FK to users, and `carBrands text[]` for garage/spare_parts brand specialisations
 - Spare parts link to a business and carry `carBrand`, `carModel`, `year`, `condition`
 - Reviews carry `name` (public display name, no user FK), `rating` (1–5), `comment`
 - Messages carry sender contact info and message text
+- `CAR_BRANDS` constant (25 brands) in `shared/schema.ts` used across registration, dashboard edit, and brand discovery pages
 
 ### Authentication & Authorization
 - **Mechanism:** JWT issued on login/register, stored client-side in `localStorage`

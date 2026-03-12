@@ -191,7 +191,7 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-5 md:grid-cols-10 gap-3 md:gap-4">
             {POPULAR_BRANDS.map(brand => (
-              <Link href={`/cars?brand=${encodeURIComponent(brand.name)}`} key={brand.name}>
+              <Link href={`/brand/${encodeURIComponent(brand.name)}`} key={brand.name}>
                 <div
                   className="flex flex-col items-center gap-2.5 p-3 md:p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-red-400 dark:hover:border-red-500 hover:shadow-md transition-all cursor-pointer group"
                   data-testid={`brand-${brand.name.toLowerCase().replace(/\s/g, "-")}`}

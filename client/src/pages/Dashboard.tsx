@@ -18,7 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Business, Message, Review, SparePart, Car as CarType, GarageService, SupportService } from "@shared/schema";
-import { BUSINESS_CATEGORIES, FUEL_TYPES, TRANSMISSIONS, CAR_CONDITIONS, PART_CONDITIONS } from "@shared/schema";
+import { BUSINESS_CATEGORIES, FUEL_TYPES, TRANSMISSIONS, CAR_CONDITIONS, PART_CONDITIONS, CAR_BRANDS } from "@shared/schema";
 
 interface DashboardData {
   business: Business;
@@ -308,6 +308,46 @@ export default function Dashboard() {
                   <Label className="text-xs">Business Logo</Label>
                   <LogoUpload value={editForm.logo || ""} onChange={url => setEditForm(p => ({ ...p, logo: url }))} />
                 </div>
+                {(editForm.category === "garage" || editForm.category === "spare_parts") && (
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs">
+                      Car Brands {editForm.category === "spare_parts" ? "You Stock Parts For" : "You Service"}
+                      <span className="text-muted-foreground font-normal ml-1">(select all that apply)</span>
+                    </Label>
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {CAR_BRANDS.map(brand => {
+                        const checked = (editForm.carBrands ?? []).includes(brand);
+                        return (
+                          <button
+                            key={brand}
+                            type="button"
+                            onClick={() => setEditForm(p => ({
+                              ...p,
+                              carBrands: checked
+                                ? (p.carBrands ?? []).filter(b => b !== brand)
+                                : [...(p.carBrands ?? []), brand]
+                            }))}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs transition-all text-left ${
+                              checked
+                                ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 font-medium"
+                                : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-red-300"
+                            }`}
+                          >
+                            <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${
+                              checked ? "bg-red-600 border-red-600 text-white" : "border-gray-300 dark:border-gray-600"
+                            }`}>
+                              {checked ? "✓" : ""}
+                            </span>
+                            {brand}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {(editForm.carBrands ?? []).length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-2">Selected: {(editForm.carBrands ?? []).join(", ")}</p>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex gap-2 mt-4">
                 <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending} className="bg-red-600 text-white" data-testid="button-save-edit">

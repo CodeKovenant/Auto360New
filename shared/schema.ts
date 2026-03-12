@@ -44,6 +44,7 @@ export const businesses = pgTable("businesses", {
   status: businessStatusEnum("status").notNull().default("pending"),
   premium: boolean("premium").default(false),
   premiumExpiresAt: timestamp("premium_expires_at"),
+  carBrands: text("car_brands").array(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -223,6 +224,14 @@ export const AUTOMOTIVE_SUPPORT_SUBCATEGORIES = [
   { value: "vehicle_finance", label: "Vehicle Finance" },
   { value: "vehicle_tracking", label: "Vehicle Tracking" },
   { value: "vehicle_towing", label: "Vehicle Towing" },
+] as const;
+
+export const CAR_BRANDS = [
+  "Toyota", "Nissan", "Honda", "Subaru", "Mazda",
+  "Mitsubishi", "Mercedes-Benz", "BMW", "Volkswagen", "Hyundai",
+  "Kia", "Ford", "Land Rover", "Isuzu", "Jeep",
+  "Suzuki", "Lexus", "Peugeot", "Volvo", "Audi",
+  "Porsche", "Renault", "Fiat", "Alfa Romeo", "Ferrari",
 ] as const;
 
 export type BusinessCategory = typeof BUSINESS_CATEGORIES[number]["value"];

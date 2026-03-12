@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { BUSINESS_CATEGORIES, AUTOMOTIVE_SUPPORT_SUBCATEGORIES } from "@shared/schema";
+import { BUSINESS_CATEGORIES, AUTOMOTIVE_SUPPORT_SUBCATEGORIES, CAR_BRANDS } from "@shared/schema";
 import LogoUpload from "@/components/LogoUpload";
 
 export default function RegisterBusiness() {
@@ -31,10 +31,19 @@ export default function RegisterBusiness() {
     description: "",
     logo: "",
   });
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
 
   function setField(field: string, value: string) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
+
+  function toggleBrand(brand: string) {
+    setSelectedBrands(prev =>
+      prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
+    );
+  }
+
+  const needsBrands = form.category === "garage" || form.category === "spare_parts";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -52,7 +61,11 @@ export default function RegisterBusiness() {
     }
     setLoading(true);
     try {
-      await apiRequest("POST", "/api/businesses", { ...form, ownerId: user.id });
+      await apiRequest("POST", "/api/businesses", {
+      ...form,
+      ownerId: user.id,
+      carBrands: needsBrands ? selectedBrands : [],
+    });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
       setSuccess(true);
     } catch (e: any) {
@@ -147,6 +160,45 @@ export default function RegisterBusiness() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+
+              {needsBrands && (
+                <div>
+                  <Label>
+                    Car Brands You Deal With
+                    <span className="text-muted-foreground text-xs font-normal ml-1">(select all that apply)</span>
+                  </Label>
+                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2" data-testid="grid-car-brands">
+                    {CAR_BRANDS.map(brand => {
+                      const checked = selectedBrands.includes(brand);
+                      return (
+                        <button
+                          key={brand}
+                          type="button"
+                          onClick={() => toggleBrand(brand)}
+                          data-testid={`brand-checkbox-${brand.toLowerCase().replace(/\s/g, "-")}`}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-all text-left ${
+                            checked
+                              ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 font-medium"
+                              : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-red-300 hover:bg-red-50/50 dark:hover:bg-red-900/10"
+                          }`}
+                        >
+                          <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${
+                            checked ? "bg-red-600 border-red-600 text-white" : "border-gray-300 dark:border-gray-600"
+                          }`}>
+                            {checked ? "✓" : ""}
+                          </span>
+                          {brand}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedBrands.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Selected: {selectedBrands.join(", ")}
+                    </p>
+                  )}
                 </div>
               )}
 

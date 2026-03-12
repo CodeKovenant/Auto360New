@@ -684,6 +684,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Brand page route
+  app.get("/api/businesses/by-brand/:brand", async (req, res) => {
+    try {
+      const brand = decodeURIComponent(req.params.brand);
+      const result = await storage.getBusinessesByBrand(brand);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   // Gallery routes
   app.get("/api/gallery/:entityType/:entityId", async (req, res) => {
     try {

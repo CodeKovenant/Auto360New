@@ -387,8 +387,24 @@ export default function BusinessProfile() {
         {/* About */}
         <Card>
           <CardHeader><CardTitle className="text-base">About</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground leading-relaxed" data-testid="business-description">{business.description}</p>
+            {business.carBrands && business.carBrands.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  {business.category === "spare_parts" ? "Car Parts Brands" : "Car Brands Serviced"}
+                </p>
+                <div className="flex flex-wrap gap-1.5" data-testid="business-brands">
+                  {business.carBrands.map(brand => (
+                    <Link href={`/brand/${encodeURIComponent(brand)}`} key={brand}>
+                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-colors">
+                        {brand}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
