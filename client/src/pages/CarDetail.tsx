@@ -58,8 +58,8 @@ export default function CarDetail() {
           </Button>
         </Link>
 
-        {/* Images */}
-        <div className="mb-6">
+        {/* Featured Image */}
+        <div className="mb-4">
           {images.length > 0 ? (
             <div className="grid grid-cols-1 gap-3">
               <div className="h-72 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800">
@@ -80,6 +80,20 @@ export default function CarDetail() {
               <CarIcon className="w-20 h-20 text-gray-300 dark:text-gray-600" />
             </div>
           )}
+        </div>
+
+        {/* Car Gallery — directly below featured image */}
+        <div className="mb-6">
+          <Card>
+            <CardContent className="pt-5">
+              <BusinessGallery
+                entityType="car"
+                entityId={car.id}
+                canManage={canManageGallery}
+                title="Car Photos"
+              />
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -110,18 +124,6 @@ export default function CarDetail() {
                 {car.description && (
                   <p className="text-sm text-muted-foreground leading-relaxed">{car.description}</p>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Car Gallery */}
-            <Card>
-              <CardContent className="pt-5">
-                <BusinessGallery
-                  entityType="car"
-                  entityId={car.id}
-                  canManage={canManageGallery}
-                  title="Car Photos"
-                />
               </CardContent>
             </Card>
           </div>
