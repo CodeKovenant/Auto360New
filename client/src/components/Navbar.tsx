@@ -10,7 +10,6 @@ const NAV_CATEGORIES = [
   { label: "Autospares Dealers", href: "/businesses?category=spare_parts", icon: Store, param: "spare_parts" },
   { label: "Autogarage Repair", href: "/businesses?category=garage", icon: Wrench, param: "garage" },
   { label: "Automotive Support", href: "/businesses?category=automotive_support", icon: Shield, param: "automotive_support" },
-  { label: "Cars for Sale", href: "/cars", icon: Car, param: null },
 ];
 
 function isNavActive(href: string, location: string): boolean {
