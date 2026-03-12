@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Droplets, BadgeDollarSign, Radio, Truck, Building2, SlidersHorizontal, X } from "lucide-react";
@@ -66,6 +66,12 @@ export default function AutomotiveSupport() {
   const [search, setSearch] = useState("");
   const [county, setCounty] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    const p = new URLSearchParams(searchStr);
+    const tab = p.get("tab");
+    if (tab) setActiveTab(tab);
+  }, [searchStr]);
 
   const queryString = new URLSearchParams({
     category: "automotive_support",

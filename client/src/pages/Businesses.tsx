@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Search, SlidersHorizontal, X, Building2 } from "lucide-react";
@@ -29,6 +29,12 @@ export default function Businesses() {
   const [city, setCity] = useState("all");
   const [minRating, setMinRating] = useState("0");
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    const p = new URLSearchParams(searchStr);
+    setSearch(p.get("q") || "");
+    setCategory(p.get("category") || "all");
+  }, [searchStr]);
 
   const queryString = new URLSearchParams({
     ...(search ? { q: search } : {}),
