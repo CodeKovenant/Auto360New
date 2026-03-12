@@ -1,16 +1,15 @@
 import { Link, useLocation } from "wouter";
-import { Car, Menu, X, LogOut, LayoutDashboard, Shield, Wrench, Store, Settings, UserCircle2, ChevronDown } from "lucide-react";
+import { Car, Menu, X, LogOut, LayoutDashboard, Shield, Wrench, Store } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import TopBar from "./TopBar";
 
 const NAV_CATEGORIES = [
-  { label: "Car Dealers", href: "/businesses?category=car_dealer", icon: Car, param: "car_dealer" },
-  { label: "Spare Parts", href: "/businesses?category=spare_parts", icon: Store, param: "spare_parts" },
-  { label: "Garages", href: "/businesses?category=garage", icon: Wrench, param: "garage" },
-  { label: "Car Wash", href: "/businesses?category=car_wash", icon: Settings, param: "car_wash" },
-  { label: "Insurance", href: "/businesses?category=insurance", icon: Shield, param: "insurance" },
+  { label: "Automobile Dealers", href: "/businesses?category=car_dealer", icon: Car, param: "car_dealer" },
+  { label: "Autospares Dealers", href: "/businesses?category=spare_parts", icon: Store, param: "spare_parts" },
+  { label: "Autogarage Repair", href: "/businesses?category=garage", icon: Wrench, param: "garage" },
+  { label: "Automotive Support", href: "/businesses?category=automotive_support", icon: Shield, param: "automotive_support" },
   { label: "Cars for Sale", href: "/cars", icon: Car, param: null },
 ];
 

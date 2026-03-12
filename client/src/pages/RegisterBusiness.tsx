@@ -140,8 +140,24 @@ export default function RegisterBusiness() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="biz-city">City <span className="text-red-500">*</span></Label>
-                  <Input id="biz-city" value={form.city} onChange={e => setField("city", e.target.value)} placeholder="Nairobi" className="mt-1" required data-testid="input-biz-city" />
+                  <Label htmlFor="biz-county">County <span className="text-red-500">*</span></Label>
+                  <Select value={form.city} onValueChange={val => setField("city", val)}>
+                    <SelectTrigger id="biz-county" className="mt-1" data-testid="select-biz-county">
+                      <SelectValue placeholder="Select County" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["Baringo","Bomet","Bungoma","Busia","Elgeyo-Marakwet","Embu","Garissa",
+                        "Homa Bay","Isiolo","Kajiado","Kakamega","Kericho","Kiambu","Kilifi",
+                        "Kirinyaga","Kisii","Kisumu","Kitui","Kwale","Laikipia","Lamu","Machakos",
+                        "Makueni","Mandera","Marsabit","Meru","Migori","Mombasa","Murang'a",
+                        "Nairobi","Nakuru","Nandi","Narok","Nyandarua","Nyamira","Nyeri",
+                        "Samburu","Siaya","Taita-Taveta","Tana River","Tharaka-Nithi",
+                        "Trans-Nzoia","Turkana","Uasin Gishu","Vihiga","Wajir","West Pokot"
+                      ].map(county => (
+                        <SelectItem key={county} value={county}>{county}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="biz-address">Address <span className="text-red-500">*</span></Label>

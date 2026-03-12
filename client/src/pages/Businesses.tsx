@@ -10,6 +10,16 @@ import BusinessCard from "@/components/BusinessCard";
 import type { Business } from "@shared/schema";
 import { BUSINESS_CATEGORIES } from "@shared/schema";
 
+const KENYA_COUNTIES = [
+  "Baringo","Bomet","Bungoma","Busia","Elgeyo-Marakwet","Embu","Garissa",
+  "Homa Bay","Isiolo","Kajiado","Kakamega","Kericho","Kiambu","Kilifi",
+  "Kirinyaga","Kisii","Kisumu","Kitui","Kwale","Laikipia","Lamu","Machakos",
+  "Makueni","Mandera","Marsabit","Meru","Migori","Mombasa","Murang'a",
+  "Nairobi","Nakuru","Nandi","Narok","Nyandarua","Nyamira","Nyeri",
+  "Samburu","Siaya","Taita-Taveta","Tana River","Tharaka-Nithi",
+  "Trans-Nzoia","Turkana","Uasin Gishu","Vihiga","Wajir","West Pokot",
+];
+
 export default function Businesses() {
   const searchStr = useSearch();
   const params = new URLSearchParams(searchStr);
@@ -30,8 +40,6 @@ export default function Businesses() {
   const { data: businesses, isLoading } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
     queryKey: [`/api/businesses?${queryString}`],
   });
-
-  const cities = [...new Set(businesses?.map(b => b.city) || [])].sort();
 
   function clearFilters() {
     setSearch("");
@@ -92,12 +100,12 @@ export default function Businesses() {
               </Select>
 
               <Select value={city} onValueChange={setCity}>
-                <SelectTrigger data-testid="select-city">
-                  <SelectValue placeholder="All Cities" />
+                <SelectTrigger data-testid="select-county">
+                  <SelectValue placeholder="All Counties" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Cities</SelectItem>
-                  {cities.map(c => (
+                  <SelectItem value="all">All Counties</SelectItem>
+                  {KENYA_COUNTIES.map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
