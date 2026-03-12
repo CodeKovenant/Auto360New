@@ -27,7 +27,7 @@ export interface IStorage {
   // Businesses
   getBusinessById(id: string): Promise<Business | undefined>;
   getBusinessByOwnerId(ownerId: string): Promise<Business | undefined>;
-  getAllBusinesses(filters?: { category?: string; city?: string; q?: string; minRating?: number }): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
+  getAllBusinesses(filters?: { category?: string; subcategory?: string; city?: string; q?: string; minRating?: number }): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   getFeaturedBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   getPremiumBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   createBusiness(biz: InsertBusiness): Promise<Business>;
@@ -126,11 +126,22 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getAllBusinesses(filters?: { category?: string; city?: string; q?: string; minRating?: number }) {
+  async getAllBusinesses(filters?: { category?: string; subcategory?: string; city?: string; q?: string; minRating?: number }) {
     const conditions = [eq(businesses.status, "approved")];
     if (filters?.category) {
       if (filters.category === "automotive_support") {
-        conditions.push(inArray(businesses.category, ["insurance", "car_wash", "other"]));
+        if (filters.subcategory === "car_wash_detailing") {
+          conditions.push(eq(businesses.category, "car_wash"));
+        } else if (filters.subcategory) {
+          conditions.push(
+            and(
+              inArray(businesses.category, ["automotive_support", "insurance", "car_wash", "other"]),
+              eq(businesses.subcategory, filters.subcategory)
+            )!
+          );
+        } else {
+          conditions.push(inArray(businesses.category, ["automotive_support", "insurance", "car_wash", "other"]));
+        }
       } else {
         conditions.push(eq(businesses.category, filters.category as any));
       }

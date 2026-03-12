@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { BUSINESS_CATEGORIES } from "@shared/schema";
+import { BUSINESS_CATEGORIES, AUTOMOTIVE_SUPPORT_SUBCATEGORIES } from "@shared/schema";
 import LogoUpload from "@/components/LogoUpload";
 
 export default function RegisterBusiness() {
@@ -23,6 +23,7 @@ export default function RegisterBusiness() {
   const [form, setForm] = useState({
     name: "",
     category: "",
+    subcategory: "",
     phone: "",
     whatsapp: "",
     address: "",
@@ -43,6 +44,10 @@ export default function RegisterBusiness() {
     }
     if (!form.name || !form.category || !form.phone || !form.whatsapp || !form.address || !form.city || !form.description) {
       toast({ title: "Missing fields", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+    if (form.category === "automotive_support" && !form.subcategory) {
+      toast({ title: "Select service type", description: "Please select the type of automotive support service.", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -114,18 +119,36 @@ export default function RegisterBusiness() {
                 </div>
                 <div>
                   <Label htmlFor="biz-category">Category <span className="text-red-500">*</span></Label>
-                  <Select value={form.category} onValueChange={v => setField("category", v)}>
+                  <Select value={form.category} onValueChange={v => { setField("category", v); setField("subcategory", ""); }}>
                     <SelectTrigger className="mt-1" data-testid="select-biz-category">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {BUSINESS_CATEGORIES.filter(c => c.value !== "automotive_support").map(c => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                      ))}
+                      <SelectItem value="car_dealer">Automobile Dealers</SelectItem>
+                      <SelectItem value="spare_parts">Autospares Dealers</SelectItem>
+                      <SelectItem value="garage">Autogarage Repair</SelectItem>
+                      <SelectItem value="automotive_support">Automotive Support Industry</SelectItem>
+                      <SelectItem value="car_wash">Car Wash & Auto Detailing</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
+
+              {form.category === "automotive_support" && (
+                <div>
+                  <Label htmlFor="biz-subcategory">Support Service Type <span className="text-red-500">*</span></Label>
+                  <Select value={form.subcategory} onValueChange={v => setField("subcategory", v)}>
+                    <SelectTrigger className="mt-1" data-testid="select-biz-subcategory">
+                      <SelectValue placeholder="Select service type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AUTOMOTIVE_SUPPORT_SUBCATEGORIES.filter(s => s.value !== "car_wash_detailing").map(s => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

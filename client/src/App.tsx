@@ -15,6 +15,7 @@ import Admin from "@/pages/Admin";
 import Cars from "@/pages/Cars";
 import CarDetail from "@/pages/CarDetail";
 import GarageServices from "@/pages/GarageServices";
+import AutomotiveSupport from "@/pages/AutomotiveSupport";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/cars" component={Cars} />
       <Route path="/cars/:id" component={CarDetail} />
       <Route path="/garages/services" component={GarageServices} />
+      <Route path="/automotive-support" component={AutomotiveSupport} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/register-business" component={RegisterBusiness} />

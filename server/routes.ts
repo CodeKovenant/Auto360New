@@ -206,8 +206,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/businesses", async (req, res) => {
     try {
-      const { q, category, city, minRating } = req.query as Record<string, string>;
-      const biz = await storage.getAllBusinesses({ q, category, city, minRating: minRating ? parseFloat(minRating) : undefined });
+      const { q, category, subcategory, city, minRating } = req.query as Record<string, string>;
+      const biz = await storage.getAllBusinesses({ q, category, subcategory, city, minRating: minRating ? parseFloat(minRating) : undefined });
       res.json(biz);
     } catch (e: any) {
       res.status(500).json({ message: e.message });

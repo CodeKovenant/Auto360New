@@ -32,6 +32,7 @@ export const businesses = pgTable("businesses", {
   ownerId: varchar("owner_id").notNull().references(() => users.id),
   name: text("name").notNull(),
   category: businessCategoryEnum("category").notNull(),
+  subcategory: text("subcategory"),
   description: text("description").notNull(),
   phone: text("phone").notNull(),
   whatsapp: text("whatsapp").notNull(),
@@ -203,6 +204,13 @@ export const CAR_CONDITIONS = [
 export const PART_CONDITIONS = [
   { value: "new", label: "New" },
   { value: "used", label: "Used" },
+] as const;
+
+export const AUTOMOTIVE_SUPPORT_SUBCATEGORIES = [
+  { value: "car_wash_detailing", label: "Car Wash & Auto Detailing" },
+  { value: "vehicle_finance", label: "Vehicle Finance" },
+  { value: "vehicle_tracking", label: "Vehicle Tracking" },
+  { value: "vehicle_towing", label: "Vehicle Towing" },
 ] as const;
 
 export type BusinessCategory = typeof BUSINESS_CATEGORIES[number]["value"];
