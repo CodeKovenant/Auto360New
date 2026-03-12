@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2, BadgeCheck } from "lucide-react";
+import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2, BadgeCheck, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,9 +72,13 @@ export default function Home() {
     navigate(search.trim() ? `/businesses?q=${encodeURIComponent(search.trim())}` : "/businesses");
   }
 
+  const sparePartsBusinesses = businesses?.filter(b => b.category === "spare_parts") ?? [];
+  const garageBusinesses = businesses?.filter(b => b.category === "garage") ?? [];
+
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
-      {/* Hero */}
+
+      {/* ── 1. HERO ── */}
       <section className="relative bg-gradient-to-br from-gray-950 via-red-950 to-red-900 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-orange-400 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-gray-950 to-transparent" />
@@ -102,7 +106,7 @@ export default function Home() {
                   data-testid="input-search-hero"
                 />
               </div>
-              <Button type="submit" size="lg" className="bg-orange-500 text-white h-12 px-6 flex-shrink-0" data-testid="button-search-hero">
+              <Button type="submit" size="lg" className="bg-orange-500 hover:bg-orange-600 text-white h-12 px-6 flex-shrink-0" data-testid="button-search-hero">
                 Search
               </Button>
             </form>
@@ -119,7 +123,7 @@ export default function Home() {
                 </Button>
               </Link>
               <Link href="/register-business">
-                <Button className="bg-orange-500 text-white" data-testid="button-register-hero">
+                <Button className="bg-orange-500 hover:bg-orange-600 text-white" data-testid="button-register-hero">
                   Register Your Business
                 </Button>
               </Link>
@@ -128,7 +132,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Premium Businesses */}
+      {/* ── 2. PREMIUM BUSINESSES ── */}
       {premiumBusinesses && premiumBusinesses.length > 0 && (
         <section className="py-14 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-950/30 dark:to-yellow-950/30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -155,7 +159,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* Categories */}
+      {/* ── 3. CATEGORIES ── */}
       <section className="py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Browse by Category</h2>
@@ -178,14 +182,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Popular Car Brands */}
+      {/* ── 4. CAR BRANDS ── */}
       <section className="py-12 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="brands-heading">Popular Car Brands</h2>
             <p className="text-muted-foreground">Browse cars by your favorite brand</p>
           </div>
-          <div className="grid grid-cols-5 sm:grid-cols-5 md:grid-cols-10 gap-3 md:gap-4">
+          <div className="grid grid-cols-5 md:grid-cols-10 gap-3 md:gap-4">
             {POPULAR_BRANDS.map(brand => (
               <Link href={`/cars?brand=${encodeURIComponent(brand.name)}`} key={brand.name}>
                 <div
@@ -215,8 +219,103 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Cars */}
+      {/* ── 5. FEATURED PRODUCTS (Spare Parts) ── */}
       <section className="py-14">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="featured-products-heading">Featured Spare Parts Shops</h2>
+              <p className="text-muted-foreground">Genuine and quality parts for all vehicle makes</p>
+            </div>
+            <Link href="/businesses?category=spare_parts">
+              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-parts">
+                View All <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+          {sparePartsBusinesses.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {sparePartsBusinesses.slice(0, 6).map(biz => (
+                <BusinessCard key={biz.id} business={biz} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+              <Package className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+              <p className="text-muted-foreground">No spare parts shops listed yet.</p>
+              <Link href="/register-business">
+                <Button variant="outline" className="mt-4">Register Your Shop</Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── 6. FEATURED GARAGES ── */}
+      <section className="py-14 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="featured-garages-heading">Featured Garages</h2>
+              <p className="text-muted-foreground">Trusted mechanics and auto repair shops near you</p>
+            </div>
+            <Link href="/businesses?category=garage">
+              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-garages">
+                View All <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+          {garageBusinesses.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {garageBusinesses.slice(0, 6).map(biz => (
+                <BusinessCard key={biz.id} business={biz} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+              <Wrench className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+              <p className="text-muted-foreground">No garages listed yet.</p>
+              <Link href="/register-business">
+                <Button variant="outline" className="mt-4">Register Your Garage</Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── 7. FEATURED SERVICES ── */}
+      <section className="py-14">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="popular-services-heading">Featured Services</h2>
+              <p className="text-muted-foreground">Popular garage and automotive services</p>
+            </div>
+            <Link href="/garages/services">
+              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-services">
+                All Services <ChevronRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+          {servicesLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-md" />)}
+            </div>
+          ) : popularServices && popularServices.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {popularServices.slice(0, 6).map(svc => <GarageServiceCard key={svc.id} service={svc} />)}
+            </div>
+          ) : (
+            <div className="text-center py-12 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+              <Wrench className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+              <p className="text-muted-foreground">No services listed yet.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── 8. FEATURED CARS ── */}
+      <section className="py-14 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
             <div>
@@ -238,7 +337,7 @@ export default function Home() {
               {featuredCars.slice(0, 6).map(car => <CarCard key={car.id} car={car} />)}
             </div>
           ) : (
-            <div className="text-center py-12">
+            <div className="text-center py-12 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
               <Car className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
               <p className="text-muted-foreground">No car listings yet. Check back soon!</p>
               <Link href="/businesses?category=car_dealer">
@@ -249,71 +348,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Popular Garage Services */}
-      <section className="py-14 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="popular-services-heading">Popular Garage Services</h2>
-              <p className="text-muted-foreground">Find trusted mechanics and garage services near you</p>
-            </div>
-            <Link href="/garages/services">
-              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-services">
-                All Services <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-          {servicesLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-md" />)}
-            </div>
-          ) : popularServices && popularServices.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {popularServices.slice(0, 6).map(svc => <GarageServiceCard key={svc.id} service={svc} />)}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Wrench className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-              <p className="text-muted-foreground">No garage services listed yet.</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Featured Businesses */}
+      {/* ── 9. REVIEWS ── */}
       <section className="py-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">Featured Businesses</h2>
-              <p className="text-muted-foreground">Trusted and verified car service providers</p>
-            </div>
-            <Link href="/businesses">
-              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all">
-                View All <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-          {businesses && businesses.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {businesses.slice(0, 6).map(biz => (
-                <BusinessCard key={biz.id} business={biz} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Building2 className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-              <p className="text-muted-foreground">No businesses listed yet. Be the first!</p>
-              <Link href="/register-business">
-                <Button className="mt-4 bg-orange-500 text-white">Register Your Business</Button>
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Recent Reviews */}
-      <section className="py-14 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="recent-reviews-heading">What Customers Say</h2>
@@ -335,27 +371,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">How It Works</h2>
-          <p className="text-muted-foreground">Simple process to get your business listed</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {STEPS.map((step, i) => (
-            <div key={i} className="flex flex-col items-start p-6 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-              <span className="text-4xl font-black text-red-100 dark:text-red-900 mb-3">{step.num}</span>
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                <h3 className="font-semibold text-gray-900 dark:text-white">{step.title}</h3>
+      {/* ── 10. HOW IT WORKS ── */}
+      <section className="py-14 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">How It Works</h2>
+            <p className="text-muted-foreground">Simple process to get your business listed</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {STEPS.map((step, i) => (
+              <div key={i} className="flex flex-col items-start p-6 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+                <span className="text-4xl font-black text-red-100 dark:text-red-900 mb-3">{step.num}</span>
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{step.title}</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">{step.desc}</p>
               </div>
-              <p className="text-sm text-muted-foreground">{step.desc}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* CTA */}
+      {/* ── 11. CTA ── */}
       <section className="py-14 bg-gradient-to-r from-red-800 to-red-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-3">Register Your Car Business Today</h2>
@@ -363,35 +401,34 @@ export default function Home() {
             Reach thousands of customers looking for trusted automotive services.
           </p>
           <Link href="/register-business">
-            <Button size="lg" className="bg-orange-500 text-white px-8" data-testid="button-cta-register">
+            <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white px-8" data-testid="button-cta-register">
               Create Business Listing
             </Button>
           </Link>
         </div>
       </section>
 
-      {/* Footer */}
+      {/* ── 12. FOOTER ── */}
       <footer className="border-t border-gray-200 dark:border-gray-800 py-8 bg-white dark:bg-gray-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-red-600 flex items-center justify-center">
-                <Car className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold text-gray-900 dark:text-white">AutoDirectory</span>
-            </div>
+            <Link href="/">
+              <img src="/logo.png" alt="Auto360" className="h-9 w-auto object-contain" />
+            </Link>
             <div className="flex items-center gap-6 flex-wrap">
+              <Link href="/businesses?category=car_dealer" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Car Dealers</Link>
+              <Link href="/businesses?category=spare_parts" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Spare Parts</Link>
+              <Link href="/businesses?category=garage" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Garages</Link>
               <Link href="/cars" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Cars for Sale</Link>
-              <Link href="/garages/services" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Garage Services</Link>
-              <Link href="/businesses" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Businesses</Link>
+              <Link href="/garages/services" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Services</Link>
               <Link href="/register-business" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Register</Link>
             </div>
           </div>
           <div className="border-t border-gray-100 dark:border-gray-800 pt-4 flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} AutoDirectory Kenya. All rights reserved.
+              &copy; {new Date().getFullYear()} Auto360 Kenya. All rights reserved.
             </p>
-            <p className="text-sm text-muted-foreground">hello@autodirectory.co.ke</p>
+            <p className="text-sm text-muted-foreground">hello@auto360.co.ke</p>
           </div>
         </div>
       </footer>
