@@ -83,10 +83,10 @@ export default function CarDetail() {
               <CardContent className="pt-5">
                 <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="car-detail-title">{car.title}</h1>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="car-detail-price">{formatPrice(car.price)}</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="car-detail-price">{formatPrice(car.price)}</p>
                 </div>
                 <div className="flex gap-2 flex-wrap mb-4">
-                  <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{car.year}</Badge>
+                  <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">{car.year}</Badge>
                   <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 capitalize">{car.fuelType}</Badge>
                   <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 capitalize">{car.transmission}</Badge>
                 </div>

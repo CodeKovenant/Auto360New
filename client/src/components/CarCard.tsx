@@ -36,7 +36,7 @@ export default function CarCard({ car }: CarCardProps) {
           </div>
         )}
         <div className="absolute top-2 left-2 flex gap-1.5 flex-wrap">
-          <Badge className="bg-blue-600 text-white text-xs">{car.year}</Badge>
+          <Badge className="bg-orange-500 text-white text-xs">{car.year}</Badge>
           {car.condition && (
             <Badge className={`text-xs ${car.condition === "new" ? "bg-green-600 text-white" : "bg-gray-900/70 text-white backdrop-blur-sm"}`}>
               {car.condition === "new" ? "Brand New" : "Used"}
@@ -52,7 +52,7 @@ export default function CarCard({ car }: CarCardProps) {
         <h3 className="font-semibold text-gray-900 dark:text-white text-base leading-tight mb-0.5 line-clamp-1" data-testid={`car-title-${car.id}`}>
           {car.title}
         </h3>
-        <p className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-3" data-testid={`car-price-${car.id}`}>
+        <p className="text-xl font-bold text-red-600 dark:text-red-400 mb-3" data-testid={`car-price-${car.id}`}>
           {formatPrice(car.price)}
         </p>
 

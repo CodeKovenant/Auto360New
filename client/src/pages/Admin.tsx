@@ -157,7 +157,7 @@ function BusinessCard({
 
                 <div className="pt-1">
                   <Link href={`/business/${biz.id}`}>
-                    <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800" data-testid={`link-view-profile-${biz.id}`}>
+                    <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800" data-testid={`link-view-profile-${biz.id}`}>
                       <ExternalLink className="w-3.5 h-3.5 mr-1" />
                       View Public Profile
                     </Button>
@@ -182,17 +182,17 @@ function BusinessCard({
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Online Presence</p>
                 <div className="flex flex-wrap gap-2">
                   {biz.website && (
-                    <a href={biz.website} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline" data-testid={`link-website-${biz.id}`}>
+                    <a href={biz.website} target="_blank" rel="noopener noreferrer" className="text-xs text-red-600 underline" data-testid={`link-website-${biz.id}`}>
                       Website
                     </a>
                   )}
                   {biz.facebook && (
-                    <a href={biz.facebook} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline" data-testid={`link-facebook-${biz.id}`}>
+                    <a href={biz.facebook} target="_blank" rel="noopener noreferrer" className="text-xs text-red-600 underline" data-testid={`link-facebook-${biz.id}`}>
                       Facebook
                     </a>
                   )}
                   {biz.instagram && (
-                    <a href={biz.instagram} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline" data-testid={`link-instagram-${biz.id}`}>
+                    <a href={biz.instagram} target="_blank" rel="noopener noreferrer" className="text-xs text-red-600 underline" data-testid={`link-instagram-${biz.id}`}>
                       Instagram
                     </a>
                   )}
@@ -335,7 +335,7 @@ export default function Admin() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-5">
         <div className="max-w-6xl mx-auto flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md bg-blue-600 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-md bg-red-600 flex items-center justify-center">
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -350,8 +350,8 @@ export default function Admin() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           <Card>
             <CardContent className="pt-4 pb-4 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="w-9 h-9 rounded-md bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="admin-stat-total">{stats.total}</p>
@@ -495,7 +495,7 @@ export default function Admin() {
                         <Button
                           size="sm"
                           variant={biz.premium ? "default" : "outline"}
-                          className={biz.premium ? "bg-blue-600 hover:bg-blue-700 text-white" : "text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"}
+                          className={biz.premium ? "bg-red-600 hover:bg-red-700 text-white" : "text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950"}
                           onClick={() => togglePremiumMutation.mutate({ businessId: biz.id, activate: !biz.premium })}
                           disabled={togglePremiumMutation.isPending}
                           title={biz.premium ? "Remove premium status" : "Grant premium status"}
@@ -698,11 +698,11 @@ export default function Admin() {
                       </div>
                     </CardContent>
                   </Card>
-                  <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
+                  <Card className="border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20">
                     <CardContent className="pt-4 pb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-md bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
-                          <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <div className="w-9 h-9 rounded-md bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center flex-shrink-0">
+                          <TrendingUp className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                         </div>
                         <div>
                           <p className="text-xl font-bold text-gray-900 dark:text-white" data-testid="revenue-mrr">
@@ -716,8 +716,8 @@ export default function Admin() {
                   <Card>
                     <CardContent className="pt-4 pb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                          <BadgeCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <div className="w-9 h-9 rounded-md bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                          <BadgeCheck className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                         </div>
                         <div>
                           <p className="text-xl font-bold text-gray-900 dark:text-white" data-testid="revenue-active-subs">
@@ -761,7 +761,7 @@ export default function Admin() {
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <BadgeCheck className="w-4 h-4 text-blue-500" />
+                      <BadgeCheck className="w-4 h-4 text-yellow-500" />
                       Active Premium Subscriptions
                     </CardTitle>
                   </CardHeader>
@@ -780,7 +780,7 @@ export default function Admin() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{sub.name}</p>
-                                <BadgeCheck className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                                <BadgeCheck className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />
                               </div>
                               <p className="text-xs text-muted-foreground">{getCategoryLabel(sub.category)} · {sub.city}</p>
                             </div>

@@ -185,7 +185,7 @@ export default function Dashboard() {
       <Building2 className="w-14 h-14 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Business Listed</h2>
       <p className="text-muted-foreground mb-5">You haven't registered a business yet.</p>
-      <Button onClick={() => navigate("/register-business")} className="bg-blue-600 text-white">Register Your Business</Button>
+      <Button onClick={() => navigate("/register-business")} className="bg-red-600 text-white">Register Your Business</Button>
     </div>
   );
 
@@ -224,8 +224,8 @@ export default function Dashboard() {
           ].map((stat, i) => (
             <Card key={i}>
               <CardContent className="pt-4 pb-4 flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-md flex items-center justify-center ${stat.color === "blue" ? "bg-blue-100 dark:bg-blue-900/30" : stat.color === "orange" ? "bg-orange-100 dark:bg-orange-900/30" : "bg-green-100 dark:bg-green-900/30"}`}>
-                  <stat.icon className={`w-5 h-5 ${stat.color === "blue" ? "text-blue-600 dark:text-blue-400" : stat.color === "orange" ? "text-orange-500" : "text-green-600 dark:text-green-400"}`} />
+                <div className={`w-9 h-9 rounded-md flex items-center justify-center ${stat.color === "blue" ? "bg-red-100 dark:bg-red-900/30" : stat.color === "orange" ? "bg-orange-100 dark:bg-orange-900/30" : "bg-green-100 dark:bg-green-900/30"}`}>
+                  <stat.icon className={`w-5 h-5 ${stat.color === "blue" ? "text-red-600 dark:text-red-400" : stat.color === "orange" ? "text-orange-500" : "text-green-600 dark:text-green-400"}`} />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{stat.count}</p>
@@ -238,11 +238,11 @@ export default function Dashboard() {
 
         {/* Premium Card */}
         {business && (
-          <Card className={`mb-6 ${business.premium ? "border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/20" : "border-orange-200 dark:border-orange-800"}`}>
+          <Card className={`mb-6 ${business.premium ? "border-yellow-400 dark:border-yellow-600 bg-yellow-50/50 dark:bg-yellow-950/20" : "border-orange-200 dark:border-orange-800"}`}>
             <CardContent className="pt-5 pb-5">
               {business.premium ? (
                 <div className="flex items-start gap-3">
-                  <BadgeCheck className="w-8 h-8 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <BadgeCheck className="w-8 h-8 text-yellow-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white text-sm" data-testid="text-premium-active">Premium Business</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -310,7 +310,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex gap-2 mt-4">
-                <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending} className="bg-blue-600 text-white" data-testid="button-save-edit">
+                <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending} className="bg-red-600 text-white" data-testid="button-save-edit">
                   {updateMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
                 <Button variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
@@ -339,7 +339,7 @@ export default function Dashboard() {
               )}
               {business.status === "approved" && (
                 <div className="flex justify-end mb-4">
-                  <Button onClick={() => setShowAddCar(!showAddCar)} className="bg-blue-600 text-white" data-testid="button-add-car">
+                  <Button onClick={() => setShowAddCar(!showAddCar)} className="bg-red-600 text-white" data-testid="button-add-car">
                     <Plus className="w-4 h-4 mr-1" />Add Car
                   </Button>
                 </div>
@@ -409,7 +409,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex gap-2 mt-4">
-                      <Button onClick={() => addCarMutation.mutate()} disabled={addCarMutation.isPending || !newCar.title || !newCar.brand || !newCar.model || !newCar.price || !newCar.location} className="bg-blue-600 text-white" data-testid="button-save-car">
+                      <Button onClick={() => addCarMutation.mutate()} disabled={addCarMutation.isPending || !newCar.title || !newCar.brand || !newCar.model || !newCar.price || !newCar.location} className="bg-red-600 text-white" data-testid="button-save-car">
                         {addCarMutation.isPending ? "Adding..." : "Add Car"}
                       </Button>
                       <Button variant="outline" onClick={() => setShowAddCar(false)}>Cancel</Button>
@@ -441,7 +441,7 @@ export default function Dashboard() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <Button size="sm" onClick={() => updateCarMutation.mutate(editingCar!)} disabled={updateCarMutation.isPending} className="bg-blue-600 text-white">Save</Button>
+                              <Button size="sm" onClick={() => updateCarMutation.mutate(editingCar!)} disabled={updateCarMutation.isPending} className="bg-red-600 text-white">Save</Button>
                               <Button size="sm" variant="outline" onClick={() => setEditingCar(null)}>Cancel</Button>
                             </div>
                           </div>
@@ -457,7 +457,7 @@ export default function Dashboard() {
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground">{car.brand} {car.model} • {car.year} • {car.location}</p>
-                              <p className="text-base font-bold text-blue-600 dark:text-blue-400 mt-0.5">KSh {Number(car.price).toLocaleString()}</p>
+                              <p className="text-base font-bold text-red-600 dark:text-red-400 mt-0.5">KSh {Number(car.price).toLocaleString()}</p>
                             </div>
                             <div className="flex gap-2">
                               <Button size="sm" variant="outline" onClick={() => setEditingCar(car)} data-testid={`button-edit-car-${car.id}`}><Edit className="w-3.5 h-3.5" /></Button>
@@ -632,7 +632,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex gap-2 mt-4">
-                      <Button onClick={() => addPartMutation.mutate()} disabled={addPartMutation.isPending || !newPart.partName || !newPart.carBrand || !newPart.carModel} className="bg-blue-600 text-white" data-testid="button-save-part">
+                      <Button onClick={() => addPartMutation.mutate()} disabled={addPartMutation.isPending || !newPart.partName || !newPart.carBrand || !newPart.carModel} className="bg-red-600 text-white" data-testid="button-save-part">
                         {addPartMutation.isPending ? "Adding..." : "Add Part"}
                       </Button>
                       <Button variant="outline" onClick={() => setShowAddPart(false)}>Cancel</Button>

@@ -61,7 +61,7 @@ export default function BusinessMap({ lat, lng, name, address }: BusinessMapProp
   return (
     <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
       <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <MapPin className="w-4 h-4 text-blue-600" />
+        <MapPin className="w-4 h-4 text-red-600" />
         <span className="text-sm font-medium text-gray-900 dark:text-white">Location on Map</span>
         <span className="text-xs text-muted-foreground ml-auto">{address}</span>
       </div>

@@ -12,7 +12,7 @@ import ReviewCard from "@/components/ReviewCard";
 import type { Business, Car as CarType, GarageService } from "@shared/schema";
 
 const CATEGORIES = [
-  { value: "car_dealer", label: "Car Dealers", icon: Car, color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800" },
+  { value: "car_dealer", label: "Car Dealers", icon: Car, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800" },
   { value: "garage", label: "Professional Garages", icon: Wrench, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-800" },
   { value: "spare_parts", label: "Spare Parts", icon: Package, color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-800" },
   { value: "car_wash", label: "Car Wash", icon: Droplets, color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-800" },
@@ -75,7 +75,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 text-white overflow-hidden">
+      <section className="relative bg-gradient-to-br from-gray-950 via-red-950 to-red-900 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-orange-400 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-gray-950 to-transparent" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
@@ -88,7 +88,7 @@ export default function Home() {
               Find Trusted Car Services
               <span className="block text-orange-400">Near You</span>
             </h1>
-            <p className="text-lg md:text-xl text-blue-100 mb-8 max-w-xl">
+            <p className="text-lg md:text-xl text-red-100 mb-8 max-w-xl">
               Dealers, garages, spare parts, car wash and more — all in one place.
             </p>
             <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-xl mb-8">
@@ -130,12 +130,12 @@ export default function Home() {
 
       {/* Premium Businesses */}
       {premiumBusinesses && premiumBusinesses.length > 0 && (
-        <section className="py-14 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
+        <section className="py-14 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-950/30 dark:to-yellow-950/30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <BadgeCheck className="w-6 h-6 text-blue-500" />
+                  <BadgeCheck className="w-6 h-6 text-yellow-500" />
                   <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Premium Businesses</h2>
                 </div>
                 <p className="text-muted-foreground">Verified and trusted premium automotive businesses</p>
@@ -189,7 +189,7 @@ export default function Home() {
             {POPULAR_BRANDS.map(brand => (
               <Link href={`/cars?brand=${encodeURIComponent(brand.name)}`} key={brand.name}>
                 <div
-                  className="flex flex-col items-center gap-2.5 p-3 md:p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md transition-all cursor-pointer group"
+                  className="flex flex-col items-center gap-2.5 p-3 md:p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-red-400 dark:hover:border-red-500 hover:shadow-md transition-all cursor-pointer group"
                   data-testid={`brand-${brand.name.toLowerCase().replace(/\s/g, "-")}`}
                 >
                   <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center p-1.5 shadow-sm border border-gray-100">
@@ -207,7 +207,7 @@ export default function Home() {
                       }}
                     />
                   </div>
-                  <span className="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 leading-tight">{brand.name}</span>
+                  <span className="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 leading-tight">{brand.name}</span>
                 </div>
               </Link>
             ))}
@@ -344,9 +344,9 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {STEPS.map((step, i) => (
             <div key={i} className="flex flex-col items-start p-6 rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-              <span className="text-4xl font-black text-blue-100 dark:text-blue-900 mb-3">{step.num}</span>
+              <span className="text-4xl font-black text-red-100 dark:text-red-900 mb-3">{step.num}</span>
               <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <CheckCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
                 <h3 className="font-semibold text-gray-900 dark:text-white">{step.title}</h3>
               </div>
               <p className="text-sm text-muted-foreground">{step.desc}</p>
@@ -356,10 +356,10 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-14 bg-gradient-to-r from-blue-800 to-blue-700 text-white">
+      <section className="py-14 bg-gradient-to-r from-red-800 to-red-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-3">Register Your Car Business Today</h2>
-          <p className="text-blue-100 mb-7 max-w-lg mx-auto">
+          <p className="text-orange-100 mb-7 max-w-lg mx-auto">
             Reach thousands of customers looking for trusted automotive services.
           </p>
           <Link href="/register-business">
@@ -375,7 +375,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-md bg-red-600 flex items-center justify-center">
                 <Car className="w-4 h-4 text-white" />
               </div>
               <span className="font-bold text-gray-900 dark:text-white">AutoDirectory</span>

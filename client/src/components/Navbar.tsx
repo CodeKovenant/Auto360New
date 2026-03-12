@@ -30,7 +30,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
             <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-9 h-9 rounded-md bg-blue-600 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-md bg-red-600 flex items-center justify-center">
                 <Car className="w-5 h-5 text-white" />
               </div>
               <span className="font-bold text-lg text-gray-900 dark:text-white">AutoDirectory</span>
@@ -103,7 +103,7 @@ export default function Navbar() {
             {NAV_CATEGORIES.map(({ label, href, icon: Icon }) => (
               <Link key={href} href={href} onClick={() => setOpen(false)}>
                 <div className="flex items-center gap-2 py-2 text-gray-700 dark:text-gray-300 font-medium">
-                  <Icon className="w-4 h-4 text-blue-600" />
+                  <Icon className="w-4 h-4 text-red-600" />
                   {label}
                 </div>
               </Link>

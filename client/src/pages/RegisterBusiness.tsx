@@ -71,7 +71,7 @@ export default function RegisterBusiness() {
             </p>
             <div className="flex gap-3 justify-center flex-wrap">
               <Link href="/dashboard">
-                <Button className="bg-blue-600 text-white" data-testid="button-go-dashboard">Go to Dashboard</Button>
+                <Button className="bg-red-600 text-white" data-testid="button-go-dashboard">Go to Dashboard</Button>
               </Link>
               <Link href="/">
                 <Button variant="outline">Back to Home</Button>
@@ -88,7 +88,7 @@ export default function RegisterBusiness() {
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-center mb-6">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-md bg-blue-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-md bg-red-600 flex items-center justify-center">
               <Car className="w-5 h-5 text-white" />
             </div>
             <span className="font-bold text-lg text-gray-900 dark:text-white">AutoDirectory</span>
@@ -164,7 +164,7 @@ export default function RegisterBusiness() {
 
               <Button
                 type="submit"
-                className="w-full bg-blue-600 text-white"
+                className="w-full bg-red-600 text-white"
                 disabled={loading || !user}
                 data-testid="button-submit-business"
               >

@@ -56,7 +56,7 @@ function ShareButtons({ businessName }: { businessName: string }) {
       label: "Facebook",
       icon: SiFacebook,
       href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(profileUrl)}`,
-      color: "bg-blue-600 hover:bg-blue-700 text-white",
+      color: "bg-red-600 hover:bg-red-700 text-white",
     },
     {
       label: "X",
@@ -328,7 +328,7 @@ export default function BusinessProfile() {
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen pb-12">
       {/* Hero header */}
-      <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-10">
+      <div className="bg-gradient-to-r from-gray-950 to-red-900 text-white py-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="flex items-start gap-5 flex-wrap">
             <div className="w-20 h-20 rounded-md bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/20">
@@ -341,19 +341,19 @@ export default function BusinessProfile() {
             <div className="flex-1 min-w-0">
               <Badge className="mb-2 bg-white/10 text-white border-white/20">{categoryLabel}</Badge>
               <h1 className="text-2xl md:text-3xl font-bold mb-1 truncate" data-testid="business-name">{business.name}</h1>
-              <div className="flex items-center gap-1 text-blue-200 mb-2">
+              <div className="flex items-center gap-1 text-red-200 mb-2">
                 <MapPin className="w-4 h-4 flex-shrink-0" />
                 <span className="text-sm">{business.address}, {business.city}</span>
               </div>
               {avgRating > 0 ? (
                 <div className="flex items-center gap-2">
                   <StarRow rating={Math.round(avgRating)} size="md" />
-                  <span className="text-sm text-blue-100">
+                  <span className="text-sm text-red-100">
                     {avgRating.toFixed(1)} ({business.reviewCount} review{business.reviewCount !== 1 ? "s" : ""})
                   </span>
                 </div>
               ) : (
-                <span className="text-sm text-blue-200">No reviews yet</span>
+                <span className="text-sm text-orange-200">No reviews yet</span>
               )}
             </div>
             <div className="flex gap-2 flex-wrap mt-1">
@@ -392,7 +392,7 @@ export default function BusinessProfile() {
         {isSupport && (
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <Settings className="w-5 h-5 text-red-600 dark:text-red-400" />
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Services Offered {supportServices && supportServices.length > 0 && `(${supportServices.length})`}
               </h2>
@@ -423,7 +423,7 @@ export default function BusinessProfile() {
           <div>
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
               <div className="flex items-center gap-2">
-                <Car className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <Car className="w-5 h-5 text-red-600 dark:text-red-400" />
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Cars for Sale {carListings && `(${carListings.length})`}
                 </h2>
@@ -562,8 +562,8 @@ export default function BusinessProfile() {
                     {reviews.map(r => (
                       <div key={r.id} className="pb-4 border-b border-gray-100 dark:border-gray-800 last:border-0 last:pb-0" data-testid={`review-${r.id}`}>
                         <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{r.name.charAt(0).toUpperCase()}</span>
+                          <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-red-600 dark:text-red-400">{r.name.charAt(0).toUpperCase()}</span>
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
@@ -600,7 +600,7 @@ export default function BusinessProfile() {
                     <Button
                       onClick={() => reviewMutation.mutate()}
                       disabled={!reviewName || !reviewRating || !reviewComment || reviewMutation.isPending}
-                      className="w-full bg-blue-600 text-white"
+                      className="w-full bg-red-600 text-white"
                       data-testid="button-submit-review"
                     >
                       {reviewMutation.isPending ? "Submitting..." : "Submit Review"}
@@ -623,8 +623,8 @@ export default function BusinessProfile() {
               <CardHeader><CardTitle className="text-base">Contact</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <a href={`tel:${business.phone}`} className="flex items-center gap-3 p-3 rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" data-testid="link-phone">
-                  <div className="w-8 h-8 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Phone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <div className="w-8 h-8 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <Phone className="w-4 h-4 text-red-600 dark:text-red-400" />
                   </div>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{business.phone}</span>
                 </a>

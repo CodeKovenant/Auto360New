@@ -51,10 +51,10 @@ export default function Cars() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-10 px-4">
+      <div className="bg-gradient-to-r from-gray-950 to-red-900 text-white py-10 px-4">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-2" data-testid="cars-heading">Cars for Sale</h1>
-          <p className="text-blue-200 mb-6">Browse verified vehicles from trusted dealers</p>
+          <p className="text-orange-200 mb-6">Browse verified vehicles from trusted dealers</p>
           <form onSubmit={e => e.preventDefault()} className="flex items-center gap-2 max-w-xl">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />

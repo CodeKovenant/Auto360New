@@ -94,7 +94,7 @@ export default function PartImageUpload({ value, onChange }: PartImageUploadProp
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="flex flex-col items-center justify-center w-full max-w-xs h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+          className="flex flex-col items-center justify-center w-full max-w-xs h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md text-gray-500 dark:text-gray-400 hover:border-red-400 hover:text-red-500 transition-colors"
           data-testid="button-upload-part-image"
         >
           <ImageIcon className="w-7 h-7 mb-2 opacity-50" />

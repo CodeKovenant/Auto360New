@@ -63,7 +63,7 @@ export default function Businesses() {
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
-              className={showFilters ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800" : ""}
+              className={showFilters ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800" : ""}
               data-testid="button-toggle-filters"
             >
               <SlidersHorizontal className="w-4 h-4 mr-1.5" />

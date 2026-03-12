@@ -10,7 +10,7 @@ const SOCIAL_LINKS = [
 
 export default function TopBar() {
   return (
-    <div className="bg-blue-950 text-blue-100 text-xs">
+    <div className="bg-gray-950 text-orange-100 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-9 flex items-center justify-between gap-4">
         {/* Left — welcome + contact */}
         <div className="flex items-center gap-4 overflow-hidden">
@@ -19,7 +19,7 @@ export default function TopBar() {
           </span>
           <a
             href="mailto:hello@autodirectory.co.ke"
-            className="flex items-center gap-1.5 text-blue-200 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors"
             data-testid="topbar-email"
           >
             <Mail className="w-3.5 h-3.5 flex-shrink-0" />
@@ -29,7 +29,7 @@ export default function TopBar() {
             href="https://wa.me/254700000000"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-blue-200 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors"
             data-testid="topbar-whatsapp"
           >
             <MessageCircle className="w-3.5 h-3.5 flex-shrink-0" />
@@ -46,7 +46,7 @@ export default function TopBar() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={label}
-              className={`text-blue-300 transition-colors ${color}`}
+              className={`text-gray-400 transition-colors ${color}`}
               data-testid={`topbar-social-${label.toLowerCase()}`}
             >
               <Icon className="w-3.5 h-3.5" />

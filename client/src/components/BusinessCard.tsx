@@ -17,7 +17,7 @@ function getCategoryLabel(cat: string) {
 
 function getCategoryColor(cat: string) {
   const colors: Record<string, string> = {
-    car_dealer: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    car_dealer: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
     garage: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
     spare_parts: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
     car_wash: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300",
@@ -45,7 +45,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
                 <div className="flex items-center gap-1.5">
                   <h3 className="font-semibold text-gray-900 dark:text-white text-base leading-tight">{business.name}</h3>
                   {business.premium && (
-                    <BadgeCheck className="w-4 h-4 text-blue-500 flex-shrink-0" title="Premium Business" data-testid={`icon-premium-${business.id}`} />
+                    <BadgeCheck className="w-4 h-4 text-yellow-500 flex-shrink-0" title="Premium Business" data-testid={`icon-premium-${business.id}`} />
                   )}
                 </div>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${getCategoryColor(business.category)}`}>

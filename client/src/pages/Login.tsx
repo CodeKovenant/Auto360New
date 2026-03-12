@@ -45,7 +45,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-md bg-blue-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-md bg-red-600 flex items-center justify-center">
               <Car className="w-6 h-6 text-white" />
             </div>
             <span className="font-bold text-xl text-gray-900 dark:text-white">AutoDirectory</span>
@@ -93,7 +93,7 @@ export default function Login() {
                   </button>
                 </div>
               </div>
-              <Button type="submit" className="w-full bg-blue-600 text-white" disabled={loading} data-testid="button-login">
+              <Button type="submit" className="w-full bg-red-600 text-white" disabled={loading} data-testid="button-login">
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
@@ -101,7 +101,7 @@ export default function Login() {
             <div className="mt-5 text-center">
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{" "}
-                <Link href="/register" className="text-blue-600 dark:text-blue-400 font-medium">
+                <Link href="/register" className="text-red-600 dark:text-red-400 font-medium">
                   Register here
                 </Link>
               </p>

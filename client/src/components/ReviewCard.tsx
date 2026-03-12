@@ -32,8 +32,8 @@ export default function ReviewCard({ review }: ReviewCardProps) {
     <Card className="hover-elevate" data-testid={`review-card-${review.id}`}>
       <CardContent className="pt-4 pb-4">
         <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+          <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+            <span className="text-sm font-bold text-red-600 dark:text-red-400">
               {review.name.charAt(0).toUpperCase()}
             </span>
           </div>
@@ -49,7 +49,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
             <StarRow rating={review.rating} />
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5 line-clamp-2">{review.comment}</p>
             <Link href={`/business/${review.businessId}`}>
-              <span className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1.5 block font-medium">
+              <span className="text-xs text-red-600 dark:text-red-400 hover:underline mt-1.5 block font-medium">
                 {review.businessName}
               </span>
             </Link>
