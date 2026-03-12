@@ -419,8 +419,8 @@ export default function Home() {
               <Link href="/businesses?category=car_dealer" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Car Dealers</Link>
               <Link href="/businesses?category=spare_parts" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Spare Parts</Link>
               <Link href="/businesses?category=garage" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Garages</Link>
+              <Link href="/automotive-support" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Automotive Support</Link>
               <Link href="/cars" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Cars for Sale</Link>
-              <Link href="/garages/services" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Services</Link>
               <Link href="/register-business" className="text-sm text-muted-foreground hover:text-gray-900 dark:hover:text-white transition-colors">Register</Link>
             </div>
           </div>
