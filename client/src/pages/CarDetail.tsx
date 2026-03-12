@@ -1,12 +1,14 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { MapPin, Fuel, Settings2, Gauge, MessageCircle, Car as CarIcon, ChevronLeft, Building2 } from "lucide-react";
+import { MapPin, Gauge, MessageCircle, Car as CarIcon, ChevronLeft, Building2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Car as CarType } from "@shared/schema";
 import { Link } from "wouter";
+import BusinessGallery from "@/components/BusinessGallery";
+import { useAuth } from "@/hooks/use-auth";
 
 type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string };
 
@@ -17,10 +19,13 @@ function formatPrice(price: string | number) {
 
 export default function CarDetail() {
   const params = useParams<{ id: string }>();
+  const { user } = useAuth();
 
   const { data: car, isLoading } = useQuery<CarWithDealer>({
     queryKey: [`/api/cars/${params.id}`],
   });
+
+  const canManageGallery = !!(user && car && user.id === car.dealerId);
 
   if (isLoading) {
     return (
@@ -105,6 +110,18 @@ export default function CarDetail() {
                 {car.description && (
                   <p className="text-sm text-muted-foreground leading-relaxed">{car.description}</p>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Car Gallery */}
+            <Card>
+              <CardContent className="pt-5">
+                <BusinessGallery
+                  entityType="car"
+                  entityId={car.id}
+                  canManage={canManageGallery}
+                  title="Car Photos"
+                />
               </CardContent>
             </Card>
           </div>

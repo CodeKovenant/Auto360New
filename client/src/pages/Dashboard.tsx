@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Building2, MessageSquare, Star, Plus, Edit, Package, CheckCircle, Clock, XCircle, Car, Wrench, BadgeCheck, Sparkles } from "lucide-react";
+import { Building2, MessageSquare, Star, Plus, Edit, Package, CheckCircle, Clock, XCircle, Car, Wrench, BadgeCheck, Sparkles, Images } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import StarRating from "@/components/StarRating";
 import LogoUpload from "@/components/LogoUpload";
 import PartImageUpload from "@/components/PartImageUpload";
+import BusinessGallery from "@/components/BusinessGallery";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +49,7 @@ export default function Dashboard() {
 
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Business>>({});
+  const [galleryCarId, setGalleryCarId] = useState<string | null>(null);
 
   // Spare parts state
   const [newPart, setNewPart] = useState({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "", image: "" });
@@ -486,23 +488,45 @@ export default function Dashboard() {
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-start justify-between gap-2 flex-wrap">
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                                <p className="font-semibold text-gray-900 dark:text-white">{car.title}</p>
-                                {car.condition && (
-                                  <Badge className={`text-xs ${car.condition === "new" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>
-                                    {car.condition === "new" ? "Brand New" : "Used"}
-                                  </Badge>
-                                )}
+                          <div>
+                            <div className="flex items-start justify-between gap-2 flex-wrap">
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                                  <p className="font-semibold text-gray-900 dark:text-white">{car.title}</p>
+                                  {car.condition && (
+                                    <Badge className={`text-xs ${car.condition === "new" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"}`}>
+                                      {car.condition === "new" ? "Brand New" : "Used"}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">{car.brand} {car.model} • {car.year} • {car.location}</p>
+                                <p className="text-base font-bold text-red-600 dark:text-red-400 mt-0.5">KSh {Number(car.price).toLocaleString()}</p>
                               </div>
-                              <p className="text-sm text-muted-foreground">{car.brand} {car.model} • {car.year} • {car.location}</p>
-                              <p className="text-base font-bold text-red-600 dark:text-red-400 mt-0.5">KSh {Number(car.price).toLocaleString()}</p>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setGalleryCarId(galleryCarId === car.id ? null : car.id)}
+                                  data-testid={`button-gallery-car-${car.id}`}
+                                  className={galleryCarId === car.id ? "border-red-400 text-red-600 bg-red-50 dark:bg-red-900/20" : ""}
+                                >
+                                  <Images className="w-3.5 h-3.5 mr-1" />
+                                  Photos
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => setEditingCar(car)} data-testid={`button-edit-car-${car.id}`}><Edit className="w-3.5 h-3.5" /></Button>
+                                <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deleteCarMutation.mutate(car.id)} data-testid={`button-delete-car-${car.id}`}>Remove</Button>
+                              </div>
                             </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" onClick={() => setEditingCar(car)} data-testid={`button-edit-car-${car.id}`}><Edit className="w-3.5 h-3.5" /></Button>
-                              <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deleteCarMutation.mutate(car.id)} data-testid={`button-delete-car-${car.id}`}>Remove</Button>
-                            </div>
+                            {galleryCarId === car.id && (
+                              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                <BusinessGallery
+                                  entityType="car"
+                                  entityId={car.id}
+                                  canManage={true}
+                                  title="Car Photos"
+                                />
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>
