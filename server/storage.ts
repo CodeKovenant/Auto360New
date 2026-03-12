@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { eq, ilike, and, or, sql, gte, lte, desc, inArray } from "drizzle-orm";
 import {
-  users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports,
+  users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports, galleryImages,
   type User, type InsertUser,
   type Business, type InsertBusiness,
   type SparePart, type InsertSparePart,
@@ -12,6 +12,7 @@ import {
   type GarageService, type InsertGarageService,
   type SupportService, type InsertSupportService,
   type BusinessReport, type InsertBusinessReport,
+  type GalleryImage, type InsertGalleryImage,
 } from "@shared/schema";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -80,6 +81,12 @@ export interface IStorage {
   // Reports
   createReport(report: InsertBusinessReport): Promise<BusinessReport>;
   getAllReports(): Promise<(BusinessReport & { businessName: string })[]>;
+
+  // Gallery
+  getGalleryImages(entityType: string, entityId: string): Promise<GalleryImage[]>;
+  addGalleryImage(image: InsertGalleryImage): Promise<GalleryImage>;
+  deleteGalleryImage(id: string): Promise<void>;
+  getGalleryImageById(id: string): Promise<GalleryImage | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -450,6 +457,26 @@ export class DatabaseStorage implements IStorage {
     const bizList = await db.select({ id: businesses.id, name: businesses.name }).from(businesses).where(inArray(businesses.id, bizIds));
     const bizMap = Object.fromEntries(bizList.map(b => [b.id, b.name]));
     return allReports.map(r => ({ ...r, businessName: bizMap[r.businessId] || "Unknown" }));
+  }
+
+  async getGalleryImages(entityType: string, entityId: string) {
+    return db.select().from(galleryImages)
+      .where(and(eq(galleryImages.entityType, entityType), eq(galleryImages.entityId, entityId)))
+      .orderBy(galleryImages.createdAt);
+  }
+
+  async addGalleryImage(image: InsertGalleryImage) {
+    const [created] = await db.insert(galleryImages).values(image).returning();
+    return created;
+  }
+
+  async deleteGalleryImage(id: string) {
+    await db.delete(galleryImages).where(eq(galleryImages.id, id));
+  }
+
+  async getGalleryImageById(id: string) {
+    const [img] = await db.select().from(galleryImages).where(eq(galleryImages.id, id));
+    return img;
   }
 }
 

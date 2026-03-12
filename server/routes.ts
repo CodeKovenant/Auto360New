@@ -14,8 +14,10 @@ import { db } from "./storage";
 // Ensure uploads directories exist
 const logosDir = path.resolve(process.cwd(), "uploads/logos");
 const partsDir = path.resolve(process.cwd(), "uploads/parts");
+const galleryDir = path.resolve(process.cwd(), "uploads/gallery");
 if (!fs.existsSync(logosDir)) fs.mkdirSync(logosDir, { recursive: true });
 if (!fs.existsSync(partsDir)) fs.mkdirSync(partsDir, { recursive: true });
+if (!fs.existsSync(galleryDir)) fs.mkdirSync(galleryDir, { recursive: true });
 
 function makeUpload(dest: string, prefix: string) {
   return multer({
@@ -36,6 +38,7 @@ function makeUpload(dest: string, prefix: string) {
 
 const logoUpload = makeUpload(logosDir, "logo");
 const partImageUpload = makeUpload(partsDir, "part");
+const galleryUpload = makeUpload(galleryDir, "gallery");
 
 const JWT_SECRET = process.env.SESSION_SECRET || "autodirectory-secret-key";
 
@@ -675,6 +678,43 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/support-services/:id", ownerMiddleware, async (req, res) => {
     try {
       await storage.deleteSupportService(req.params.id);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  // Gallery routes
+  app.get("/api/gallery/:entityType/:entityId", async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const images = await storage.getGalleryImages(entityType, entityId);
+      res.json(images);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/gallery/:entityType/:entityId", authMiddleware, galleryUpload.single("image"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No image file uploaded" });
+      const { entityType, entityId } = req.params;
+      const url = `/uploads/gallery/${req.file.filename}`;
+      const caption = req.body.caption || null;
+      const image = await storage.addGalleryImage({ entityType, entityId, url, caption });
+      res.json(image);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/gallery/:id", authMiddleware, async (req: any, res) => {
+    try {
+      const image = await storage.getGalleryImageById(req.params.id);
+      if (!image) return res.status(404).json({ message: "Image not found" });
+      await storage.deleteGalleryImage(req.params.id);
+      const filePath = path.resolve(process.cwd(), image.url.replace(/^\//, ""));
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ message: e.message });

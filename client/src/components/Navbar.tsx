@@ -79,18 +79,6 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-              <Link href="/register-business">
-                <button
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md transition-all ${
-                    isNavActive("/register-business", location)
-                      ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
-                      : "text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }`}
-                  data-testid="nav-register"
-                >
-                  Register Business
-                </button>
-              </Link>
             </div>
 
             {/* Desktop auth section */}
@@ -132,7 +120,7 @@ export default function Navbar() {
                   <Link href="/login">
                     <Button variant="ghost" size="sm" className="text-xs" data-testid="nav-login">Login</Button>
                   </Link>
-                  <Link href="/register">
+                  <Link href="/register-business">
                     <Button size="sm" data-testid="nav-signup" className="text-xs bg-red-600 hover:bg-red-700 text-white">
                       Get Started
                     </Button>
@@ -187,15 +175,6 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-              <Link href="/register-business" onClick={() => setOpen(false)}>
-                <div className={`flex items-center gap-2.5 px-2 py-2.5 rounded-md font-medium text-sm ${
-                  isNavActive("/register-business", location)
-                    ? "bg-red-50 text-red-600"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}>
-                  Register Business
-                </div>
-              </Link>
             </div>
 
             {/* Auth section */}
@@ -224,7 +203,7 @@ export default function Navbar() {
                   <Link href="/login" onClick={() => setOpen(false)} className="flex-1">
                     <Button variant="outline" size="sm" className="w-full text-sm" data-testid="mobile-login">Login</Button>
                   </Link>
-                  <Link href="/register" onClick={() => setOpen(false)} className="flex-1">
+                  <Link href="/register-business" onClick={() => setOpen(false)} className="flex-1">
                     <Button size="sm" className="w-full text-sm bg-red-600 hover:bg-red-700 text-white" data-testid="mobile-signup">Get Started</Button>
                   </Link>
                 </div>

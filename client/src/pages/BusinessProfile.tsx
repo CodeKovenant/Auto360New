@@ -1,6 +1,7 @@
 import { useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import {
   MapPin, Phone, MessageCircle, Building2, Package, Star, Send,
   Car, Wrench, Shield, AlertTriangle, Share2, Flag, Settings,
@@ -19,6 +20,7 @@ import CarCard from "@/components/CarCard";
 import GarageServiceCard from "@/components/GarageServiceCard";
 import SupportServiceCard from "@/components/SupportServiceCard";
 import BusinessMap from "@/components/BusinessMap";
+import BusinessGallery from "@/components/BusinessGallery";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -240,6 +242,7 @@ function ReportBusinessForm({ businessId }: { businessId: string }) {
 export default function BusinessProfile() {
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [reviewName, setReviewName] = useState("");
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
@@ -324,6 +327,7 @@ export default function BusinessProfile() {
   const categoryLabel = BUSINESS_CATEGORIES.find(c => c.value === business.category)?.label || business.category;
   const avgRating = business.avgRating || 0;
   const hasMap = business.latitude && business.longitude;
+  const canManage = !!(user && (user.id === business.ownerId || user.role === "admin"));
 
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen pb-12">
@@ -385,6 +389,18 @@ export default function BusinessProfile() {
           <CardHeader><CardTitle className="text-base">About</CardTitle></CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground leading-relaxed" data-testid="business-description">{business.description}</p>
+          </CardContent>
+        </Card>
+
+        {/* Business Gallery */}
+        <Card>
+          <CardContent className="pt-5">
+            <BusinessGallery
+              entityType="business"
+              entityId={business.id}
+              canManage={canManage}
+              title="Business Photos"
+            />
           </CardContent>
         </Card>
 
@@ -466,7 +482,7 @@ export default function BusinessProfile() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {serviceListings.map(svc => <GarageServiceCard key={svc.id} service={svc} />)}
+                {serviceListings.map(svc => <GarageServiceCard key={svc.id} service={svc} canManage={canManage} />)}
               </div>
             )}
           </div>
@@ -518,6 +534,14 @@ export default function BusinessProfile() {
                           <MessageCircle className="w-3 h-3 mr-1" />WhatsApp
                         </Button>
                       </a>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <BusinessGallery
+                        entityType="spare_part"
+                        entityId={part.id}
+                        canManage={canManage}
+                        title="Part Photos"
+                      />
                     </div>
                     </div>
                   </div>

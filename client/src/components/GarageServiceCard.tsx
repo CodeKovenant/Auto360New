@@ -1,16 +1,18 @@
 import { Link } from "wouter";
-import { MapPin, Wrench, MessageCircle, Phone } from "lucide-react";
+import { MapPin, Wrench, MessageCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import BusinessGallery from "@/components/BusinessGallery";
 import type { GarageService } from "@shared/schema";
 
 interface GarageServiceCardProps {
   service: GarageService & { garageName: string; garageWhatsapp: string; garageCity: string };
   garageId?: string;
+  canManage?: boolean;
 }
 
-export default function GarageServiceCard({ service, garageId }: GarageServiceCardProps) {
+export default function GarageServiceCard({ service, garageId, canManage = false }: GarageServiceCardProps) {
   return (
     <Card className="hover-elevate cursor-pointer flex flex-col" data-testid={`card-service-${service.id}`}>
       <CardContent className="p-5 flex flex-col flex-1">
@@ -66,6 +68,15 @@ export default function GarageServiceCard({ service, garageId }: GarageServiceCa
               </Button>
             </a>
           )}
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
+          <BusinessGallery
+            entityType="garage_service"
+            entityId={service.id}
+            canManage={canManage}
+            title="Service Photos"
+          />
         </div>
       </CardContent>
     </Card>

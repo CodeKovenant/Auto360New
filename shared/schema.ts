@@ -137,6 +137,15 @@ export const businessReports = pgTable("business_reports", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const galleryImages = pgTable("gallery_images", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entityType: text("entity_type").notNull(),
+  entityId: varchar("entity_id").notNull(),
+  url: text("url").notNull(),
+  caption: text("caption"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertBusinessSchema = createInsertSchema(businesses).omit({ id: true, createdAt: true, status: true });
 export const insertSparePartSchema = createInsertSchema(spareParts).omit({ id: true, createdAt: true });
@@ -145,6 +154,7 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export const insertCarSchema = createInsertSchema(cars).omit({ id: true, createdAt: true });
 export const insertGarageServiceSchema = createInsertSchema(garageServices).omit({ id: true, createdAt: true });
 export const insertSupportServiceSchema = createInsertSchema(supportServices).omit({ id: true, createdAt: true });
+export const insertGalleryImageSchema = createInsertSchema(galleryImages).omit({ id: true, createdAt: true });
 export const insertBusinessReportSchema = createInsertSchema(businessReports).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
@@ -165,6 +175,8 @@ export type SupportService = typeof supportServices.$inferSelect;
 export type InsertSupportService = z.infer<typeof insertSupportServiceSchema>;
 export type BusinessReport = typeof businessReports.$inferSelect;
 export type InsertBusinessReport = z.infer<typeof insertBusinessReportSchema>;
+export type GalleryImage = typeof galleryImages.$inferSelect;
+export type InsertGalleryImage = z.infer<typeof insertGalleryImageSchema>;
 
 export const REPORT_REASONS = [
   { value: "fake_listing", label: "Fake Listing" },
