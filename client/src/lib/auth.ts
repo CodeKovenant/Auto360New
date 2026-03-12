@@ -18,6 +18,7 @@ export function getAuthUser(): AuthUser | null {
 export function setAuthUser(user: AuthUser, token: string) {
   localStorage.setItem("auth_user", JSON.stringify(user));
   localStorage.setItem("auth_token", token);
+  window.dispatchEvent(new Event("auth-changed"));
 }
 
 export function getAuthToken(): string | null {
@@ -27,4 +28,5 @@ export function getAuthToken(): string | null {
 export function logout() {
   localStorage.removeItem("auth_user");
   localStorage.removeItem("auth_token");
+  window.dispatchEvent(new Event("auth-changed"));
 }

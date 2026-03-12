@@ -6,11 +6,13 @@ export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(getAuthUser());
 
   useEffect(() => {
-    const handleStorage = () => {
-      setUser(getAuthUser());
+    const sync = () => setUser(getAuthUser());
+    window.addEventListener("auth-changed", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("auth-changed", sync);
+      window.removeEventListener("storage", sync);
     };
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   function login(userData: AuthUser, token: string) {
