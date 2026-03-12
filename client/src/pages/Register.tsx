@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Car, Eye, EyeOff } from "lucide-react";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,11 +49,8 @@ export default function Register() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-md bg-red-600 flex items-center justify-center">
-              <Car className="w-6 h-6 text-white" />
-            </div>
-            <span className="font-bold text-xl text-gray-900 dark:text-white">AutoDirectory</span>
+          <Link href="/">
+            <img src="/logo.png" alt="Auto360" className="h-12 w-auto object-contain" />
           </Link>
         </div>
 

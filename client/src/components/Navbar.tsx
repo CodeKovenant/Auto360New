@@ -29,11 +29,12 @@ export default function Navbar() {
       <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
-            <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-9 h-9 rounded-md bg-red-600 flex items-center justify-center">
-                <Car className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg text-gray-900 dark:text-white">AutoDirectory</span>
+            <Link href="/" className="flex items-center flex-shrink-0" data-testid="nav-logo">
+              <img
+                src="/logo.png"
+                alt="Auto360 - Your guide to the Auto World"
+                className="h-12 w-auto object-contain"
+              />
             </Link>
 
             <div className="hidden lg:flex items-center gap-0.5">

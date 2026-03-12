@@ -87,11 +87,8 @@ export default function RegisterBusiness() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-10 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-center mb-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-md bg-red-600 flex items-center justify-center">
-              <Car className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-lg text-gray-900 dark:text-white">AutoDirectory</span>
+          <Link href="/">
+            <img src="/logo.png" alt="Auto360" className="h-12 w-auto object-contain" />
           </Link>
         </div>
 
