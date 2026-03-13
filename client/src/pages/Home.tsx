@@ -79,20 +79,32 @@ export default function Home() {
     <div className="min-h-screen bg-white dark:bg-gray-950">
 
       {/* ── 1. HERO ── */}
-      <section className="relative bg-gradient-to-br from-gray-950 via-red-950 to-red-900 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-orange-400 to-transparent" />
+      <section
+        className="relative text-white overflow-hidden"
+        style={{
+          backgroundImage: "url(/hero-bg.jpeg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center right",
+        }}
+      >
+        {/* Dark gradient overlay — heavy on the left (text side), lighter on the right (car side) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/30" />
+        {/* Subtle red tint on the left edge for brand color */}
+        <div className="absolute inset-0 bg-gradient-to-br from-red-950/50 via-transparent to-transparent" />
+        {/* Fade into the page at the bottom */}
         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-gray-950 to-transparent" />
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-6 border border-white/20">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               Trusted Car Services Near You
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-5" data-testid="hero-heading">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-5 drop-shadow-lg" data-testid="hero-heading">
               Find Trusted Car Services
               <span className="block text-orange-400">Near You</span>
             </h1>
-            <p className="text-lg md:text-xl text-red-100 mb-8 max-w-xl">
+            <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-xl drop-shadow">
               Dealers, garages, spare parts, car wash and more — all in one place.
             </p>
             <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-xl mb-8">
@@ -112,18 +124,18 @@ export default function Home() {
             </form>
             <div className="flex items-center gap-3 flex-wrap">
               <Link href="/businesses">
-                <Button variant="outline" className="border-white/30 text-white bg-white/10 backdrop-blur-sm" data-testid="button-browse-hero">
+                <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-hero">
                   Browse Businesses
                 </Button>
               </Link>
               <Link href="/cars">
-                <Button variant="outline" className="border-white/30 text-white bg-white/10 backdrop-blur-sm" data-testid="button-browse-cars-hero">
+                <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-cars-hero">
                   <Car className="w-4 h-4 mr-1.5" />
                   Cars for Sale
                 </Button>
               </Link>
               <Link href="/register-business">
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white" data-testid="button-register-hero">
+                <Button className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg" data-testid="button-register-hero">
                   Register Your Business
                 </Button>
               </Link>
