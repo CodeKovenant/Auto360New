@@ -408,7 +408,7 @@ export default function Home() {
       {/* ── 11. CTA ── */}
       <section className="py-14 bg-gradient-to-r from-red-800 to-red-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">Register Your Car Business Today</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">Register Your Automotive Business Today</h2>
           <p className="text-orange-100 mb-7 max-w-lg mx-auto">
             Reach thousands of customers looking for trusted automotive services.
           </p>
