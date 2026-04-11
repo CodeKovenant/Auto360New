@@ -101,11 +101,11 @@ export default function Home() {
               Trusted Car Services Near You
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-5 drop-shadow-lg" data-testid="hero-heading">
-              Find Trusted Car Services
-              <span className="block text-orange-400">Near You</span>
+              All Your Automobile Needs. One Platform.
+              <span className="block text-orange-400">Your One-Stop Auto Solution.</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-xl drop-shadow">
-              Dealers, garages, spare parts, car wash and more — all in one place.
+              Connect with trusted dealers, spare parts &amp; garage services near you.
             </p>
             <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-xl mb-8">
               <div className="flex-1 relative">
