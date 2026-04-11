@@ -84,8 +84,14 @@ export default function RegisterBusiness() {
               <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Listing Submitted!</h2>
-            <p className="text-muted-foreground mb-5">
-              Your business has been submitted and is pending admin approval. We'll review it shortly.
+            <div className="text-left bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-5">
+              <p className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">Check your email</p>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                We've sent a verification link to <strong>{user?.email}</strong>. Please click the link to verify your email address and activate your account.
+              </p>
+            </div>
+            <p className="text-muted-foreground mb-5 text-sm">
+              After email verification, your business will be reviewed by our admin team. You'll receive another email once it's approved.
             </p>
             <div className="flex gap-3 justify-center flex-wrap">
               <Link href="/dashboard">

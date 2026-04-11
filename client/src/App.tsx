@@ -17,6 +17,7 @@ import CarDetail from "@/pages/CarDetail";
 import GarageServices from "@/pages/GarageServices";
 import AutomotiveSupport from "@/pages/AutomotiveSupport";
 import BrandPage from "@/pages/BrandPage";
+import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/register-business" component={RegisterBusiness} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/admin" component={Admin} />
+      <Route path="/verify-email/:token" component={VerifyEmail} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -4,12 +4,14 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses } from "@shared/schema";
 import { initiateSTKPush, PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
 import { db } from "./storage";
+import { sendVerificationEmail, sendAdminNotificationEmail, sendApprovalEmail, sendRejectionEmail, ADMIN_EMAIL, isMailConfigured } from "./mailer";
 
 // Ensure uploads directories exist
 const logosDir = path.resolve(process.cwd(), "uploads/logos");
@@ -238,9 +240,79 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const user = (req as any).user;
       const body = insertBusinessSchema.parse({ ...req.body, ownerId: user.id });
       const biz = await storage.createBusiness(body);
-      res.json(biz);
+
+      // Generate email verification token and send emails (non-blocking)
+      const token = crypto.randomBytes(32).toString("hex");
+      await storage.updateUser(user.id, { emailVerificationToken: token });
+      const fullUser = await storage.getUserById(user.id);
+      const appDomain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS?.split(",")[0];
+      const appUrl = appDomain ? `https://${appDomain}` : "http://localhost:5000";
+
+      sendVerificationEmail({
+        toEmail: fullUser?.email || user.email,
+        toName: fullUser?.name || user.name,
+        businessName: biz.name,
+        token,
+      }).catch(e => console.error("[mailer] verification email failed:", e.message));
+
+      sendAdminNotificationEmail({
+        businessName: biz.name,
+        businessCategory: biz.category,
+        businessCity: biz.city,
+        ownerName: fullUser?.name || user.name,
+        ownerEmail: fullUser?.email || user.email,
+        adminUrl: `${appUrl}/admin`,
+      }).catch(e => console.error("[mailer] admin notification failed:", e.message));
+
+      res.json({ ...biz, emailVerificationSent: isMailConfigured() });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
+    }
+  });
+
+  // Email verification
+  app.get("/api/verify-email/:token", async (req, res) => {
+    try {
+      const user = await storage.getUserByVerificationToken(req.params.token);
+      if (!user) return res.status(400).json({ message: "Invalid or expired verification link." });
+      await storage.updateUser(user.id, {
+        emailVerificationToken: null as any,
+        emailVerifiedAt: new Date(),
+      });
+      res.json({ success: true, message: "Email verified successfully!" });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // Check email verification status
+  app.get("/api/me/email-verified", authMiddleware, async (req: any, res) => {
+    try {
+      const user = await storage.getUserById(req.user.id);
+      res.json({ verified: !!user?.emailVerifiedAt, email: user?.email });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // Resend verification email
+  app.post("/api/me/resend-verification", authMiddleware, async (req: any, res) => {
+    try {
+      const user = await storage.getUserById(req.user.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      if (user.emailVerifiedAt) return res.status(400).json({ message: "Email already verified" });
+      const biz = await storage.getBusinessByOwnerId(user.id);
+      const token = crypto.randomBytes(32).toString("hex");
+      await storage.updateUser(user.id, { emailVerificationToken: token });
+      await sendVerificationEmail({
+        toEmail: user.email,
+        toName: user.name,
+        businessName: biz?.name || "your business",
+        token,
+      });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
     }
   });
 
@@ -331,6 +403,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.put("/api/admin/businesses/:id/approve", adminMiddleware, async (req, res) => {
     try {
       const biz = await storage.updateBusiness(req.params.id, { status: "approved" });
+      const owner = await storage.getUserById(biz.ownerId);
+      if (owner) {
+        sendApprovalEmail({ toEmail: owner.email, toName: owner.name, businessName: biz.name })
+          .catch(e => console.error("[mailer] approval email failed:", e.message));
+      }
       res.json(biz);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -340,6 +417,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.put("/api/admin/businesses/:id/reject", adminMiddleware, async (req, res) => {
     try {
       const biz = await storage.updateBusiness(req.params.id, { status: "rejected" });
+      const owner = await storage.getUserById(biz.ownerId);
+      if (owner) {
+        sendRejectionEmail({ toEmail: owner.email, toName: owner.name, businessName: biz.name })
+          .catch(e => console.error("[mailer] rejection email failed:", e.message));
+      }
       res.json(biz);
     } catch (e: any) {
       res.status(400).json({ message: e.message });

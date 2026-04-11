@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Building2, MessageSquare, Star, Plus, Edit, Package, CheckCircle, Clock, XCircle, Car, Wrench, BadgeCheck, Sparkles, Images, Upload } from "lucide-react";
+import { Building2, MessageSquare, Star, Plus, Edit, Package, CheckCircle, Clock, XCircle, Car, Wrench, BadgeCheck, Sparkles, Images, Upload, Mail, AlertTriangle } from "lucide-react";
 import ImportModal from "@/components/ImportModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,17 @@ export default function Dashboard() {
   if (!user || user.role !== "owner") { navigate("/login"); return null; }
 
   const { data, isLoading } = useQuery<DashboardData>({ queryKey: ["/api/dashboard"] });
+
+  const { data: emailStatus } = useQuery<{ verified: boolean; email: string }>({
+    queryKey: ["/api/me/email-verified"],
+    staleTime: 60_000,
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async () => { const res = await apiRequest("POST", "/api/me/resend-verification", {}); return res.json(); },
+    onSuccess: () => toast({ title: "Verification email sent!", description: "Please check your inbox." }),
+    onError: (e: Error) => toast({ title: "Failed to send email", description: e.message, variant: "destructive" }),
+  });
 
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Business>>({});
@@ -218,6 +229,28 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6">
+        {/* Email verification banner */}
+        {emailStatus && !emailStatus.verified && (
+          <div className="mb-5 flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+            <Mail className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Verify your email address</p>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-0.5">
+                We sent a verification link to <strong>{emailStatus.email}</strong>. Please check your inbox and click the link to activate your account.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-shrink-0 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40 h-8"
+              onClick={() => resendMutation.mutate()}
+              disabled={resendMutation.isPending}
+            >
+              {resendMutation.isPending ? "Sending…" : "Resend"}
+            </Button>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {[
