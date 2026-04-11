@@ -6,10 +6,30 @@ import { useAuth } from "@/hooks/use-auth";
 import TopBar from "./TopBar";
 
 const NAV_CATEGORIES = [
-  { label: "Automobile Dealers", href: "/automobile-dealers", icon: Car, param: "car_dealer" },
-  { label: "Autospares Dealers", href: "/autospares-dealers", icon: Store, param: "spare_parts" },
-  { label: "Autogarage Repair", href: "/autogarage-repair", icon: Wrench, param: "garage" },
-  { label: "Automotive Support", href: "/automotive-support", icon: Shield, param: null },
+  {
+    label: "Automobile Dealers", href: "/automobile-dealers", icon: Car, param: "car_dealer",
+    activeDesktop: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-b-2 border-red-500",
+    activeMobile: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400",
+    iconActive: "text-red-500",
+  },
+  {
+    label: "Autospares Dealers", href: "/autospares-dealers", icon: Store, param: "spare_parts",
+    activeDesktop: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-b-2 border-orange-500",
+    activeMobile: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400",
+    iconActive: "text-orange-500",
+  },
+  {
+    label: "Autogarage Repair", href: "/autogarage-repair", icon: Wrench, param: "garage",
+    activeDesktop: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-b-2 border-green-500",
+    activeMobile: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400",
+    iconActive: "text-green-500",
+  },
+  {
+    label: "Automotive Support", href: "/automotive-support", icon: Shield, param: null,
+    activeDesktop: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-b-2 border-purple-500",
+    activeMobile: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400",
+    iconActive: "text-purple-500",
+  },
 ];
 
 function isNavActive(href: string, location: string): boolean {
@@ -61,15 +81,15 @@ export default function Navbar() {
 
             {/* Desktop category nav */}
             <div className="hidden lg:flex items-center gap-0">
-              {NAV_CATEGORIES.map(({ label, href, icon: Icon, param }) => {
+              {NAV_CATEGORIES.map(({ label, href, icon: Icon, activeDesktop }) => {
                 const active = isNavActive(href, location);
                 return (
                   <Link key={href} href={href}>
                     <button
                       className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md transition-all ${
                         active
-                          ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-b-2 border-red-500"
-                          : "text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                          ? activeDesktop
+                          : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
                       }`}
                       data-testid={`nav-cat-${label.toLowerCase().replace(/\s+/g, "-")}`}
                     >
@@ -160,16 +180,16 @@ export default function Navbar() {
             {/* Category links */}
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 pt-1 pb-1.5">Browse</p>
             <div className="space-y-0.5">
-              {NAV_CATEGORIES.map(({ label, href, icon: Icon }) => {
+              {NAV_CATEGORIES.map(({ label, href, icon: Icon, activeMobile, iconActive }) => {
                 const active = isNavActive(href, location);
                 return (
                   <Link key={href} href={href} onClick={() => setOpen(false)}>
                     <div className={`flex items-center gap-2.5 px-2 py-2.5 rounded-md font-medium text-sm transition-colors ${
                       active
-                        ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
+                        ? activeMobile
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     }`}>
-                      <Icon className={`w-4 h-4 ${active ? "text-red-500" : "text-gray-400"}`} />
+                      <Icon className={`w-4 h-4 ${active ? iconActive : "text-gray-400"}`} />
                       {label}
                     </div>
                   </Link>
