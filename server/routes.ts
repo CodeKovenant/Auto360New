@@ -684,6 +684,189 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // CSV Import routes
+  const csvUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype === "text/csv" || file.originalname.endsWith(".csv")) cb(null, true);
+      else cb(new Error("Only CSV files are allowed"));
+    },
+  });
+
+  function parseCSV(raw: string): Record<string, string>[] {
+    const lines = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim().split("\n");
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+    return lines.slice(1).filter(l => l.trim()).map(line => {
+      const values: string[] = [];
+      let cur = "", inQuotes = false;
+      for (const ch of line) {
+        if (ch === '"') { inQuotes = !inQuotes; }
+        else if (ch === "," && !inQuotes) { values.push(cur.trim()); cur = ""; }
+        else { cur += ch; }
+      }
+      values.push(cur.trim());
+      const row: Record<string, string> = {};
+      headers.forEach((h, i) => { row[h] = (values[i] ?? "").replace(/^"|"$/g, ""); });
+      return row;
+    });
+  }
+
+  const TEMPLATES: Record<string, string> = {
+    cars: "title,brand,model,year,price,mileage,fuelType,transmission,condition,location,description\nToyota Prado TX 2020,Toyota,Prado,2020,6500000,35000,diesel,automatic,used,Nairobi,Well maintained Prado TX in excellent condition",
+    parts: "partName,carBrand,carModel,year,condition,price,description\nBrake Pads Front,Toyota,Corolla,2019,new,KSh 2500,Genuine Toyota brake pads",
+    services: "name,description,price\nOil Change & Filter Service,Full synthetic oil change with filter replacement. Includes 20-point inspection.,KSh 2500",
+    "support-services": "name,description,price\nComprehensive Cover,Full vehicle comprehensive insurance with third-party liability,KSh 15000/year",
+  };
+
+  app.get("/api/import/template/:type", authMiddleware, (req, res) => {
+    const type = req.params.type;
+    if (!TEMPLATES[type]) return res.status(404).json({ message: "Unknown template type" });
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename="${type}-template.csv"`);
+    res.send(TEMPLATES[type]);
+  });
+
+  app.post("/api/import/cars", ownerMiddleware, csvUpload.single("file"), async (req: any, res) => {
+    try {
+      const biz = await storage.getBusinessByOwnerId(req.user.id);
+      if (!biz || biz.category !== "car_dealer") return res.status(403).json({ message: "Only car dealers can import car listings" });
+      if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const rows = parseCSV(req.file.buffer.toString("utf-8"));
+      if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
+      const results = { imported: 0, failed: 0, errors: [] as string[] };
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        try {
+          const body = insertCarSchema.parse({
+            dealerId: biz.id,
+            title: row.title || "",
+            brand: row.brand || "",
+            model: row.model || "",
+            year: row.year ? parseInt(row.year) : new Date().getFullYear(),
+            price: row.price ? String(parseFloat(row.price.replace(/[^0-9.]/g, ""))) : "0",
+            mileage: row.mileage ? parseInt(row.mileage) : null,
+            fuelType: row.fuelType || "petrol",
+            transmission: row.transmission || "automatic",
+            condition: row.condition || "used",
+            location: row.location || biz.city || "",
+            description: row.description || null,
+            images: [],
+            featured: false,
+          });
+          await storage.createCar(body);
+          results.imported++;
+        } catch (e: any) {
+          results.failed++;
+          results.errors.push(`Row ${i + 2}: ${e.message}`);
+        }
+      }
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/import/parts", ownerMiddleware, csvUpload.single("file"), async (req: any, res) => {
+    try {
+      const biz = await storage.getBusinessByOwnerId(req.user.id);
+      if (!biz) return res.status(403).json({ message: "No business found" });
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const rows = parseCSV(req.file.buffer.toString("utf-8"));
+      if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
+      const results = { imported: 0, failed: 0, errors: [] as string[] };
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        try {
+          const body = insertSparePartSchema.parse({
+            businessId: biz.id,
+            partName: row.partName || "",
+            carBrand: row.carBrand || "",
+            carModel: row.carModel || "",
+            year: row.year || null,
+            condition: row.condition || "new",
+            price: row.price || null,
+            description: row.description || null,
+            image: row.image || null,
+          });
+          await storage.createSparePart(body);
+          results.imported++;
+        } catch (e: any) {
+          results.failed++;
+          results.errors.push(`Row ${i + 2}: ${e.message}`);
+        }
+      }
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/import/services", ownerMiddleware, csvUpload.single("file"), async (req: any, res) => {
+    try {
+      const biz = await storage.getBusinessByOwnerId(req.user.id);
+      if (!biz || biz.category !== "garage") return res.status(403).json({ message: "Only garages can import services" });
+      if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const rows = parseCSV(req.file.buffer.toString("utf-8"));
+      if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
+      const results = { imported: 0, failed: 0, errors: [] as string[] };
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        try {
+          const body = insertGarageServiceSchema.parse({
+            garageId: biz.id,
+            name: row.name || "",
+            description: row.description || null,
+            price: row.price || null,
+            popular: false,
+          });
+          await storage.createGarageService(body);
+          results.imported++;
+        } catch (e: any) {
+          results.failed++;
+          results.errors.push(`Row ${i + 2}: ${e.message}`);
+        }
+      }
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/import/support-services", ownerMiddleware, csvUpload.single("file"), async (req: any, res) => {
+    try {
+      const biz = await storage.getBusinessByOwnerId(req.user.id);
+      const supportCategories = ["insurance", "car_wash", "other"];
+      if (!biz || !supportCategories.includes(biz.category)) return res.status(403).json({ message: "Only automotive support businesses can import services" });
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const rows = parseCSV(req.file.buffer.toString("utf-8"));
+      if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
+      const results = { imported: 0, failed: 0, errors: [] as string[] };
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        try {
+          const body = insertSupportServiceSchema.parse({
+            businessId: biz.id,
+            name: row.name || "",
+            description: row.description || null,
+            price: row.price || null,
+          });
+          await storage.createSupportService(body);
+          results.imported++;
+        } catch (e: any) {
+          results.failed++;
+          results.errors.push(`Row ${i + 2}: ${e.message}`);
+        }
+      }
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   // Brand page route
   app.get("/api/businesses/by-brand/:brand", async (req, res) => {
     try {

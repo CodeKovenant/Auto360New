@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Building2, MessageSquare, Star, Plus, Edit, Package, CheckCircle, Clock, XCircle, Car, Wrench, BadgeCheck, Sparkles, Images } from "lucide-react";
+import { Building2, MessageSquare, Star, Plus, Edit, Package, CheckCircle, Clock, XCircle, Car, Wrench, BadgeCheck, Sparkles, Images, Upload } from "lucide-react";
+import ImportModal from "@/components/ImportModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +71,9 @@ export default function Dashboard() {
   const [showAddService, setShowAddService] = useState(false);
   const [editingService, setEditingService] = useState<GarageService | null>(null);
   const [newService, setNewService] = useState({ name: "", description: "", price: "", popular: false });
+
+  // Import modal state
+  const [importModalType, setImportModalType] = useState<"cars" | "parts" | "services" | "support-services" | null>(null);
 
   // M-Pesa premium state
   const [mpesaPhone, setMpesaPhone] = useState("");
@@ -380,7 +384,10 @@ export default function Dashboard() {
                 </div>
               )}
               {business.status === "approved" && (
-                <div className="flex justify-end mb-4">
+                <div className="flex justify-end gap-2 mb-4">
+                  <Button variant="outline" onClick={() => setImportModalType("cars")}>
+                    <Upload className="w-4 h-4 mr-1" />Import CSV
+                  </Button>
                   <Button onClick={() => setShowAddCar(!showAddCar)} className="bg-red-600 text-white" data-testid="button-add-car">
                     <Plus className="w-4 h-4 mr-1" />Add Car
                   </Button>
@@ -546,7 +553,10 @@ export default function Dashboard() {
                 </div>
               )}
               {business.status === "approved" && (
-                <div className="flex justify-end mb-4">
+                <div className="flex justify-end gap-2 mb-4">
+                  <Button variant="outline" onClick={() => setImportModalType("services")}>
+                    <Upload className="w-4 h-4 mr-1" />Import CSV
+                  </Button>
                   <Button onClick={() => setShowAddService(!showAddService)} className="bg-orange-500 text-white" data-testid="button-add-service">
                     <Plus className="w-4 h-4 mr-1" />Add Service
                   </Button>
@@ -668,7 +678,10 @@ export default function Dashboard() {
           {/* Spare Parts Tab */}
           {!isDealer && !isGarage && (
             <TabsContent value="parts">
-              <div className="flex justify-end mb-4">
+              <div className="flex justify-end gap-2 mb-4">
+                <Button variant="outline" onClick={() => setImportModalType("parts")}>
+                  <Upload className="w-4 h-4 mr-1" />Import CSV
+                </Button>
                 <Button onClick={() => setShowAddPart(!showAddPart)} className="bg-orange-500 text-white" data-testid="button-add-part">
                   <Plus className="w-4 h-4 mr-1" />Add Part
                 </Button>
@@ -774,9 +787,12 @@ export default function Dashboard() {
                 </div>
               )}
 
-              <div className="flex justify-end mb-4">
+              <div className="flex justify-end gap-2 mb-4">
+                <Button variant="outline" onClick={() => setImportModalType("support-services")}>
+                  <Upload className="w-4 h-4 mr-1" />Import CSV
+                </Button>
                 <Button onClick={() => setShowAddSupportService(!showAddSupportService)} className="bg-orange-500 text-white" data-testid="button-add-support-service">
-                  {showAddSupportService ? "Cancel" : "+ Add Service"}
+                  {showAddSupportService ? "Cancel" : <><Plus className="w-4 h-4 mr-1" />Add Service</>}
                 </Button>
               </div>
 
@@ -849,6 +865,14 @@ export default function Dashboard() {
           )}
         </Tabs>
       </div>
+
+      {importModalType && (
+        <ImportModal
+          open={true}
+          type={importModalType}
+          onClose={() => setImportModalType(null)}
+        />
+      )}
     </div>
   );
 }
