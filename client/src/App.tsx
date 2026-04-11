@@ -20,6 +20,7 @@ import BrandPage from "@/pages/BrandPage";
 import VerifyEmail from "@/pages/VerifyEmail";
 import AutoDealers from "@/pages/AutoDealers";
 import AutoSpares from "@/pages/AutoSpares";
+import AutoGarages from "@/pages/AutoGarages";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/automobile-dealers" component={AutoDealers} />
       <Route path="/autospares-dealers" component={AutoSpares} />
+      <Route path="/autogarage-repair" component={AutoGarages} />
       <Route path="/businesses" component={Businesses} />
       <Route path="/business/:id" component={BusinessProfile} />
       <Route path="/cars" component={Cars} />
