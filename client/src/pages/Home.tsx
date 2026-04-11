@@ -100,7 +100,7 @@ export default function Home() {
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               Trusted Car Services Near You
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-5 drop-shadow-lg" data-testid="hero-heading">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-5 drop-shadow-lg" data-testid="hero-heading">
               All Your Automobile Needs. One Platform.
               <span className="block text-orange-400">Your One-Stop Auto Solution.</span>
             </h1>
