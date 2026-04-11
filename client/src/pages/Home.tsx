@@ -123,15 +123,15 @@ export default function Home() {
               </Button>
             </form>
             <div className="flex items-center gap-3 flex-wrap">
-              <Link href="/businesses">
-                <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-hero">
-                  Browse Businesses
-                </Button>
-              </Link>
               <Link href="/cars">
                 <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-cars-hero">
                   <Car className="w-4 h-4 mr-1.5" />
                   Cars for Sale
+                </Button>
+              </Link>
+              <Link href="/businesses">
+                <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-hero">
+                  Browse Businesses
                 </Button>
               </Link>
               <Link href="/register-business">
