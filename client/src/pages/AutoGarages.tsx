@@ -54,9 +54,9 @@ export default function AutoGarages() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
 
       {/* ── BANNER ── */}
-      <section className="relative bg-gradient-to-br from-gray-950 via-green-950 to-gray-900 text-white overflow-hidden">
+      <section className="relative bg-gradient-to-br from-gray-950 via-red-950 to-gray-900 text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: "radial-gradient(circle at 20% 50%, #16a34a 0%, transparent 50%), radial-gradient(circle at 80% 20%, #15803d 0%, transparent 40%)" }}
+          style={{ backgroundImage: "radial-gradient(circle at 20% 50%, #ef4444 0%, transparent 50%), radial-gradient(circle at 80% 20%, #dc2626 0%, transparent 40%)" }}
         />
         <div className="absolute inset-0 opacity-5"
           style={{ backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)", backgroundSize: "20px 20px" }}
@@ -67,28 +67,28 @@ export default function AutoGarages() {
 
             {/* Left — text content */}
             <div className="flex-1 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 bg-green-600/20 border border-green-500/30 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-6 text-green-200">
-                <BadgeCheck className="w-4 h-4 text-green-400" />
+              <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/30 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-6 text-red-200">
+                <BadgeCheck className="w-4 h-4 text-red-400" />
                 Professional Auto Mechanics
               </div>
 
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-4 drop-shadow-lg" data-testid="garages-banner-heading">
                 Auto Garage Services
-                <span className="block text-green-400">Near You</span>
+                <span className="block text-orange-400">Near You</span>
               </h1>
 
               <p className="text-lg text-gray-300 mb-3 max-w-xl mx-auto lg:mx-0">
                 Get your car repaired by professional mechanics
               </p>
 
-              <div className="flex items-center gap-2 justify-center lg:justify-start mb-8 text-green-300 text-sm font-medium">
+              <div className="flex items-center gap-2 justify-center lg:justify-start mb-8 text-red-300 text-sm font-medium">
                 <Star className="w-4 h-4 flex-shrink-0" />
                 Reliable service you can trust, karibu yako
               </div>
 
               <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
                 <a href="#garage-listings">
-                  <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-6" data-testid="button-browse-garages">
+                  <Button size="lg" className="bg-red-600 hover:bg-red-700 text-white px-6" data-testid="button-browse-garages">
                     <Wrench className="w-4 h-4 mr-2" />
                     Browse Garages
                   </Button>
@@ -110,7 +110,7 @@ export default function AutoGarages() {
                 { icon: Settings, label: "Services Offered", value: "50+" },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="bg-white/10 border border-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                  <Icon className="w-6 h-6 text-green-400 mx-auto mb-2" />
+                  <Icon className="w-6 h-6 text-orange-400 mx-auto mb-2" />
                   <p className="text-xl font-bold text-white">{value}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{label}</p>
                 </div>
@@ -126,7 +126,7 @@ export default function AutoGarages() {
               {GARAGE_SERVICES.map(service => (
                 <span
                   key={service}
-                  className="px-3 py-1 rounded-full bg-white/8 border border-white/10 text-xs text-gray-300 hover:bg-green-600/30 hover:border-green-500/40 hover:text-white transition-colors cursor-default"
+                  className="px-3 py-1 rounded-full bg-white/8 border border-white/10 text-xs text-gray-300 hover:bg-red-600/30 hover:border-red-500/40 hover:text-white transition-colors cursor-default"
                   data-testid={`garage-service-${service.toLowerCase().replace(/\s+/g, "-")}`}
                 >
                   {service}
@@ -154,7 +154,7 @@ export default function AutoGarages() {
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
-              className={showFilters ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : ""}
+              className={showFilters ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800" : ""}
               data-testid="button-toggle-filters"
             >
               <SlidersHorizontal className="w-4 h-4 mr-1.5" />
@@ -213,7 +213,7 @@ export default function AutoGarages() {
                 {businesses.length} garage{businesses.length !== 1 ? "s" : ""} found
               </p>
               <Link href="/register-business">
-                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs" data-testid="button-register-garage">
+                <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white text-xs" data-testid="button-register-garage">
                   <ChevronRight className="w-3.5 h-3.5 mr-1" />
                   Register Your Garage
                 </Button>
@@ -237,7 +237,7 @@ export default function AutoGarages() {
                 <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
               )}
               <Link href="/register-business">
-                <Button className="bg-green-600 hover:bg-green-700 text-white">Register Your Garage</Button>
+                <Button className="bg-red-600 hover:bg-red-700 text-white">Register Your Garage</Button>
               </Link>
             </div>
           </div>
