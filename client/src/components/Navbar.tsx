@@ -7,7 +7,7 @@ import TopBar from "./TopBar";
 
 const NAV_CATEGORIES = [
   { label: "Automobile Dealers", href: "/automobile-dealers", icon: Car, param: "car_dealer" },
-  { label: "Autospares Dealers", href: "/businesses?category=spare_parts", icon: Store, param: "spare_parts" },
+  { label: "Autospares Dealers", href: "/autospares-dealers", icon: Store, param: "spare_parts" },
   { label: "Autogarage Repair", href: "/businesses?category=garage", icon: Wrench, param: "garage" },
   { label: "Automotive Support", href: "/automotive-support", icon: Shield, param: null },
 ];

@@ -1,0 +1,248 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { Search, Package, MapPin, BadgeCheck, ChevronRight, Building2, SlidersHorizontal, X, Wrench, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import BusinessCard from "@/components/BusinessCard";
+import type { Business } from "@shared/schema";
+
+const KENYA_COUNTIES = [
+  "Baringo","Bomet","Bungoma","Busia","Elgeyo-Marakwet","Embu","Garissa",
+  "Homa Bay","Isiolo","Kajiado","Kakamega","Kericho","Kiambu","Kilifi",
+  "Kirinyaga","Kisii","Kisumu","Kitui","Kwale","Laikipia","Lamu","Machakos",
+  "Makueni","Mandera","Marsabit","Meru","Migori","Mombasa","Murang'a",
+  "Nairobi","Nakuru","Nandi","Narok","Nyandarua","Nyamira","Nyeri",
+  "Samburu","Siaya","Taita-Taveta","Tana River","Tharaka-Nithi",
+  "Trans-Nzoia","Turkana","Uasin Gishu","Vihiga","Wajir","West Pokot",
+];
+
+const PARTS_CATEGORIES = [
+  "Engine Parts","Brake Systems","Suspension","Electrical","Body Parts",
+  "Transmission","Exhaust","Cooling System","Tyres & Wheels","Filters",
+  "Lights & Bulbs","Accessories",
+];
+
+export default function AutoSpares() {
+  const [search, setSearch] = useState("");
+  const [city, setCity] = useState("all");
+  const [minRating, setMinRating] = useState("0");
+  const [showFilters, setShowFilters] = useState(false);
+
+  const queryString = new URLSearchParams({
+    category: "spare_parts",
+    ...(search ? { q: search } : {}),
+    ...(city !== "all" ? { city } : {}),
+    ...(minRating !== "0" ? { minRating } : {}),
+  }).toString();
+
+  const { data: businesses, isLoading } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
+    queryKey: [`/api/businesses?${queryString}`],
+  });
+
+  const hasFilters = search || city !== "all" || minRating !== "0";
+
+  function clearFilters() {
+    setSearch("");
+    setCity("all");
+    setMinRating("0");
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+
+      {/* ── BANNER ── */}
+      <section className="relative bg-gradient-to-br from-gray-950 via-orange-950 to-gray-900 text-white overflow-hidden">
+        <div className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: "radial-gradient(circle at 20% 50%, #f97316 0%, transparent 50%), radial-gradient(circle at 80% 20%, #ea580c 0%, transparent 40%)" }}
+        />
+        <div className="absolute inset-0 opacity-5"
+          style={{ backgroundImage: "repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)", backgroundSize: "20px 20px" }}
+        />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
+          <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+
+            {/* Left — text content */}
+            <div className="flex-1 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 bg-orange-600/20 border border-orange-500/30 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-6 text-orange-200">
+                <BadgeCheck className="w-4 h-4 text-orange-400" />
+                Genuine & Trusted Spare Parts
+              </div>
+
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-4 drop-shadow-lg" data-testid="spares-banner-heading">
+                Auto Spare Parts
+                <span className="block text-orange-400">Near You</span>
+              </h1>
+
+              <p className="text-lg text-gray-300 mb-3 max-w-xl mx-auto lg:mx-0">
+                Get genuine spare parts from trusted dealers
+              </p>
+
+              <div className="flex items-center gap-2 justify-center lg:justify-start mb-8 text-orange-300 text-sm font-medium">
+                <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                Quality parts for every car, guaranteed
+              </div>
+
+              <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+                <a href="#spares-listings">
+                  <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white px-6" data-testid="button-browse-spares">
+                    <Package className="w-4 h-4 mr-2" />
+                    Browse Spare Parts
+                  </Button>
+                </a>
+                <Link href="/register-business">
+                  <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-6" data-testid="button-list-spares-shop">
+                    List Your Shop
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Right — stats cards */}
+            <div className="flex-shrink-0 grid grid-cols-2 gap-4 w-full max-w-xs">
+              {[
+                { icon: Package, label: "Parts Shops", value: businesses?.length ?? "—" },
+                { icon: MapPin, label: "Counties Covered", value: "47" },
+                { icon: ShieldCheck, label: "Genuine Parts", value: "100%" },
+                { icon: Wrench, label: "Parts Categories", value: "50+" },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="bg-white/10 border border-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                  <Icon className="w-6 h-6 text-orange-400 mx-auto mb-2" />
+                  <p className="text-xl font-bold text-white">{value}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{label}</p>
+                </div>
+              ))}
+            </div>
+
+          </div>
+
+          {/* Parts category pills */}
+          <div className="mt-10 pt-8 border-t border-white/10">
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-4 text-center lg:text-left">Parts categories available</p>
+            <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
+              {PARTS_CATEGORIES.map(part => (
+                <span
+                  key={part}
+                  className="px-3 py-1 rounded-full bg-white/8 border border-white/10 text-xs text-gray-300 hover:bg-orange-600/30 hover:border-orange-500/40 hover:text-white transition-colors cursor-default"
+                  data-testid={`spares-category-${part.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  {part}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── SEARCH & FILTERS ── */}
+      <div id="spares-listings" className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 py-5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex-1 min-w-60 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search spare parts shops by name, city..."
+                className="pl-9"
+                data-testid="input-search-spares"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className={showFilters ? "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800" : ""}
+              data-testid="button-toggle-filters"
+            >
+              <SlidersHorizontal className="w-4 h-4 mr-1.5" />
+              Filters
+            </Button>
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} data-testid="button-clear-filters">
+                <X className="w-4 h-4 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
+
+          {showFilters && (
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Select value={city} onValueChange={setCity}>
+                <SelectTrigger data-testid="select-county">
+                  <SelectValue placeholder="All Counties" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Counties</SelectItem>
+                  {KENYA_COUNTIES.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={minRating} onValueChange={setMinRating}>
+                <SelectTrigger data-testid="select-rating">
+                  <SelectValue placeholder="Any Rating" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Any Rating</SelectItem>
+                  <SelectItem value="3">3+ Stars</SelectItem>
+                  <SelectItem value="4">4+ Stars</SelectItem>
+                  <SelectItem value="5">5 Stars</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── LISTINGS ── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-52 rounded-md" />
+            ))}
+          </div>
+        ) : businesses && businesses.length > 0 ? (
+          <>
+            <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+              <p className="text-sm text-muted-foreground" data-testid="spares-count">
+                {businesses.length} shop{businesses.length !== 1 ? "s" : ""} found
+              </p>
+              <Link href="/register-business">
+                <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs" data-testid="button-register-spares">
+                  <ChevronRight className="w-3.5 h-3.5 mr-1" />
+                  Register Your Shop
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {businesses.map(biz => (
+                <BusinessCard key={biz.id} business={biz} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-20">
+            <Package className="w-14 h-14 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">No spare parts shops found</h3>
+            <p className="text-muted-foreground mb-4">
+              {hasFilters ? "Try adjusting your filters or search terms." : "No approved shops yet."}
+            </p>
+            <div className="flex gap-3 justify-center flex-wrap">
+              {hasFilters && (
+                <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
+              )}
+              <Link href="/register-business">
+                <Button className="bg-orange-500 hover:bg-orange-600 text-white">Register Your Shop</Button>
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
