@@ -949,6 +949,99 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // ─── Admin Export ─────────────────────────────────────────────────────────
+
+  function toCSV(headers: string[], rows: (string | number | boolean | null | undefined)[][]): string {
+    const escape = (v: any) => {
+      if (v == null) return "";
+      const s = String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    return [headers, ...rows].map(r => r.map(escape).join(",")).join("\n");
+  }
+
+  app.get("/api/admin/export/businesses", adminMiddleware, async (req: any, res) => {
+    try {
+      const status = (req.query.status as string) || "all";
+      const allBiz = await storage.getAllBusinesses();
+      const filtered = status === "all" ? allBiz : allBiz.filter(b => b.status === status);
+      const headers = ["id","name","category","status","city","address","phone","whatsapp","description","premium","premiumExpiresAt","createdAt"];
+      const rows = filtered.map(b => [b.id, b.name, b.category, b.status, b.city, b.address, b.phone, b.whatsapp, b.description, b.premium, b.premiumExpiresAt, b.createdAt]);
+      const csv = toCSV(headers, rows);
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="businesses-${status}-${Date.now()}.csv"`);
+      res.send(csv);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/export/users", adminMiddleware, async (req: any, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const headers = ["id","name","email","role","createdAt"];
+      const rows = allUsers.map(u => [u.id, u.name, u.email, u.role, u.createdAt]);
+      const csv = toCSV(headers, rows);
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="users-${Date.now()}.csv"`);
+      res.send(csv);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/export/reviews", adminMiddleware, async (req: any, res) => {
+    try {
+      const allReviews = await storage.getAllReviews();
+      const headers = ["id","businessId","businessName","reviewerName","rating","comment","createdAt"];
+      const rows = allReviews.map((r: any) => [r.id, r.businessId, r.businessName ?? "", r.name, r.rating, r.comment, r.createdAt]);
+      const csv = toCSV(headers, rows);
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="reviews-${Date.now()}.csv"`);
+      res.send(csv);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  // ─── Admin Import ─────────────────────────────────────────────────────────
+
+  app.post("/api/admin/import/businesses", adminMiddleware, csvUpload.single("file"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const rows = parseCSV(req.file.buffer.toString("utf-8"));
+      if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
+      const results = { imported: 0, failed: 0, errors: [] as string[] };
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        try {
+          const body = insertBusinessSchema.parse({
+            ownerId: req.user.id,
+            name: row.name || "",
+            category: row.category || "other",
+            phone: row.phone || "",
+            whatsapp: row.whatsapp || row.phone || "",
+            address: row.address || "",
+            city: row.city || "",
+            description: row.description || null,
+            subcategory: row.subcategory || null,
+            carBrands: row.carBrands ? row.carBrands.split("|") : null,
+            premium: false,
+          });
+          const created = await storage.createBusiness(body);
+          await storage.updateBusiness(created.id, { status: "approved" });
+          results.imported++;
+        } catch (e: any) {
+          results.failed++;
+          results.errors.push(`Row ${i + 2}: ${e.message}`);
+        }
+      }
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   // Brand page route
   app.get("/api/businesses/by-brand/:brand", async (req, res) => {
     try {

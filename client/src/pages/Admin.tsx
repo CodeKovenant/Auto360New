@@ -3,7 +3,8 @@ import { useLocation, Link } from "wouter";
 import {
   Shield, Building2, CheckCircle, XCircle, Trash2, Users, Star,
   Clock, Flag, Phone, MessageCircle, MapPin, Mail, User, ExternalLink,
-  Calendar, ChevronDown, ChevronUp, BadgeCheck, TrendingUp, DollarSign, AlertCircle
+  Calendar, ChevronDown, ChevronUp, BadgeCheck, TrendingUp, DollarSign, AlertCircle,
+  Download, Upload, FileText, FileUp
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Business, Review, User as UserType, BusinessReport } from "@shared/schema";
 import { BUSINESS_CATEGORIES, REPORT_REASONS } from "@shared/schema";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { getAuthToken } from "@/lib/auth";
 
 type EnrichedBusiness = Business & {
   avgRating: number;
@@ -305,6 +307,70 @@ export default function Admin() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  // ── Import / Export ──────────────────────────────────────────────────────
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importDragging, setImportDragging] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; failed: number; errors: string[] } | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+
+  async function downloadExport(path: string, filename: string) {
+    try {
+      const token = getAuthToken();
+      const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast({ title: "Export failed", description: e.message, variant: "destructive" });
+    }
+  }
+
+  function downloadTemplate() {
+    const csv = "name,category,phone,whatsapp,address,city,description,subcategory,carBrands\nExample Motors,car_dealer,+254700000000,+254700000000,123 Example Road,Nairobi,A great dealership,,Toyota|Honda\n";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "businesses-import-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleImportFile(file: File) {
+    if (!file.name.endsWith(".csv")) {
+      toast({ title: "Invalid file", description: "Please upload a CSV file", variant: "destructive" });
+      return;
+    }
+    setImportLoading(true);
+    setImportResult(null);
+    try {
+      const token = getAuthToken();
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/import/businesses", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Import failed");
+      setImportResult(data);
+      if (data.imported > 0) {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
+      }
+    } catch (e: any) {
+      toast({ title: "Import failed", description: e.message, variant: "destructive" });
+    } finally {
+      setImportLoading(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-4">
@@ -429,6 +495,9 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="revenue" data-testid="admin-tab-revenue">
               Revenue
+            </TabsTrigger>
+            <TabsTrigger value="data" data-testid="admin-tab-data">
+              Import / Export
             </TabsTrigger>
           </TabsList>
 
@@ -849,6 +918,175 @@ export default function Admin() {
                 </Card>
               </div>
             )}
+          </TabsContent>
+
+          {/* Import / Export */}
+          <TabsContent value="data" className="space-y-6">
+            {/* Export section */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Download className="w-4 h-4 text-green-600" />
+                  Export Data
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">Download platform data as CSV files for analysis or backup.</p>
+
+                {/* Businesses exports */}
+                <div>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4" /> Businesses
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(["all", "approved", "pending", "rejected"] as const).map(status => (
+                      <Button
+                        key={status}
+                        size="sm"
+                        variant="outline"
+                        className="h-8"
+                        onClick={() => downloadExport(
+                          `/api/admin/export/businesses${status !== "all" ? `?status=${status}` : ""}`,
+                          `businesses-${status}.csv`
+                        )}
+                      >
+                        <Download className="w-3.5 h-3.5 mr-1.5" />
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Users export */}
+                <div>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-1.5">
+                    <Users className="w-4 h-4" /> Users
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    onClick={() => downloadExport("/api/admin/export/users", "users.csv")}
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                    All Users
+                  </Button>
+                </div>
+
+                {/* Reviews export */}
+                <div>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center gap-1.5">
+                    <Star className="w-4 h-4" /> Reviews
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    onClick={() => downloadExport("/api/admin/export/reviews", "reviews.csv")}
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                    All Reviews
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Import section */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-blue-600" />
+                  Import Businesses
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <p className="text-sm text-muted-foreground">
+                    Bulk-import business listings from a CSV file. Imported businesses are auto-approved and published immediately.
+                  </p>
+                  <Button size="sm" variant="outline" className="h-8 flex-shrink-0" onClick={downloadTemplate}>
+                    <FileText className="w-3.5 h-3.5 mr-1.5" />
+                    Download Template
+                  </Button>
+                </div>
+
+                {/* Required columns info */}
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1">Required CSV columns:</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-400 font-mono">name, category, phone, whatsapp, address, city</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                    Optional: description, subcategory, carBrands (pipe-separated, e.g. <span className="font-mono">Toyota|Honda</span>)
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                    Categories: car_dealer, garage, spare_parts, car_wash, insurance, other
+                  </p>
+                </div>
+
+                {/* Drop zone */}
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+                    importDragging
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                      : "border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-900"
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setImportDragging(true); }}
+                  onDragLeave={() => setImportDragging(false)}
+                  onDrop={e => {
+                    e.preventDefault();
+                    setImportDragging(false);
+                    const file = e.dataTransfer.files[0];
+                    if (file) handleImportFile(file);
+                  }}
+                >
+                  <FileUp className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                  {importLoading ? (
+                    <p className="text-sm text-muted-foreground">Importing…</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Drop CSV file here or click to browse</p>
+                      <p className="text-xs text-muted-foreground mt-1">CSV files only · Max 5 MB</p>
+                    </>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImportFile(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+
+                {/* Result */}
+                {importResult && (
+                  <div className={`rounded-lg border p-4 ${importResult.failed === 0 ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20" : "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20"}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      {importResult.failed === 0
+                        ? <CheckCircle className="w-4 h-4 text-green-600" />
+                        : <AlertCircle className="w-4 h-4 text-orange-500" />}
+                      <p className="text-sm font-semibold">
+                        {importResult.imported} imported
+                        {importResult.failed > 0 && `, ${importResult.failed} failed`}
+                      </p>
+                    </div>
+                    {importResult.errors.length > 0 && (
+                      <ul className="space-y-1 mt-2">
+                        {importResult.errors.slice(0, 10).map((err, i) => (
+                          <li key={i} className="text-xs text-orange-700 dark:text-orange-300">{err}</li>
+                        ))}
+                        {importResult.errors.length > 10 && (
+                          <li className="text-xs text-muted-foreground">…and {importResult.errors.length - 10} more errors</li>
+                        )}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
