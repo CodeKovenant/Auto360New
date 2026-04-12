@@ -101,7 +101,7 @@ export default function Home() {
               Trusted Car Services Near You
             </div>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold leading-tight mb-5 drop-shadow-lg" data-testid="hero-heading">
-              All Your Automobile Needs. One Platform.
+              All Your Automobile Needs.<br />One Platform.
               <span className="block text-orange-400">Your One-Stop Auto Solution.</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-xl drop-shadow">
