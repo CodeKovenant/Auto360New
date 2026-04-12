@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +16,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { toast } = useToast();
   const { login, user } = useAuth();
   const [, navigate] = useLocation();
@@ -29,6 +31,10 @@ export default function Register() {
     if (!name || !email || !password) return;
     if (password.length < 6) {
       toast({ title: "Password too short", description: "Password must be at least 6 characters.", variant: "destructive" });
+      return;
+    }
+    if (!agreedToTerms) {
+      toast({ title: "Terms required", description: "Please read and accept the Terms & Conditions to continue.", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -107,7 +113,25 @@ export default function Register() {
                   </button>
                 </div>
               </div>
-              <Button type="submit" className="w-full bg-red-600 text-white" disabled={loading} data-testid="button-register">
+              {/* Terms & Conditions */}
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                <Checkbox
+                  id="terms-checkbox"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                  className="mt-0.5 flex-shrink-0"
+                  data-testid="checkbox-terms"
+                />
+                <Label htmlFor="terms-checkbox" className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed cursor-pointer">
+                  I have read and agree to the{" "}
+                  <Link href="/terms" className="text-red-600 dark:text-red-400 font-medium underline hover:text-red-700">
+                    Terms &amp; Conditions
+                  </Link>
+                  {" "}of Auto360Ke.
+                </Label>
+              </div>
+
+              <Button type="submit" className="w-full bg-red-600 text-white" disabled={loading || !agreedToTerms} data-testid="button-register">
                 {loading ? "Creating account..." : "Create Account"}
               </Button>
             </form>
