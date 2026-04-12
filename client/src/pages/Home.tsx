@@ -100,7 +100,7 @@ export default function Home() {
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               Trusted Car Services Near You
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 drop-shadow-lg" data-testid="hero-heading">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-6 drop-shadow-lg" data-testid="hero-heading">
               All Your Automobile<br />Needs. One Platform.<br /><span className="text-orange-400">Your One-Stop Auto Solution.</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-xl drop-shadow leading-relaxed">
@@ -222,7 +222,7 @@ export default function Home() {
             <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="brands-heading">Popular Car Brands</h2>
             <p className="text-muted-foreground">Browse cars by your favorite brand</p>
           </div>
-          <div className="grid grid-cols-5 md:grid-cols-10 gap-3 md:gap-4">
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-10 gap-3 md:gap-4">
             {POPULAR_BRANDS.map(brand => (
               <Link href={`/brand/${encodeURIComponent(brand.name)}`} key={brand.name}>
                 <div

@@ -141,7 +141,7 @@ export default function AutoSpares() {
       <div id="spares-listings" className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 py-5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex-1 min-w-60 relative">
+            <div className="flex-1 min-w-0 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 value={search}

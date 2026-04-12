@@ -13,27 +13,29 @@ export default function TopBar() {
     <div className="bg-red-700 text-red-100 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-9 flex items-center justify-between gap-4">
         {/* Left — welcome + contact */}
-        <div className="flex items-center gap-4 overflow-hidden">
-          <span className="hidden sm:block font-semibold text-white whitespace-nowrap">
+        <div className="flex items-center gap-3 overflow-hidden min-w-0">
+          <span className="hidden sm:block font-semibold text-white whitespace-nowrap flex-shrink-0">
             Welcome to Auto360Ke
           </span>
           <a
             href="mailto:info@auto360.co.ke"
-            className="flex items-center gap-1.5 text-red-200 hover:text-white transition-colors"
+            className="hidden md:flex items-center gap-1.5 text-red-200 hover:text-white transition-colors flex-shrink-0"
             data-testid="topbar-email"
           >
             <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="hidden md:block">info@auto360.co.ke</span>
+            <span>info@auto360.co.ke</span>
           </a>
           <a
             href="https://wa.me/254764999688"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-red-200 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-red-200 hover:text-white transition-colors min-w-0"
             data-testid="topbar-whatsapp"
           >
             <MessageCircle className="w-3.5 h-3.5 flex-shrink-0" />
-            <span>Call/WhatsApp: 0764 999 688</span>
+            <span className="truncate">
+              <span className="hidden sm:inline">Call/WhatsApp: </span>0764 999 688
+            </span>
           </a>
         </div>
 

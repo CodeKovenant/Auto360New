@@ -64,7 +64,7 @@ export default function Businesses() {
             Find Car Services
           </h1>
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex-1 min-w-60 relative">
+            <div className="flex-1 min-w-0 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 value={search}
