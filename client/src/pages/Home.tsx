@@ -12,12 +12,12 @@ import ReviewCard from "@/components/ReviewCard";
 import type { Business, Car as CarType, GarageService } from "@shared/schema";
 
 const CATEGORIES = [
-  { value: "car_dealer", label: "Car Dealers", icon: Car, color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800" },
-  { value: "garage", label: "Professional Garages", icon: Wrench, color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-800" },
-  { value: "spare_parts", label: "Spare Parts", icon: Package, color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-800" },
-  { value: "car_wash", label: "Car Wash", icon: Droplets, color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-800" },
-  { value: "insurance", label: "Insurance", icon: Shield, color: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-800" },
-  { value: "other", label: "Other Services", icon: MoreHorizontal, color: "bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700" },
+  { value: "car_dealer", label: "Car Dealers", icon: Car, href: "/automobile-dealers", color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800" },
+  { value: "garage", label: "Professional Garages", icon: Wrench, href: "/autogarage-repair", color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-800" },
+  { value: "spare_parts", label: "Spare Parts", icon: Package, href: "/autospares-dealers", color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-800" },
+  { value: "car_wash", label: "Car Wash", icon: Droplets, href: "/businesses?category=car_wash", color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-800" },
+  { value: "insurance", label: "Insurance", icon: Shield, href: "/automotive-support", color: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-800" },
+  { value: "other", label: "Other Services", icon: MoreHorizontal, href: "/businesses", color: "bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700" },
 ];
 
 const POPULAR_BRANDS = [
@@ -200,7 +200,7 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
           {CATEGORIES.map(cat => (
-            <Link href={`/businesses?category=${cat.value}`} key={cat.value}>
+            <Link href={cat.href} key={cat.value}>
               <div
                 className={`hover-elevate rounded-md border flex flex-col items-center gap-3 p-4 cursor-pointer transition-colors ${cat.color}`}
                 data-testid={`card-category-${cat.value}`}
