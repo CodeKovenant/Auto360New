@@ -1,9 +1,10 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import Home from "@/pages/Home";
 import Businesses from "@/pages/Businesses";
 import BusinessProfile from "@/pages/BusinessProfile";
@@ -50,13 +51,19 @@ function Router() {
   );
 }
 
+const NO_FOOTER_ROUTES = ["/login", "/register", "/dashboard", "/admin", "/verify-email"];
+
 function Layout() {
+  const [location] = useLocation();
+  const showFooter = !NO_FOOTER_ROUTES.some(route => location.startsWith(route));
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <main className="flex-1">
         <Router />
       </main>
+      {showFooter && <Footer />}
     </div>
   );
 }
