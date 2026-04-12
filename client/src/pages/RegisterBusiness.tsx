@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Car, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ export default function RegisterBusiness() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -53,6 +55,10 @@ export default function RegisterBusiness() {
     }
     if (!form.name || !form.category || !form.phone || !form.whatsapp || !form.address || !form.city || !form.description) {
       toast({ title: "Missing fields", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+    if (!agreedToTerms) {
+      toast({ title: "Terms required", description: "Please read and accept the Terms & Conditions to continue.", variant: "destructive" });
       return;
     }
     if (form.category === "automotive_support" && !form.subcategory) {
@@ -256,10 +262,28 @@ export default function RegisterBusiness() {
                 <LogoUpload value={form.logo} onChange={url => setField("logo", url)} />
               </div>
 
+              {/* Terms & Conditions */}
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                <Checkbox
+                  id="terms-checkbox"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                  className="mt-0.5 flex-shrink-0"
+                  data-testid="checkbox-terms"
+                />
+                <Label htmlFor="terms-checkbox" className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed cursor-pointer">
+                  I have read and agree to the{" "}
+                  <Link href="/terms" target="_blank" className="text-red-600 dark:text-red-400 font-medium underline hover:text-red-700">
+                    Terms &amp; Conditions
+                  </Link>
+                  {" "}of Auto360Ke. I confirm that the information provided is accurate and that I am authorised to register this business.
+                </Label>
+              </div>
+
               <Button
                 type="submit"
                 className="w-full bg-red-600 text-white"
-                disabled={loading || !user}
+                disabled={loading || !user || !agreedToTerms}
                 data-testid="button-submit-business"
               >
                 {loading ? "Submitting..." : "Submit Listing for Review"}

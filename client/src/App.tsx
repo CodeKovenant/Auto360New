@@ -21,6 +21,7 @@ import VerifyEmail from "@/pages/VerifyEmail";
 import AutoDealers from "@/pages/AutoDealers";
 import AutoSpares from "@/pages/AutoSpares";
 import AutoGarages from "@/pages/AutoGarages";
+import Terms from "@/pages/Terms";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/register-business" component={RegisterBusiness} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/admin" component={Admin} />
+      <Route path="/terms" component={Terms} />
       <Route path="/verify-email/:token" component={VerifyEmail} />
       <Route component={NotFound} />
     </Switch>
