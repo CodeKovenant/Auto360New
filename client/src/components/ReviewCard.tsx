@@ -1,6 +1,5 @@
 import { Link } from "wouter";
-import { Star } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Star, Quote } from "lucide-react";
 
 interface ReviewCardProps {
   review: {
@@ -28,34 +27,45 @@ function StarRow({ rating }: { rating: number }) {
 }
 
 export default function ReviewCard({ review }: ReviewCardProps) {
+  const initials = review.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+
   return (
-    <Card className="hover-elevate" data-testid={`review-card-${review.id}`}>
-      <CardContent className="pt-4 pb-4">
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-bold text-red-600 dark:text-red-400">
-              {review.name.charAt(0).toUpperCase()}
-            </span>
+    <div
+      className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-5"
+      data-testid={`review-card-${review.id}`}
+    >
+      {/* Quote icon */}
+      <Quote className="w-6 h-6 text-gray-100 dark:text-gray-800 mb-2 -scale-x-100" />
+
+      {/* Comment */}
+      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed mb-4">
+        {review.comment}
+      </p>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <span className="text-xs font-bold text-white">{initials}</span>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-              <p className="font-semibold text-sm text-gray-900 dark:text-white">{review.name}</p>
-              {review.createdAt && (
-                <span className="text-xs text-muted-foreground">
-                  {new Date(review.createdAt).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}
-                </span>
-              )}
-            </div>
+          <div>
+            <p className="font-semibold text-sm text-gray-900 dark:text-white leading-none">{review.name}</p>
             <StarRow rating={review.rating} />
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5 line-clamp-2">{review.comment}</p>
-            <Link href={`/business/${review.businessId}`}>
-              <span className="text-xs text-red-600 dark:text-red-400 hover:underline mt-1.5 block font-medium">
-                {review.businessName}
-              </span>
-            </Link>
           </div>
         </div>
-      </CardContent>
-    </Card>
+        <div className="text-right">
+          <Link href={`/business/${review.businessId}`}>
+            <span className="text-xs text-red-600 dark:text-red-400 hover:underline font-semibold block truncate max-w-[120px]">
+              {review.businessName}
+            </span>
+          </Link>
+          {review.createdAt && (
+            <span className="text-[10px] text-gray-400">
+              {new Date(review.createdAt).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

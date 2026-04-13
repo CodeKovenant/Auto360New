@@ -1,7 +1,5 @@
 import { Link } from "wouter";
 import { MapPin, Fuel, Gauge, MessageCircle, Car as CarIcon, Zap, RotateCcw } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import type { Car } from "@shared/schema";
 
 interface CarCardProps {
@@ -24,48 +22,56 @@ function formatMileage(km: number | null) {
 export default function CarCard({ car }: CarCardProps) {
   const image = car.images?.[0];
   const isNew = car.condition === "new";
+  const mileage = formatMileage(car.mileage);
 
   return (
-    <Card className="group hover-elevate cursor-pointer flex flex-col overflow-hidden" data-testid={`card-car-${car.id}`}>
-      {/* Image */}
-      <Link href={`/cars/${car.id}`} className="block">
-        <div className="relative h-48 bg-gray-100 dark:bg-gray-800 flex-shrink-0 overflow-hidden">
+    <div
+      className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col"
+      data-testid={`card-car-${car.id}`}
+    >
+      {/* Image area */}
+      <Link href={`/cars/${car.id}`} className="block relative flex-shrink-0">
+        <div className="relative h-52 bg-gray-100 dark:bg-gray-800 overflow-hidden">
           {image ? (
-            <img src={image} alt={car.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+            <img
+              src={image}
+              alt={car.title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <CarIcon className="w-16 h-16 text-gray-300 dark:text-gray-600" />
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+              <CarIcon className="w-14 h-14 text-gray-200 dark:text-gray-700" />
+              <span className="text-xs text-gray-400">No photo</span>
             </div>
           )}
 
-          {/* Gradient overlay at bottom of image */}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+          {/* Bottom gradient */}
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
 
           {/* Year — top left */}
-          <div className="absolute top-2.5 left-2.5">
-            <span className="inline-flex items-center gap-1 bg-orange-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-              {car.year}
-            </span>
-          </div>
+          <span className="absolute top-3 left-3 inline-flex items-center bg-orange-500 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow">
+            {car.year}
+          </span>
 
-          {/* Condition + Transmission — bottom left (over gradient) */}
-          <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5">
+          {/* Featured — top right */}
+          {car.featured && (
+            <span className="absolute top-3 right-3 inline-flex items-center bg-yellow-400 text-yellow-900 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow">
+              ★ Featured
+            </span>
+          )}
+
+          {/* Condition + transmission — over gradient */}
+          <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
             {car.condition && (
-              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full shadow-sm ${
-                isNew
-                  ? "bg-emerald-500 text-white"
-                  : "bg-white/15 backdrop-blur-md border border-white/30 text-white"
+              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full shadow ${
+                isNew ? "bg-emerald-500 text-white" : "bg-white/20 backdrop-blur-sm border border-white/30 text-white"
               }`}>
-                {isNew ? (
-                  <Zap className="w-2.5 h-2.5" />
-                ) : (
-                  <RotateCcw className="w-2.5 h-2.5" />
-                )}
+                {isNew ? <Zap className="w-2.5 h-2.5" /> : <RotateCcw className="w-2.5 h-2.5" />}
                 {isNew ? "Brand New" : "Used"}
               </span>
             )}
             {car.transmission && (
-              <span className="inline-flex items-center gap-1 bg-white/15 backdrop-blur-md border border-white/30 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full shadow-sm capitalize">
+              <span className="inline-flex items-center bg-white/20 backdrop-blur-sm border border-white/30 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full shadow capitalize">
                 {car.transmission}
               </span>
             )}
@@ -73,60 +79,69 @@ export default function CarCard({ car }: CarCardProps) {
         </div>
       </Link>
 
-      <CardContent className="p-4 flex flex-col flex-1">
-        {/* Clickable title */}
+      {/* Content */}
+      <div className="p-4 flex flex-col flex-1">
         <Link href={`/cars/${car.id}`}>
           <h3
-            className="font-semibold text-gray-900 dark:text-white text-base leading-tight mb-0.5 line-clamp-1 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            className="font-bold text-gray-900 dark:text-white text-[15px] leading-snug line-clamp-1 hover:text-red-600 dark:hover:text-red-400 transition-colors mb-1"
             data-testid={`car-title-${car.id}`}
           >
             {car.title}
           </h3>
         </Link>
 
-        <p className="text-xl font-bold text-red-600 dark:text-red-400 mb-3" data-testid={`car-price-${car.id}`}>
+        <p className="text-2xl font-extrabold text-red-600 dark:text-red-400 mb-3 tracking-tight" data-testid={`car-price-${car.id}`}>
           {formatPrice(car.price)}
         </p>
 
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-3">
-          {car.mileage && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Gauge className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{formatMileage(car.mileage)}</span>
+        {/* Specs */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-3">
+          {mileage && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+              <Gauge className="w-3.5 h-3.5 text-gray-400" />
+              {mileage}
             </div>
           )}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Fuel className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="capitalize">{car.fuelType}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground col-span-2">
-            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="truncate">{car.location}</span>
-          </div>
+          {car.fuelType && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+              <Fuel className="w-3.5 h-3.5 text-gray-400" />
+              <span className="capitalize">{car.fuelType}</span>
+            </div>
+          )}
+          {car.location && (
+            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+              <MapPin className="w-3.5 h-3.5 text-gray-400" />
+              {car.location}
+            </div>
+          )}
         </div>
 
-        <p className="text-xs text-muted-foreground mb-3 truncate">
-          Dealer: <span className="text-gray-700 dark:text-gray-300 font-medium">{car.dealerName}</span>
+        <p className="text-xs text-gray-400 dark:text-gray-500 truncate mb-4">
+          by <span className="text-gray-600 dark:text-gray-300 font-medium">{car.dealerName}</span>
         </p>
 
+        {/* Actions */}
         <div className="flex items-center gap-2 mt-auto">
           <Link href={`/cars/${car.id}`} className="flex-1">
-            <Button size="sm" variant="outline" className="w-full" data-testid={`button-view-car-${car.id}`}>
+            <button
+              className="w-full text-xs font-semibold py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              data-testid={`button-view-car-${car.id}`}
+            >
               View Details
-            </Button>
+            </button>
           </Link>
           <a
-            href={`https://wa.me/${car.dealerWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm interested in the ${car.title} listed on AutoDirectory.`)}`}
+            href={`https://wa.me/${car.dealerWhatsapp?.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm interested in the ${car.title} listed on Auto360.`)}`}
             target="_blank"
             rel="noopener noreferrer"
             data-testid={`button-whatsapp-car-${car.id}`}
           >
-            <Button size="sm" className="bg-green-600 text-white">
-              <MessageCircle className="w-3.5 h-3.5" />
-            </Button>
+            <button className="flex items-center justify-center w-9 h-9 rounded-xl bg-green-500 hover:bg-green-600 text-white transition-colors shadow-sm shadow-green-200 dark:shadow-none">
+              <MessageCircle className="w-4 h-4" />
+            </button>
           </a>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
