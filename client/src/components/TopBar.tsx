@@ -19,7 +19,7 @@ export default function TopBar() {
           </span>
           <a
             href="mailto:info@auto360.co.ke"
-            className="hidden md:flex items-center gap-1.5 text-red-200 hover:text-white transition-colors flex-shrink-0"
+            className="hidden md:flex items-center gap-1.5 text-white hover:text-red-200 transition-colors flex-shrink-0"
             data-testid="topbar-email"
           >
             <Mail className="w-3.5 h-3.5 flex-shrink-0" />
@@ -29,7 +29,7 @@ export default function TopBar() {
             href="https://wa.me/254764999688"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-red-200 hover:text-white transition-colors min-w-0"
+            className="flex items-center gap-1.5 text-white hover:text-red-200 transition-colors min-w-0"
             data-testid="topbar-whatsapp"
           >
             <MessageCircle className="w-3.5 h-3.5 flex-shrink-0" />
