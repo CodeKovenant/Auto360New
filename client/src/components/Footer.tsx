@@ -73,7 +73,13 @@ export default function Footer() {
             <p className="text-sm text-gray-400 mb-4 leading-relaxed">Serving automotive businesses across all 47 counties of Kenya.</p>
             <div className="flex flex-wrap gap-1.5">
               {["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Thika", "Nyeri", "Meru"].map(city => (
-                <span key={city} className="text-xs bg-gray-800 text-gray-400 px-2.5 py-1 rounded-md">{city}</span>
+                <Link
+                  key={city}
+                  href={`/businesses?city=${encodeURIComponent(city)}`}
+                  className="text-xs bg-gray-800 text-gray-400 hover:bg-red-600 hover:text-white px-2.5 py-1 rounded-md transition-colors"
+                >
+                  {city}
+                </Link>
               ))}
               <span className="text-xs text-gray-600 px-2.5 py-1">+39 more</span>
             </div>

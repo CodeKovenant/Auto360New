@@ -26,7 +26,7 @@ export default function Businesses() {
 
   const [search, setSearch] = useState(params.get("q") || "");
   const [category, setCategory] = useState(params.get("category") || "all");
-  const [city, setCity] = useState("all");
+  const [city, setCity] = useState(params.get("city") || "all");
   const [minRating, setMinRating] = useState("0");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -34,6 +34,7 @@ export default function Businesses() {
     const p = new URLSearchParams(searchStr);
     setSearch(p.get("q") || "");
     setCategory(p.get("category") || "all");
+    setCity(p.get("city") || "all");
   }, [searchStr]);
 
   const queryString = new URLSearchParams({
