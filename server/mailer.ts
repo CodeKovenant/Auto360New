@@ -104,6 +104,47 @@ export async function sendAdminNotificationEmail(opts: {
   });
 }
 
+export async function sendRegistrationConfirmationEmail(opts: {
+  toEmail: string;
+  toName: string;
+  businessName: string;
+  businessCategory: string;
+}): Promise<void> {
+  if (!isMailConfigured()) {
+    console.warn("[mailer] SMTP not configured — skipping registration confirmation email");
+    return;
+  }
+  const transporter = getTransporter();
+  const categoryLabel: Record<string, string> = {
+    car_dealer: "Car Dealer",
+    garage: "Garage / Workshop",
+    spare_parts: "Spare Parts Shop",
+    car_wash: "Car Wash",
+    insurance: "Insurance",
+    driving_school: "Driving School",
+  };
+  const category = categoryLabel[opts.businessCategory] || opts.businessCategory;
+  await transporter.sendMail({
+    from: `"Auto360" <${SMTP_FROM}>`,
+    to: opts.toEmail,
+    subject: `Registration received — ${opts.businessName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+        <h2 style="color:#dc2626">Auto360 — Registration Received</h2>
+        <p>Hi <strong>${opts.toName}</strong>,</p>
+        <p>Thank you for registering <strong>${opts.businessName}</strong> (${category}) on Auto360 — Kenya's Automotive Marketplace.</p>
+        <div style="background:#f9fafb;border-left:4px solid #dc2626;padding:16px;border-radius:4px;margin:20px 0">
+          <p style="margin:0;font-weight:600;color:#374151">Your registration is under review</p>
+          <p style="margin:8px 0 0;color:#6b7280;font-size:14px">Our team will review your business details and approve your listing shortly. You will receive another email once your business has been approved and is visible to customers.</p>
+        </div>
+        <p style="color:#374151">While you wait, make sure your business details are complete so we can approve it quickly.</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
+        <p style="color:#9ca3af;font-size:12px">Auto360 — Kenya's Automotive Marketplace</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendApprovalEmail(opts: {
   toEmail: string;
   toName: string;

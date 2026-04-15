@@ -11,7 +11,7 @@ import fs from "fs";
 import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses } from "@shared/schema";
 import { initiateSTKPush, PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
 import { db } from "./storage";
-import { sendVerificationEmail, sendAdminNotificationEmail, sendApprovalEmail, sendRejectionEmail, ADMIN_EMAIL, isMailConfigured } from "./mailer";
+import { sendVerificationEmail, sendAdminNotificationEmail, sendApprovalEmail, sendRejectionEmail, sendRegistrationConfirmationEmail, ADMIN_EMAIL, isMailConfigured } from "./mailer";
 
 // Ensure uploads directories exist
 const logosDir = path.resolve(process.cwd(), "uploads/logos");
@@ -263,6 +263,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         ownerEmail: fullUser?.email || user.email,
         adminUrl: `${appUrl}/admin`,
       }).catch(e => console.error("[mailer] admin notification failed:", e.message));
+
+      sendRegistrationConfirmationEmail({
+        toEmail: fullUser?.email || user.email,
+        toName: fullUser?.name || user.name,
+        businessName: biz.name,
+        businessCategory: biz.category,
+      }).catch(e => console.error("[mailer] registration confirmation email failed:", e.message));
 
       res.json({ ...biz, emailVerificationSent: isMailConfigured() });
     } catch (e: any) {
