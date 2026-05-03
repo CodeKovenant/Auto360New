@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, ilike, and, or, sql, gte, lte, desc, inArray, notInArray } from "drizzle-orm";
+import { eq, ilike, and, or, sql, gte, lte, desc, inArray, notInArray, isNull } from "drizzle-orm";
 import {
   users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports, galleryImages,
   type User, type InsertUser,
@@ -20,6 +20,24 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL,
     ? { rejectUnauthorized: false }
     : false, });
 export const db = drizzle(pool);
+
+/** Active premium window evaluated in Postgres (avoids JS vs timestamp-without-timezone skew). */
+function premiumSubscriptionStillActive() {
+  return or(isNull(businesses.premiumExpiresAt), sql`${businesses.premiumExpiresAt} > NOW()`);
+}
+
+async function clearPremiumFlagsPastExpiryInDb() {
+  await db
+    .update(businesses)
+    .set({ premium: false })
+    .where(
+      and(
+        sql`${businesses.premium} IS TRUE`,
+        sql`${businesses.premiumExpiresAt} IS NOT NULL`,
+        sql`${businesses.premiumExpiresAt} <= NOW()`
+      )
+    );
+}
 
 export interface IStorage {
   // Users
@@ -201,20 +219,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPremiumBusinesses() {
-    const now = new Date();
-    const bizList = await db.select().from(businesses).where(
-      and(eq(businesses.status, "approved"), eq(businesses.premium, true))
-    ).orderBy(businesses.createdAt);
+    await clearPremiumFlagsPastExpiryInDb();
+    const bizList = await db
+      .select()
+      .from(businesses)
+      .where(and(eq(businesses.status, "approved"), sql`${businesses.premium} IS TRUE`, premiumSubscriptionStillActive()))
+      .orderBy(businesses.createdAt);
     return Promise.all(
       bizList.map(async (biz) => {
-        if (biz.premiumExpiresAt && new Date(biz.premiumExpiresAt) < now) {
-          await db.update(businesses).set({ premium: false }).where(eq(businesses.id, biz.id));
-          return null;
-        }
         const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
         return { ...biz, avgRating, reviewCount };
       })
-    ).then(results => results.filter(Boolean) as (Business & { avgRating: number; reviewCount: number })[]);
+    );
   }
 
   async getFeaturedBusinesses() {
@@ -228,8 +244,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getHomepageBusinessSections(limitPerCategory: number) {
+    await clearPremiumFlagsPastExpiryInDb();
     const categories = ["car_dealer", "garage", "spare_parts", "car_wash", "insurance", "other"] as const;
-    const now = new Date();
     const cap = Math.max(1, Math.min(limitPerCategory, 24));
     const result: Record<string, (Business & { avgRating: number; reviewCount: number })[]> = {};
 
@@ -237,24 +253,22 @@ export class DatabaseStorage implements IStorage {
       const premiumRaw = await db
         .select()
         .from(businesses)
-        .where(and(eq(businesses.status, "approved"), eq(businesses.premium, true), eq(businesses.category, category)))
+        .where(
+          and(
+            eq(businesses.status, "approved"),
+            sql`${businesses.premium} IS TRUE`,
+            eq(businesses.category, category),
+            premiumSubscriptionStillActive()
+          )
+        )
         .orderBy(desc(businesses.createdAt));
 
-      const activePremium: Business[] = [];
-      for (const biz of premiumRaw) {
-        if (biz.premiumExpiresAt && new Date(biz.premiumExpiresAt) < now) {
-          await db.update(businesses).set({ premium: false }).where(eq(businesses.id, biz.id));
-          continue;
-        }
-        activePremium.push(biz);
-      }
-
-      const premiumSlice = activePremium.slice(0, cap);
+      const premiumSlice = premiumRaw.slice(0, cap);
       const ids = new Set(premiumSlice.map((b) => b.id));
       const need = cap - premiumSlice.length;
       let filler: Business[] = [];
       if (need > 0) {
-        const nonPremium = eq(businesses.premium, false);
+        const nonPremium = sql`${businesses.premium} IS NOT TRUE`;
         const base = and(
           eq(businesses.status, "approved"),
           eq(businesses.category, category),
