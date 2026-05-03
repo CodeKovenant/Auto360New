@@ -77,15 +77,45 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [, navigate] = useLocation();
 
+  const SPOTLIGHT_LIMIT = 6;
+
   const { data: homeSections, isLoading: homeSectionsLoading } = useQuery<HomeSections>({
     queryKey: ["/api/businesses/home-sections?limit=6"],
     staleTime: 0,
   });
 
-  const { data: premiumBusinesses } = useQuery<BusinessRated[]>({
+  const { data: premiumBusinesses, isLoading: premiumLoading } = useQuery<BusinessRated[]>({
     queryKey: ["/api/businesses/premium"],
     staleTime: 0,
   });
+
+  /** Premium listings merged ahead of API sections so garages/spares show even if one endpoint is stale. */
+  const spotlightByCategory = useMemo(() => {
+    const out: Record<string, BusinessRated[]> = {};
+    for (const block of HOME_SPOTLIGHT_SECTIONS) {
+      const cat = block.category;
+      const fromSections = homeSections?.[cat] ?? [];
+      const premiumInCat = premiumBusinesses?.filter((b) => b.category === cat) ?? [];
+      const seen = new Set<string>();
+      const merged: BusinessRated[] = [];
+      for (const b of premiumInCat) {
+        if (merged.length >= SPOTLIGHT_LIMIT) break;
+        if (!seen.has(b.id)) {
+          seen.add(b.id);
+          merged.push(b);
+        }
+      }
+      for (const b of fromSections) {
+        if (merged.length >= SPOTLIGHT_LIMIT) break;
+        if (!seen.has(b.id)) {
+          seen.add(b.id);
+          merged.push(b);
+        }
+      }
+      out[cat] = merged;
+    }
+    return out;
+  }, [homeSections, premiumBusinesses]);
 
   const premiumByCategory = useMemo(() => {
     const map = new Map<string, BusinessRated[]>();
@@ -245,7 +275,7 @@ export default function Home() {
 
       {/* ── 3. FEATURED BUSINESSES BY CATEGORY (premium listings appear first for every type) ── */}
       {HOME_SPOTLIGHT_SECTIONS.map((block, idx) => {
-        const list = homeSections?.[block.category] ?? [];
+        const list = spotlightByCategory[block.category] ?? [];
         const Icon = block.icon;
         const striped = idx % 2 === 1;
         const emptyMessage =
@@ -292,7 +322,7 @@ export default function Home() {
                   </Button>
                 </Link>
               </div>
-              {homeSectionsLoading ? (
+              {list.length === 0 && (homeSectionsLoading || premiumLoading) ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <Skeleton key={i} className="h-48 rounded-md" />

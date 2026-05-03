@@ -339,7 +339,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const user = (req as any).user;
       const biz = await storage.getBusinessByOwnerId(user.id);
       if (!biz) return res.status(404).json({ message: "Business not found" });
-      const { id, ownerId, createdAt, status, ...allowedFields } = req.body;
+      const ownerCannotSet = new Set([
+        "id",
+        "ownerId",
+        "createdAt",
+        "status",
+        "premium",
+        "premiumExpiresAt",
+      ]);
+      const allowedFields = Object.fromEntries(
+        Object.entries(req.body || {}).filter(([k]) => !ownerCannotSet.has(k))
+      );
+      if (Object.keys(allowedFields).length === 0) {
+        return res.json(biz);
+      }
       const updated = await storage.updateBusiness(biz.id, allowedFields);
       res.json(updated);
     } catch (e: any) {
