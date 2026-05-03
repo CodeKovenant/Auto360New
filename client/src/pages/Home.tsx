@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2, BadgeCheck, Store, MapPin, ArrowRight } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +11,35 @@ import CarCard from "@/components/CarCard";
 import GarageServiceCard from "@/components/GarageServiceCard";
 import ReviewCard from "@/components/ReviewCard";
 import type { Business, Car as CarType, GarageService } from "@shared/schema";
+
+type BusinessRated = Business & { avgRating: number; reviewCount: number };
+type HomeSections = Record<string, BusinessRated[]>;
+
+const PREMIUM_CATEGORY_ORDER = ["car_dealer", "garage", "spare_parts", "car_wash", "insurance", "other"] as const;
+
+const PREMIUM_SECTION_TITLE: Record<(typeof PREMIUM_CATEGORY_ORDER)[number], string> = {
+  car_dealer: "Premium Car Dealers",
+  garage: "Premium Garages",
+  spare_parts: "Premium Spare Parts Shops",
+  car_wash: "Premium Car Wash",
+  insurance: "Premium Insurance",
+  other: "Premium Other Services",
+};
+
+const HOME_SPOTLIGHT_SECTIONS: {
+  category: (typeof PREMIUM_CATEGORY_ORDER)[number];
+  title: string;
+  subtitle: string;
+  href: string;
+  icon: LucideIcon;
+}[] = [
+  { category: "spare_parts", title: "Featured Spare Parts Shops", subtitle: "Genuine and quality parts for all vehicle makes", href: "/autospares-dealers", icon: Package },
+  { category: "garage", title: "Featured Garages", subtitle: "Trusted mechanics and auto repair shops near you", href: "/autogarage-repair", icon: Wrench },
+  { category: "car_dealer", title: "Featured Car Dealers", subtitle: "Trusted dealers and showrooms near you", href: "/automobile-dealers", icon: Car },
+  { category: "car_wash", title: "Featured Car Wash", subtitle: "Wash and detailing services", href: "/businesses?category=car_wash", icon: Droplets },
+  { category: "insurance", title: "Featured Insurance", subtitle: "Coverage and automotive support", href: "/automotive-support", icon: Shield },
+  { category: "other", title: "Other Featured Services", subtitle: "More automotive businesses", href: "/businesses", icon: MoreHorizontal },
+];
 
 const CATEGORIES = [
   { value: "car_dealer", label: "Car Dealers", icon: Car, href: "/automobile-dealers", color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800" },
@@ -47,13 +77,24 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [, navigate] = useLocation();
 
-  const { data: businesses } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
-    queryKey: ["/api/businesses/featured"],
+  const { data: homeSections, isLoading: homeSectionsLoading } = useQuery<HomeSections>({
+    queryKey: ["/api/businesses/home-sections?limit=6"],
   });
 
-  const { data: premiumBusinesses } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
+  const { data: premiumBusinesses } = useQuery<BusinessRated[]>({
     queryKey: ["/api/businesses/premium"],
   });
+
+  const premiumByCategory = useMemo(() => {
+    const map = new Map<string, BusinessRated[]>();
+    if (!premiumBusinesses) return map;
+    for (const b of premiumBusinesses) {
+      const cur = map.get(b.category) ?? [];
+      cur.push(b);
+      map.set(b.category, cur);
+    }
+    return map;
+  }, [premiumBusinesses]);
 
   const { data: featuredCars, isLoading: carsLoading } = useQuery<CarWithDealer[]>({
     queryKey: ["/api/cars/featured"],
@@ -71,9 +112,6 @@ export default function Home() {
     e.preventDefault();
     navigate(search.trim() ? `/businesses?q=${encodeURIComponent(search.trim())}` : "/businesses");
   }
-
-  const sparePartsBusinesses = businesses?.filter(b => b.category === "spare_parts") ?? [];
-  const garageBusinesses = businesses?.filter(b => b.category === "garage") ?? [];
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
@@ -183,10 +221,21 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {premiumBusinesses.map(biz => (
-                <BusinessCard key={biz.id} business={biz} />
-              ))}
+            <div className="space-y-10">
+              {PREMIUM_CATEGORY_ORDER.map(cat => {
+                const list = premiumByCategory.get(cat);
+                if (!list?.length) return null;
+                return (
+                  <div key={cat}>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{PREMIUM_SECTION_TITLE[cat]}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {list.map(biz => (
+                        <BusinessCard key={biz.id} business={biz} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -252,69 +301,80 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 5. FEATURED PRODUCTS (Spare Parts) ── */}
-      <section className="py-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="featured-products-heading">Featured Spare Parts Shops</h2>
-              <p className="text-muted-foreground">Genuine and quality parts for all vehicle makes</p>
-            </div>
-            <Link href="/businesses?category=spare_parts">
-              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-parts">
-                View All <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-          {sparePartsBusinesses.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {sparePartsBusinesses.slice(0, 6).map(biz => (
-                <BusinessCard key={biz.id} business={biz} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
-              <Package className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-              <p className="text-muted-foreground">No spare parts shops listed yet.</p>
-              <Link href="/register-business">
-                <Button variant="outline" className="mt-4">Register Your Shop</Button>
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
+      {/* ── 5–6. FEATURED BUSINESSES BY CATEGORY (premium listed first per category) ── */}
+      {HOME_SPOTLIGHT_SECTIONS.map((block, idx) => {
+        const list = homeSections?.[block.category] ?? [];
+        const Icon = block.icon;
+        const striped = idx % 2 === 1;
+        const emptyMessage =
+          block.category === "spare_parts"
+            ? "No spare parts shops listed yet."
+            : block.category === "garage"
+              ? "No garages listed yet."
+              : block.category === "car_dealer"
+                ? "No car dealers listed yet."
+                : block.category === "car_wash"
+                  ? "No car wash businesses listed yet."
+                  : block.category === "insurance"
+                    ? "No insurance listings yet."
+                    : "No businesses in this category yet.";
+        const emptyCta =
+          block.category === "garage"
+            ? "Register Your Garage"
+            : block.category === "spare_parts"
+              ? "Register Your Shop"
+              : "Register Your Business";
+        const testHeading =
+          block.category === "spare_parts"
+            ? "featured-products-heading"
+            : block.category === "garage"
+              ? "featured-garages-heading"
+              : undefined;
 
-      {/* ── 6. FEATURED GARAGES ── */}
-      <section className="py-14 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="featured-garages-heading">Featured Garages</h2>
-              <p className="text-muted-foreground">Trusted mechanics and auto repair shops near you</p>
+        return (
+          <section key={block.category} className={striped ? "py-14 bg-gray-50 dark:bg-gray-900" : "py-14"}>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+                <div>
+                  <h2
+                    className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1"
+                    {...(testHeading ? { "data-testid": testHeading } : {})}
+                  >
+                    {block.title}
+                  </h2>
+                  <p className="text-muted-foreground">{block.subtitle}</p>
+                </div>
+                <Link href={block.href}>
+                  <Button variant="outline" className="flex items-center gap-1">
+                    View All <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+              </div>
+              {homeSectionsLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-48 rounded-md" />
+                  ))}
+                </div>
+              ) : list.length === 0 ? (
+                <div className="text-center py-12 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+                  <Icon className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
+                  <p className="text-muted-foreground">{emptyMessage}</p>
+                  <Link href="/register-business">
+                    <Button variant="outline" className="mt-4">{emptyCta}</Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {list.map(biz => (
+                    <BusinessCard key={biz.id} business={biz} />
+                  ))}
+                </div>
+              )}
             </div>
-            <Link href="/businesses?category=garage">
-              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-garages">
-                View All <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-          {garageBusinesses.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {garageBusinesses.slice(0, 6).map(biz => (
-                <BusinessCard key={biz.id} business={biz} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
-              <Wrench className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-              <p className="text-muted-foreground">No garages listed yet.</p>
-              <Link href="/register-business">
-                <Button variant="outline" className="mt-4">Register Your Garage</Button>
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
+          </section>
+        );
+      })}
 
       {/* ── 7. FEATURED SERVICES ── */}
       <section className="py-14">

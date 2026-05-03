@@ -303,6 +303,7 @@ export default function Admin() {
       toast({ title: activate ? "Premium activated!" : "Premium deactivated." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -310,7 +311,7 @@ export default function Admin() {
   // ── Import / Export ──────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importDragging, setImportDragging] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; failed: number; errors: string[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ imported: number; failed: number; skipped: number; errors: string[] } | null>(null);
   const [importLoading, setImportLoading] = useState(false);
 
   async function downloadExport(path: string, filename: string) {
@@ -360,9 +361,11 @@ export default function Admin() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Import failed");
       setImportResult(data);
-      if (data.imported > 0) {
+      if (data.imported > 0 || data.skipped > 0 || data.failed > 0) {
         queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
         queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
       }
     } catch (e: any) {
       toast({ title: "Import failed", description: e.message, variant: "destructive" });
@@ -1070,6 +1073,7 @@ export default function Admin() {
                         : <AlertCircle className="w-4 h-4 text-orange-500" />}
                       <p className="text-sm font-semibold">
                         {importResult.imported} imported
+                        {(importResult.skipped ?? 0) > 0 && `, ${importResult.skipped} skipped (duplicates)`}
                         {importResult.failed > 0 && `, ${importResult.failed} failed`}
                       </p>
                     </div>

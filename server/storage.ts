@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, ilike, and, or, sql, gte, lte, desc, inArray } from "drizzle-orm";
+import { eq, ilike, and, or, sql, gte, lte, desc, inArray, notInArray } from "drizzle-orm";
 import {
   users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports, galleryImages,
   type User, type InsertUser,
@@ -36,6 +36,7 @@ export interface IStorage {
   getAllBusinesses(filters?: { category?: string; subcategory?: string; city?: string; q?: string; minRating?: number }): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   getFeaturedBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   getPremiumBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
+  getHomepageBusinessSections(limitPerCategory: number): Promise<Record<string, (Business & { avgRating: number; reviewCount: number })[]>>;
   createBusiness(biz: InsertBusiness): Promise<Business>;
   updateBusiness(id: string, data: Partial<Business>): Promise<Business>;
   deleteBusiness(id: string): Promise<void>;
@@ -224,6 +225,57 @@ export class DatabaseStorage implements IStorage {
         return { ...biz, avgRating, reviewCount };
       })
     );
+  }
+
+  async getHomepageBusinessSections(limitPerCategory: number) {
+    const categories = ["car_dealer", "garage", "spare_parts", "car_wash", "insurance", "other"] as const;
+    const now = new Date();
+    const cap = Math.max(1, Math.min(limitPerCategory, 24));
+    const result: Record<string, (Business & { avgRating: number; reviewCount: number })[]> = {};
+
+    for (const category of categories) {
+      const premiumRaw = await db
+        .select()
+        .from(businesses)
+        .where(and(eq(businesses.status, "approved"), eq(businesses.premium, true), eq(businesses.category, category)))
+        .orderBy(desc(businesses.createdAt));
+
+      const activePremium: Business[] = [];
+      for (const biz of premiumRaw) {
+        if (biz.premiumExpiresAt && new Date(biz.premiumExpiresAt) < now) {
+          await db.update(businesses).set({ premium: false }).where(eq(businesses.id, biz.id));
+          continue;
+        }
+        activePremium.push(biz);
+      }
+
+      const premiumSlice = activePremium.slice(0, cap);
+      const ids = new Set(premiumSlice.map((b) => b.id));
+      const need = cap - premiumSlice.length;
+      let filler: Business[] = [];
+      if (need > 0) {
+        const base = and(eq(businesses.status, "approved"), eq(businesses.category, category));
+        filler =
+          ids.size === 0
+            ? await db.select().from(businesses).where(base).orderBy(desc(businesses.createdAt)).limit(need)
+            : await db
+                .select()
+                .from(businesses)
+                .where(and(base, notInArray(businesses.id, Array.from(ids))))
+                .orderBy(desc(businesses.createdAt))
+                .limit(need);
+      }
+
+      const merged = [...premiumSlice, ...filler].slice(0, cap);
+      result[category] = await Promise.all(
+        merged.map(async (biz) => {
+          const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
+          return { ...biz, avgRating, reviewCount };
+        })
+      );
+    }
+
+    return result;
   }
 
   async createBusiness(biz: InsertBusiness) {

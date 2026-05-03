@@ -139,6 +139,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/businesses/home-sections", async (req, res) => {
+    try {
+      const raw = parseInt(String(req.query.limit ?? "6"), 10);
+      const limit = Number.isFinite(raw) ? raw : 6;
+      const sections = await storage.getHomepageBusinessSections(limit);
+      res.json(sections);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/mpesa/config", ownerMiddleware, async (req, res) => {
     res.json({
       amount: PREMIUM_AMOUNT,
@@ -776,7 +787,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // CSV Import routes
   const csvUpload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 2 * 1024 * 1024 },
+    limits: { fileSize: 100 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
       if (file.mimetype === "text/csv" || file.originalname.endsWith(".csv")) cb(null, true);
       else cb(new Error("Only CSV files are allowed"));
@@ -1013,15 +1024,43 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // ─── Admin Import ─────────────────────────────────────────────────────────
 
+  function normalizeKeBusinessPhone(raw: string): string {
+    let d = raw.replace(/\D/g, "");
+    if (d.startsWith("0") && d.length >= 9) d = `254${d.slice(1)}`;
+    if (!d.startsWith("254") && d.length === 9) d = `254${d}`;
+    return d;
+  }
+
   app.post("/api/admin/import/businesses", adminMiddleware, csvUpload.single("file"), async (req: any, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
-      const results = { imported: 0, failed: 0, errors: [] as string[] };
+      const existingPhones = await db.select({ phone: businesses.phone }).from(businesses);
+      const knownNormalizedPhones = new Set(
+        existingPhones.map((r) => normalizeKeBusinessPhone(r.phone || "")).filter((p) => p.length >= 9)
+      );
+      const seenInFile = new Set<string>();
+      const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
+          const norm = normalizeKeBusinessPhone(row.phone || "");
+          if (norm.length < 9) {
+            results.failed++;
+            results.errors.push(`Row ${i + 2}: phone missing or too short`);
+            continue;
+          }
+          if (seenInFile.has(norm)) {
+            results.skipped++;
+            results.errors.push(`Row ${i + 2}: duplicate phone in this file`);
+            continue;
+          }
+          if (knownNormalizedPhones.has(norm)) {
+            results.skipped++;
+            results.errors.push(`Row ${i + 2}: duplicate phone (already in directory)`);
+            continue;
+          }
           const body = insertBusinessSchema.parse({
             ownerId: req.user.id,
             name: row.name || "",
@@ -1030,13 +1069,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             whatsapp: row.whatsapp || row.phone || "",
             address: row.address || "",
             city: row.city || "",
-            description: row.description || null,
+            description: (row.description ?? "").trim() || "Imported listing",
             subcategory: row.subcategory || null,
             carBrands: row.carBrands ? row.carBrands.split("|") : null,
             premium: false,
           });
           const created = await storage.createBusiness(body);
           await storage.updateBusiness(created.id, { status: "approved" });
+          knownNormalizedPhones.add(norm);
+          seenInFile.add(norm);
           results.imported++;
         } catch (e: any) {
           results.failed++;
