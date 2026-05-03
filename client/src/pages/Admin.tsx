@@ -256,6 +256,8 @@ export default function Admin() {
       toast({ title: "Business approved!" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -267,6 +269,8 @@ export default function Admin() {
     onSuccess: () => {
       toast({ title: "Business rejected." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -279,6 +283,8 @@ export default function Admin() {
       toast({ title: "Business deleted." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });

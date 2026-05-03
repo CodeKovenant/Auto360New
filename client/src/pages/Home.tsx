@@ -79,10 +79,12 @@ export default function Home() {
 
   const { data: homeSections, isLoading: homeSectionsLoading } = useQuery<HomeSections>({
     queryKey: ["/api/businesses/home-sections?limit=6"],
+    staleTime: 0,
   });
 
   const { data: premiumBusinesses } = useQuery<BusinessRated[]>({
     queryKey: ["/api/businesses/premium"],
+    staleTime: 0,
   });
 
   const premiumByCategory = useMemo(() => {
@@ -241,67 +243,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── 3. CATEGORIES ── */}
-      <section className="py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Browse by Category</h2>
-          <p className="text-muted-foreground">Find the right automotive service for your needs</p>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-          {CATEGORIES.map(cat => (
-            <Link href={cat.href} key={cat.value}>
-              <div
-                className={`hover-elevate rounded-md border flex flex-col items-center gap-3 p-4 cursor-pointer transition-colors ${cat.color}`}
-                data-testid={`card-category-${cat.value}`}
-              >
-                <div className="w-10 h-10 rounded-md bg-current/10 flex items-center justify-center">
-                  <cat.icon className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-medium text-center leading-tight">{cat.label}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ── 4. CAR BRANDS ── */}
-      <section className="py-12 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="brands-heading">Popular Car Brands</h2>
-            <p className="text-muted-foreground">Browse cars by your favorite brand</p>
-          </div>
-          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-10 gap-3 md:gap-4">
-            {POPULAR_BRANDS.map(brand => (
-              <Link href={`/brand/${encodeURIComponent(brand.name)}`} key={brand.name}>
-                <div
-                  className="flex flex-col items-center gap-2.5 p-3 md:p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-red-400 dark:hover:border-red-500 hover:shadow-md transition-all cursor-pointer group"
-                  data-testid={`brand-${brand.name.toLowerCase().replace(/\s/g, "-")}`}
-                >
-                  <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center p-1.5 shadow-sm border border-gray-100">
-                    <img
-                      src={brand.logo}
-                      alt={`${brand.name} logo`}
-                      className="w-full h-full object-contain"
-                      onError={e => {
-                        const target = e.currentTarget;
-                        target.style.display = "none";
-                        const parent = target.parentElement;
-                        if (parent) {
-                          parent.innerHTML = `<span class="text-lg font-bold text-gray-400">${brand.name[0]}</span>`;
-                        }
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 leading-tight">{brand.name}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 5–6. FEATURED BUSINESSES BY CATEGORY (premium listed first per category) ── */}
+      {/* ── 3. FEATURED BUSINESSES BY CATEGORY (premium listings appear first for every type) ── */}
       {HOME_SPOTLIGHT_SECTIONS.map((block, idx) => {
         const list = homeSections?.[block.category] ?? [];
         const Icon = block.icon;
@@ -376,7 +318,67 @@ export default function Home() {
         );
       })}
 
-      {/* ── 7. FEATURED SERVICES ── */}
+      {/* ── 4. CATEGORIES ── */}
+      <section className="py-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Browse by Category</h2>
+          <p className="text-muted-foreground">Find the right automotive service for your needs</p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+          {CATEGORIES.map(cat => (
+            <Link href={cat.href} key={cat.value}>
+              <div
+                className={`hover-elevate rounded-md border flex flex-col items-center gap-3 p-4 cursor-pointer transition-colors ${cat.color}`}
+                data-testid={`card-category-${cat.value}`}
+              >
+                <div className="w-10 h-10 rounded-md bg-current/10 flex items-center justify-center">
+                  <cat.icon className="w-5 h-5" />
+                </div>
+                <span className="text-sm font-medium text-center leading-tight">{cat.label}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 5. CAR BRANDS ── */}
+      <section className="py-12 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="brands-heading">Popular Car Brands</h2>
+            <p className="text-muted-foreground">Browse cars by your favorite brand</p>
+          </div>
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-10 gap-3 md:gap-4">
+            {POPULAR_BRANDS.map(brand => (
+              <Link href={`/brand/${encodeURIComponent(brand.name)}`} key={brand.name}>
+                <div
+                  className="flex flex-col items-center gap-2.5 p-3 md:p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-red-400 dark:hover:border-red-500 hover:shadow-md transition-all cursor-pointer group"
+                  data-testid={`brand-${brand.name.toLowerCase().replace(/\s/g, "-")}`}
+                >
+                  <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center p-1.5 shadow-sm border border-gray-100">
+                    <img
+                      src={brand.logo}
+                      alt={`${brand.name} logo`}
+                      className="w-full h-full object-contain"
+                      onError={e => {
+                        const target = e.currentTarget;
+                        target.style.display = "none";
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `<span class="text-lg font-bold text-gray-400">${brand.name[0]}</span>`;
+                        }
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium text-center text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 leading-tight">{brand.name}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 6. FEATURED SERVICES ── */}
       <section className="py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
@@ -407,7 +409,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 8. FEATURED CARS ── */}
+      {/* ── 7. FEATURED CARS ── */}
       <section className="py-14 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
@@ -441,7 +443,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 9. REVIEWS ── */}
+      {/* ── 8. REVIEWS ── */}
       <section className="py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -464,7 +466,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 10. HOW IT WORKS ── */}
+      {/* ── 9. HOW IT WORKS ── */}
       <section className="py-16 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -501,7 +503,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 11. CTA ── */}
+      {/* ── 10. CTA ── */}
       <section className="relative py-20 overflow-hidden bg-gradient-to-br from-red-800 via-red-700 to-red-900 text-white">
         {/* Subtle background pattern */}
         <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "28px 28px" }} />

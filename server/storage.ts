@@ -254,7 +254,12 @@ export class DatabaseStorage implements IStorage {
       const need = cap - premiumSlice.length;
       let filler: Business[] = [];
       if (need > 0) {
-        const base = and(eq(businesses.status, "approved"), eq(businesses.category, category));
+        const nonPremium = eq(businesses.premium, false);
+        const base = and(
+          eq(businesses.status, "approved"),
+          eq(businesses.category, category),
+          nonPremium
+        );
         filler =
           ids.size === 0
             ? await db.select().from(businesses).where(base).orderBy(desc(businesses.createdAt)).limit(need)
@@ -266,7 +271,9 @@ export class DatabaseStorage implements IStorage {
                 .limit(need);
       }
 
-      const merged = [...premiumSlice, ...filler].slice(0, cap);
+      const merged = [...premiumSlice, ...filler]
+        .sort((a, b) => Number(!!b.premium) - Number(!!a.premium))
+        .slice(0, cap);
       result[category] = await Promise.all(
         merged.map(async (biz) => {
           const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
