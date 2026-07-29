@@ -67,11 +67,14 @@ export default function RegisterBusiness() {
     }
     setLoading(true);
     try {
+      // "automotive_support" is a display-only virtual category; map to the real DB enum value
+      const dbCategory = form.category === "automotive_support" ? "other" : form.category;
       await apiRequest("POST", "/api/businesses", {
-      ...form,
-      ownerId: user.id,
-      carBrands: needsBrands ? selectedBrands : [],
-    });
+        ...form,
+        category: dbCategory,
+        ownerId: user.id,
+        carBrands: needsBrands ? selectedBrands : [],
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
       setSuccess(true);
     } catch (e: any) {

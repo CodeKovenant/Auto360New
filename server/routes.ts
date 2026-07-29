@@ -925,10 +925,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
-      const results = { imported: 0, failed: 0, errors: [] as string[] };
+      // Build set of existing service names for duplicate detection
+      const existingServices = await storage.getGarageServicesByGarageId(biz.id);
+      const knownServiceNames = new Set(existingServices.map(s => s.name.trim().toLowerCase()));
+      const seenInFile = new Set<string>();
+      const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
+          const normalizedName = (row.name || "").trim().toLowerCase();
+          if (!normalizedName) {
+            results.failed++;
+            results.errors.push(`Row ${i + 2}: service name is required`);
+            continue;
+          }
+          if (seenInFile.has(normalizedName)) {
+            results.skipped++;
+            results.errors.push(`Row ${i + 2}: duplicate service name in this file`);
+            continue;
+          }
+          if (knownServiceNames.has(normalizedName)) {
+            results.skipped++;
+            results.errors.push(`Row ${i + 2}: service "${row.name}" already exists`);
+            continue;
+          }
           const body = insertGarageServiceSchema.parse({
             garageId: biz.id,
             name: row.name || "",
@@ -937,6 +957,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             popular: false,
           });
           await storage.createGarageService(body);
+          knownServiceNames.add(normalizedName);
+          seenInFile.add(normalizedName);
           results.imported++;
         } catch (e: any) {
           results.failed++;
@@ -957,17 +979,39 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
-      const results = { imported: 0, failed: 0, errors: [] as string[] };
+      // Build set of existing service names for duplicate detection
+      const existingServices = await storage.getSupportServicesByBusinessId(biz.id);
+      const knownServiceNames = new Set(existingServices.map(s => s.name.trim().toLowerCase()));
+      const seenInFile = new Set<string>();
+      const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
+          const normalizedName = (row.name || "").trim().toLowerCase();
+          if (!normalizedName) {
+            results.failed++;
+            results.errors.push(`Row ${i + 2}: service name is required`);
+            continue;
+          }
+          if (seenInFile.has(normalizedName)) {
+            results.skipped++;
+            results.errors.push(`Row ${i + 2}: duplicate service name in this file`);
+            continue;
+          }
+          if (knownServiceNames.has(normalizedName)) {
+            results.skipped++;
+            results.errors.push(`Row ${i + 2}: service "${row.name}" already exists`);
+            continue;
+          }
           const body = insertSupportServiceSchema.parse({
             businessId: biz.id,
             name: row.name || "",
             description: row.description || null,
-            price: row.price || null,
+            startingPrice: row.startingPrice || row.price || null,
           });
           await storage.createSupportService(body);
+          knownServiceNames.add(normalizedName);
+          seenInFile.add(normalizedName);
           results.imported++;
         } catch (e: any) {
           results.failed++;
@@ -1049,22 +1093,27 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
-      const existingPhones = await db.select({ phone: businesses.phone }).from(businesses);
+      const existingBizRecords = await db.select({ phone: businesses.phone, name: businesses.name }).from(businesses);
       const knownNormalizedPhones = new Set(
-        existingPhones.map((r) => normalizeKeBusinessPhone(r.phone || "")).filter((p) => p.length >= 9)
+        existingBizRecords.map((r) => normalizeKeBusinessPhone(r.phone || "")).filter((p) => p.length >= 9)
       );
-      const seenInFile = new Set<string>();
+      const knownNormalizedNames = new Set(
+        existingBizRecords.map((r) => (r.name || "").trim().toLowerCase()).filter(Boolean)
+      );
+      const seenPhonesInFile = new Set<string>();
+      const seenNamesInFile = new Set<string>();
       const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
           const norm = normalizeKeBusinessPhone(row.phone || "");
+          const normalizedName = (row.name || "").trim().toLowerCase();
           if (norm.length < 9) {
             results.failed++;
             results.errors.push(`Row ${i + 2}: phone missing or too short`);
             continue;
           }
-          if (seenInFile.has(norm)) {
+          if (seenPhonesInFile.has(norm)) {
             results.skipped++;
             results.errors.push(`Row ${i + 2}: duplicate phone in this file`);
             continue;
@@ -1072,6 +1121,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           if (knownNormalizedPhones.has(norm)) {
             results.skipped++;
             results.errors.push(`Row ${i + 2}: duplicate phone (already in directory)`);
+            continue;
+          }
+          if (normalizedName && seenNamesInFile.has(normalizedName)) {
+            results.skipped++;
+            results.errors.push(`Row ${i + 2}: duplicate business name in this file`);
+            continue;
+          }
+          if (normalizedName && knownNormalizedNames.has(normalizedName)) {
+            results.skipped++;
+            results.errors.push(`Row ${i + 2}: business "${row.name}" already exists in directory`);
             continue;
           }
           const body = insertBusinessSchema.parse({
@@ -1090,7 +1149,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const created = await storage.createBusiness(body);
           await storage.updateBusiness(created.id, { status: "approved" });
           knownNormalizedPhones.add(norm);
-          seenInFile.add(norm);
+          seenPhonesInFile.add(norm);
+          if (normalizedName) {
+            knownNormalizedNames.add(normalizedName);
+            seenNamesInFile.add(normalizedName);
+          }
           results.imported++;
         } catch (e: any) {
           results.failed++;
