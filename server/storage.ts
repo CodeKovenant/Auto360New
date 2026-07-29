@@ -183,12 +183,12 @@ export class DatabaseStorage implements IStorage {
         } else if (filters.subcategory) {
           conditions.push(
             and(
-              inArray(businesses.category, ["automotive_support", "insurance", "car_wash", "other"]),
+              inArray(businesses.category, ["insurance", "car_wash", "other"]),
               eq(businesses.subcategory, filters.subcategory)
             )!
           );
         } else {
-          conditions.push(inArray(businesses.category, ["automotive_support", "insurance", "car_wash", "other"]));
+          conditions.push(inArray(businesses.category, ["insurance", "car_wash", "other"]));
         }
       } else {
         conditions.push(eq(businesses.category, filters.category as any));

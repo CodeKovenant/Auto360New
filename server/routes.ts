@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, db } from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -10,7 +10,6 @@ import path from "path";
 import fs from "fs";
 import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses } from "@shared/schema";
 import { initiateSTKPush, PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
-import { db } from "./storage";
 import { sendVerificationEmail, sendAdminNotificationEmail, sendApprovalEmail, sendRejectionEmail, sendRegistrationConfirmationEmail, ADMIN_EMAIL, isMailConfigured } from "./mailer";
 
 // Ensure uploads directories exist
@@ -830,7 +829,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     cars: "title,brand,model,year,price,mileage,fuelType,transmission,condition,location,description\nToyota Prado TX 2020,Toyota,Prado,2020,6500000,35000,diesel,automatic,used,Nairobi,Well maintained Prado TX in excellent condition",
     parts: "partName,carBrand,carModel,year,condition,price,description\nBrake Pads Front,Toyota,Corolla,2019,new,KSh 2500,Genuine Toyota brake pads",
     services: "name,description,price\nOil Change & Filter Service,Full synthetic oil change with filter replacement. Includes 20-point inspection.,KSh 2500",
-    "support-services": "name,description,price\nComprehensive Cover,Full vehicle comprehensive insurance with third-party liability,KSh 15000/year",
+    "support-services": "name,description,startingPrice\nComprehensive Cover,Full vehicle comprehensive insurance with third-party liability,KSh 15000/year",
   };
 
   app.get("/api/import/template/:type", authMiddleware, (req, res) => {

@@ -69,7 +69,7 @@ export default function Dashboard() {
   const [editingPart, setEditingPart] = useState<SparePart | null>(null);
 
   // Support services state
-  const [newSupportService, setNewSupportService] = useState({ name: "", description: "", price: "" });
+  const [newSupportService, setNewSupportService] = useState({ name: "", description: "", startingPrice: "" });
   const [showAddSupportService, setShowAddSupportService] = useState(false);
   const [editingSupportService, setEditingSupportService] = useState<SupportService | null>(null);
 
@@ -129,7 +129,7 @@ export default function Dashboard() {
 
   const addSupportServiceMutation = useMutation({
     mutationFn: async () => { const res = await apiRequest("POST", "/api/support-services", { ...newSupportService, businessId: data?.business.id }); return res.json(); },
-    onSuccess: () => { toast({ title: "Service added!" }); setNewSupportService({ name: "", description: "", price: "" }); setShowAddSupportService(false); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    onSuccess: () => { toast({ title: "Service added!" }); setNewSupportService({ name: "", description: "", startingPrice: "" }); setShowAddSupportService(false); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -840,7 +840,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <Label className="text-xs">Price</Label>
-                        <Input value={newSupportService.price} onChange={e => setNewSupportService(p => ({ ...p, price: e.target.value }))} placeholder="KSh 15,000/year" className="mt-1" />
+                        <Input value={newSupportService.startingPrice} onChange={e => setNewSupportService(p => ({ ...p, startingPrice: e.target.value }))} placeholder="KSh 15,000/year" className="mt-1" />
                       </div>
                       <div className="sm:col-span-2">
                         <Label className="text-xs">Description</Label>
@@ -868,7 +868,7 @@ export default function Dashboard() {
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-3">
                               <div><Label className="text-xs">Service Name</Label><Input value={editingSupportService.name} onChange={e => setEditingSupportService(p => p ? { ...p, name: e.target.value } : null)} className="mt-1" /></div>
-                              <div><Label className="text-xs">Price</Label><Input value={editingSupportService.price || ""} onChange={e => setEditingSupportService(p => p ? { ...p, price: e.target.value } : null)} className="mt-1" /></div>
+                              <div><Label className="text-xs">Price</Label><Input value={editingSupportService.startingPrice || ""} onChange={e => setEditingSupportService(p => p ? { ...p, startingPrice: e.target.value } : null)} className="mt-1" /></div>
                               <div className="col-span-2"><Label className="text-xs">Description</Label><Textarea value={editingSupportService.description || ""} onChange={e => setEditingSupportService(p => p ? { ...p, description: e.target.value } : null)} rows={2} className="mt-1" /></div>
                             </div>
                             <div className="flex gap-2">

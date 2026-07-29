@@ -121,7 +121,7 @@ export async function sendRegistrationConfirmationEmail(opts: {
     spare_parts: "Spare Parts Shop",
     car_wash: "Car Wash",
     insurance: "Insurance",
-    driving_school: "Driving School",
+    other: "Other Automotive Services",
   };
   const category = categoryLabel[opts.businessCategory] || opts.businessCategory;
   await transporter.sendMail({
