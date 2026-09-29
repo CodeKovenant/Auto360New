@@ -14,7 +14,7 @@ const SERVICE_TYPES = [
   "AC Service", "Suspension", "Electrical", "Body Work", "Wheel Alignment", "Transmission",
 ];
 
-type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string };
+type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null };
 
 export default function GarageServices() {
   const searchStr = useSearch();
