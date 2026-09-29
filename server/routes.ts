@@ -729,6 +729,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/services/:id", async (req, res) => {
+    try {
+      const service = await storage.getGarageServiceById(req.params.id);
+      if (!service) return res.status(404).json({ message: "Service not found" });
+      res.json(service);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.post("/api/services", ownerMiddleware, async (req, res) => {
     try {
       const user = (req as any).user;
