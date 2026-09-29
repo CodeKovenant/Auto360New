@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { MapPin, Wrench, MessageCircle, ChevronDown, ChevronUp, Images, Flame } from "lucide-react";
+import { MapPin, Wrench, Building2, MessageCircle, ChevronDown, ChevronUp, Images, Flame } from "lucide-react";
 import BusinessGallery from "@/components/BusinessGallery";
 import type { GarageService } from "@shared/schema";
 
 interface GarageServiceCardProps {
-  service: GarageService & { garageName: string; garageWhatsapp: string; garageCity: string };
+  service: GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo?: string | null };
   garageId?: string;
   canManage?: boolean;
 }
@@ -29,8 +29,12 @@ export default function GarageServiceCard({ service, garageId, canManage = false
           onClick={() => setExpanded(v => !v)}
           data-testid={`toggle-service-${service.id}`}
         >
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-orange-200 dark:shadow-none">
-            <Wrench className="w-5 h-5 text-white" />
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-orange-200 dark:shadow-none overflow-hidden">
+            {service.garageLogo ? (
+              <img src={service.garageLogo} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <Wrench className="w-5 h-5 text-white" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-2">
