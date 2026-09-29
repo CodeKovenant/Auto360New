@@ -69,8 +69,8 @@ const STEPS = [
   { num: "03", title: "Customers Connect", desc: "Users find and contact your business via phone or WhatsApp." },
 ];
 
-type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string };
-type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string };
+type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null };
+type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null };
 type RecentReview = { id: string; name: string; rating: number; comment: string; businessId: string; businessName: string; createdAt: string | Date | null };
 
 export default function Home() {
