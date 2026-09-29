@@ -14,9 +14,11 @@ import { sendVerificationEmail, sendAdminNotificationEmail, sendApprovalEmail, s
 
 // Ensure uploads directories exist
 const logosDir = path.resolve(process.cwd(), "uploads/logos");
+const bannersDir = path.resolve(process.cwd(), "uploads/banners");
 const partsDir = path.resolve(process.cwd(), "uploads/parts");
 const galleryDir = path.resolve(process.cwd(), "uploads/gallery");
 if (!fs.existsSync(logosDir)) fs.mkdirSync(logosDir, { recursive: true });
+if (!fs.existsSync(bannersDir)) fs.mkdirSync(bannersDir, { recursive: true });
 if (!fs.existsSync(partsDir)) fs.mkdirSync(partsDir, { recursive: true });
 if (!fs.existsSync(galleryDir)) fs.mkdirSync(galleryDir, { recursive: true });
 
@@ -38,6 +40,7 @@ function makeUpload(dest: string, prefix: string) {
 }
 
 const logoUpload = makeUpload(logosDir, "logo");
+const bannerUpload = makeUpload(bannersDir, "banner");
 const partImageUpload = makeUpload(partsDir, "part");
 const galleryUpload = makeUpload(galleryDir, "gallery");
 
@@ -79,6 +82,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/upload/logo", authMiddleware, logoUpload.single("logo"), (req: any, res) => {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
     const url = `/uploads/logos/${req.file.filename}`;
+    res.json({ url });
+  });
+
+  // Business banner upload endpoint
+  app.post("/api/upload/banner", authMiddleware, bannerUpload.single("banner"), (req: any, res) => {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    const url = `/uploads/banners/${req.file.filename}`;
     res.json({ url });
   });
 
