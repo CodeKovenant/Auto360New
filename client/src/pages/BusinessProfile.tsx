@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   MapPin, Phone, MessageCircle, Building2, Package, Star, Send,
-  Car, Wrench, Shield, AlertTriangle, Share2, Flag, Settings,
+  Car, Wrench, Shield, AlertTriangle, Share2, Flag, Settings, Globe,
 } from "lucide-react";
 import { SiFacebook, SiX, SiInstagram, SiWhatsapp } from "react-icons/si";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -328,11 +328,19 @@ export default function BusinessProfile() {
   const avgRating = business.avgRating || 0;
   const hasMap = business.latitude && business.longitude;
   const canManage = !!(user && (user.id === business.ownerId || user.role === "admin"));
+  const websiteHref = business.website
+    ? (/^https?:\/\//i.test(business.website) ? business.website : `https://${business.website}`)
+    : "";
 
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen pb-12">
       {/* Hero header */}
-      <div className="bg-gradient-to-r from-gray-950 to-red-900 text-white py-10">
+      <div
+        className="bg-gradient-to-r from-gray-950 to-red-900 text-white py-10 bg-cover bg-center"
+        style={business.banner ? {
+          backgroundImage: `linear-gradient(to right, rgba(3, 7, 18, 0.94), rgba(127, 29, 29, 0.78)), url("${business.banner}")`,
+        } : undefined}
+      >
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="flex items-start gap-5 flex-wrap">
             <div className="w-20 h-20 rounded-md bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/20">
@@ -375,6 +383,18 @@ export default function BusinessProfile() {
                 <MessageCircle className="w-4 h-4" />
                 <span>WhatsApp</span>
               </a>
+              {websiteHref && (
+                <a
+                  href={websiteHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-md px-3 py-2 text-sm hover:bg-white/20 transition-colors"
+                  data-testid="link-website-header"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>Website</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
