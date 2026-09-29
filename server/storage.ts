@@ -80,17 +80,17 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
 
   // Cars
-  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string }): Promise<(Car & { dealerName: string; dealerWhatsapp: string })[]>;
-  getFeaturedCars(): Promise<(Car & { dealerName: string; dealerWhatsapp: string })[]>;
-  getCarById(id: string): Promise<(Car & { dealerName: string; dealerWhatsapp: string }) | undefined>;
+  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string }): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null })[]>;
+  getFeaturedCars(): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null })[]>;
+  getCarById(id: string): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null }) | undefined>;
   getCarsByDealerId(dealerId: string): Promise<Car[]>;
   createCar(car: InsertCar): Promise<Car>;
   updateCar(id: string, data: Partial<Car>): Promise<Car>;
   deleteCar(id: string): Promise<void>;
 
   // Garage Services
-  getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string })[]>;
-  getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string })[]>;
+  getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
+  getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
   getGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
   createGarageService(service: InsertGarageService): Promise<GarageService>;
   updateGarageService(id: string, data: Partial<GarageService>): Promise<GarageService>;
@@ -382,9 +382,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Cars
-  private async enrichCar(car: Car): Promise<Car & { dealerName: string; dealerWhatsapp: string }> {
-    const [dealer] = await db.select({ name: businesses.name, whatsapp: businesses.whatsapp }).from(businesses).where(eq(businesses.id, car.dealerId));
-    return { ...car, dealerName: dealer?.name || "Unknown", dealerWhatsapp: dealer?.whatsapp || "" };
+  private async enrichCar(car: Car): Promise<Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null }> {
+    const [dealer] = await db.select({ name: businesses.name, whatsapp: businesses.whatsapp, logo: businesses.logo }).from(businesses).where(eq(businesses.id, car.dealerId));
+    return { ...car, dealerName: dealer?.name || "Unknown", dealerWhatsapp: dealer?.whatsapp || "", dealerLogo: dealer?.logo || null };
   }
 
   async getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string }) {
@@ -460,9 +460,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Garage Services
-  private async enrichService(svc: GarageService): Promise<GarageService & { garageName: string; garageWhatsapp: string; garageCity: string }> {
-    const [garage] = await db.select({ name: businesses.name, whatsapp: businesses.whatsapp, city: businesses.city }).from(businesses).where(eq(businesses.id, svc.garageId));
-    return { ...svc, garageName: garage?.name || "Unknown", garageWhatsapp: garage?.whatsapp || "", garageCity: garage?.city || "" };
+  private async enrichService(svc: GarageService): Promise<GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null }> {
+    const [garage] = await db.select({ name: businesses.name, whatsapp: businesses.whatsapp, city: businesses.city, logo: businesses.logo }).from(businesses).where(eq(businesses.id, svc.garageId));
+    return { ...svc, garageName: garage?.name || "Unknown", garageWhatsapp: garage?.whatsapp || "", garageCity: garage?.city || "", garageLogo: garage?.logo || null };
   }
 
   async getGarageServices(filters?: { q?: string; location?: string; garageId?: string }) {
