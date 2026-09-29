@@ -91,6 +91,7 @@ export interface IStorage {
   // Garage Services
   getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
   getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
+  getGarageServiceById(id: string): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null }) | undefined>;
   getGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
   createGarageService(service: InsertGarageService): Promise<GarageService>;
   updateGarageService(id: string, data: Partial<GarageService>): Promise<GarageService>;
@@ -501,6 +502,23 @@ export class DatabaseStorage implements IStorage {
       filtered = all.filter(s => garageIds.includes(s.garageId)).slice(0, 6);
     }
     return Promise.all(filtered.map(s => this.enrichService(s)));
+  }
+
+  async getGarageServiceById(id: string) {
+    const [service] = await db.select().from(garageServices).where(eq(garageServices.id, id));
+    if (!service) return undefined;
+
+    const [garage] = await db
+      .select({ id: businesses.id })
+      .from(businesses)
+      .where(and(
+        eq(businesses.id, service.garageId),
+        eq(businesses.status, "approved"),
+        eq(businesses.category, "garage"),
+      ));
+    if (!garage) return undefined;
+
+    return this.enrichService(service);
   }
 
   async getGarageServicesByGarageId(garageId: string) {
