@@ -39,7 +39,7 @@ export default function GarageServiceCard({ service, garageId, canManage = false
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-2">
               <Link
-                href={`/business/${service.garageId}`}
+                href={`/services/${service.id}`}
                 onClick={e => e.stopPropagation()}
                 className="flex-1 min-w-0"
               >
