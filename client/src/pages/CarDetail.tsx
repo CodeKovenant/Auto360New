@@ -10,7 +10,7 @@ import { Link } from "wouter";
 import BusinessGallery from "@/components/BusinessGallery";
 import { useAuth } from "@/hooks/use-auth";
 
-type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string };
+type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null };
 
 function formatPrice(price: string | number) {
   const num = Number(price);
@@ -130,9 +130,18 @@ export default function CarDetail() {
 
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Building2 className="w-4 h-4" /> Dealer Info</CardTitle></CardHeader>
+             <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Building2 className="w-4 h-4" /> Dealer Info</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <p className="font-semibold text-gray-900 dark:text-white">{car.dealerName}</p>
+                 <div className="flex items-center gap-3">
+                   <div className="w-12 h-12 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                     {car.dealerLogo ? (
+                       <img src={car.dealerLogo} alt={`${car.dealerName} logo`} className="w-full h-full object-cover" />
+                     ) : (
+                       <Building2 className="w-5 h-5 text-gray-400" />
+                     )}
+                   </div>
+                   <p className="font-semibold text-gray-900 dark:text-white">{car.dealerName}</p>
+                 </div>
                 <a
                   href={`https://wa.me/${car.dealerWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm interested in the ${car.title} listed on AutoDirectory. Price: ${formatPrice(car.price)}`)}`}
                   target="_blank"
