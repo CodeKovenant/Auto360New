@@ -1,9 +1,9 @@
 import { Link } from "wouter";
-import { MapPin, Fuel, Gauge, MessageCircle, Car as CarIcon, Zap, RotateCcw } from "lucide-react";
+import { MapPin, Fuel, Gauge, MessageCircle, Car as CarIcon, Building2, Zap, RotateCcw } from "lucide-react";
 import type { Car } from "@shared/schema";
 
 interface CarCardProps {
-  car: Car & { dealerName: string; dealerWhatsapp: string };
+  car: Car & { dealerName: string; dealerWhatsapp: string; dealerLogo?: string | null };
 }
 
 function formatPrice(price: string | number) {
@@ -116,9 +116,18 @@ export default function CarCard({ car }: CarCardProps) {
           )}
         </div>
 
-        <p className="text-xs text-gray-400 dark:text-gray-500 truncate mb-4">
-          by <span className="text-gray-600 dark:text-gray-300 font-medium">{car.dealerName}</span>
-        </p>
+        <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 truncate mb-4">
+          <div className="w-6 h-6 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {car.dealerLogo ? (
+              <img src={car.dealerLogo} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <Building2 className="w-3.5 h-3.5 text-gray-400" />
+            )}
+          </div>
+          <span className="truncate">
+            by <span className="text-gray-600 dark:text-gray-300 font-medium">{car.dealerName}</span>
+          </span>
+        </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2 mt-auto">
