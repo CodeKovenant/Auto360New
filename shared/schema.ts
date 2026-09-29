@@ -41,6 +41,8 @@ export const businesses = pgTable("businesses", {
   address: text("address").notNull(),
   city: text("city").notNull(),
   logo: text("logo"),
+  banner: text("banner"),
+  website: text("website"),
   latitude: numeric("latitude"),
   longitude: numeric("longitude"),
   status: businessStatusEnum("status").notNull().default("pending"),
