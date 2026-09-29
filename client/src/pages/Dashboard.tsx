@@ -333,7 +333,7 @@ export default function Dashboard() {
             <CardHeader><CardTitle className="text-base">Edit Business Profile</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[["Business Name", "name"], ["City", "city"], ["Phone", "phone"], ["WhatsApp", "whatsapp"], ["Address", "address"]].map(([label, field]) => (
+                {[["Business Name", "name"], ["City", "city"], ["Phone", "phone"], ["WhatsApp", "whatsapp"], ["Website", "website"], ["Address", "address"]].map(([label, field]) => (
                   <div key={field} className={field === "address" ? "sm:col-span-2" : ""}>
                     <Label className="text-xs">{label}</Label>
                     <Input value={(editForm as any)[field] || ""} onChange={e => setEditForm(p => ({ ...p, [field]: e.target.value }))} className="mt-1" />
@@ -346,6 +346,11 @@ export default function Dashboard() {
                 <div className="sm:col-span-2">
                   <Label className="text-xs">Business Logo</Label>
                   <LogoUpload value={editForm.logo || ""} onChange={url => setEditForm(p => ({ ...p, logo: url }))} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label className="text-xs">Banner Image</Label>
+                  <p className="text-xs text-muted-foreground mt-1 mb-2">This image appears at the top of your public business profile.</p>
+                  <LogoUpload kind="banner" value={editForm.banner || ""} onChange={url => setEditForm(p => ({ ...p, banner: url }))} />
                 </div>
                 {(editForm.category === "garage" || editForm.category === "spare_parts") && (
                   <div className="sm:col-span-2">
