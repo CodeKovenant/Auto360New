@@ -34,8 +34,8 @@ interface BusinessData {
   supportServices: SupportService[];
 }
 
-type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string };
-type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string };
+type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null };
+type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null };
 
 function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" | "lg" }) {
   const sz = size === "sm" ? "w-3.5 h-3.5" : size === "md" ? "w-4 h-4" : "w-5 h-5";
