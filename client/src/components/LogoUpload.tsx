@@ -6,19 +6,22 @@ import { useToast } from "@/hooks/use-toast";
 interface LogoUploadProps {
   value: string;
   onChange: (url: string) => void;
+  kind?: "logo" | "banner";
 }
 
-export default function LogoUpload({ value, onChange }: LogoUploadProps) {
+export default function LogoUpload({ value, onChange, kind = "logo" }: LogoUploadProps) {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const isBanner = kind === "banner";
+  const label = isBanner ? "Banner image" : "Logo";
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Logo must be under 5 MB.", variant: "destructive" });
+      toast({ title: "File too large", description: `${label} must be under 5 MB.`, variant: "destructive" });
       return;
     }
 
@@ -26,9 +29,9 @@ export default function LogoUpload({ value, onChange }: LogoUploadProps) {
     try {
       const token = localStorage.getItem("auth_token");
       const formData = new FormData();
-      formData.append("logo", file);
+      formData.append(kind, file);
 
-      const res = await fetch("/api/upload/logo", {
+      const res = await fetch(`/api/upload/${kind}`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
@@ -41,7 +44,7 @@ export default function LogoUpload({ value, onChange }: LogoUploadProps) {
 
       const { url } = await res.json();
       onChange(url);
-      toast({ title: "Logo uploaded" });
+      toast({ title: `${label} uploaded` });
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
@@ -51,11 +54,11 @@ export default function LogoUpload({ value, onChange }: LogoUploadProps) {
   }
 
   return (
-    <div className="flex items-center gap-4 mt-1">
+    <div className={`flex items-center gap-4 mt-1 ${isBanner ? "flex-col items-start sm:flex-row" : ""}`}>
       {/* Preview */}
-      <div className="w-16 h-16 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+      <div className={`${isBanner ? "w-full sm:w-64 h-24" : "w-16 h-16"} rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0`}>
         {value ? (
-          <img src={value} alt="Business logo" className="w-full h-full object-cover" data-testid="img-logo-preview" />
+          <img src={value} alt={`Business ${label.toLowerCase()}`} className="w-full h-full object-cover" data-testid={`img-${kind}-preview`} />
         ) : (
           <ImageIcon className="w-7 h-7 text-gray-300 dark:text-gray-600" />
         )}
@@ -69,7 +72,7 @@ export default function LogoUpload({ value, onChange }: LogoUploadProps) {
           accept="image/*"
           className="hidden"
           onChange={handleFile}
-          data-testid="input-logo-file"
+          data-testid={`input-${kind}-file`}
         />
         <Button
           type="button"
@@ -77,10 +80,10 @@ export default function LogoUpload({ value, onChange }: LogoUploadProps) {
           size="sm"
           disabled={uploading}
           onClick={() => fileRef.current?.click()}
-          data-testid="button-upload-logo"
+          data-testid={`button-upload-${kind}`}
         >
           <Upload className="w-4 h-4 mr-1.5" />
-          {uploading ? "Uploading..." : value ? "Change Logo" : "Upload Logo"}
+          {uploading ? "Uploading..." : value ? `Change ${label}` : `Upload ${label}`}
         </Button>
         {value && (
           <Button
@@ -89,7 +92,7 @@ export default function LogoUpload({ value, onChange }: LogoUploadProps) {
             size="sm"
             className="text-red-500 hover:text-red-600 h-7 px-2"
             onClick={() => onChange("")}
-            data-testid="button-remove-logo"
+            data-testid={`button-remove-${kind}`}
           >
             <X className="w-3.5 h-3.5 mr-1" />
             Remove
