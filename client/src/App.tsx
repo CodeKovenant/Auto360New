@@ -16,6 +16,7 @@ import Admin from "@/pages/Admin";
 import Cars from "@/pages/Cars";
 import CarDetail from "@/pages/CarDetail";
 import GarageServices from "@/pages/GarageServices";
+import ServiceDetail from "@/pages/ServiceDetail";
 import AutomotiveSupport from "@/pages/AutomotiveSupport";
 import BrandPage from "@/pages/BrandPage";
 import VerifyEmail from "@/pages/VerifyEmail";
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/business/:id" component={BusinessProfile} />
       <Route path="/cars" component={Cars} />
       <Route path="/cars/:id" component={CarDetail} />
+      <Route path="/services/:id" component={ServiceDetail} />
       <Route path="/garages/services" component={GarageServices} />
       <Route path="/automotive-support" component={AutomotiveSupport} />
       <Route path="/brand/:brand" component={BrandPage} />
