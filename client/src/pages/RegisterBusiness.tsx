@@ -32,6 +32,8 @@ export default function RegisterBusiness() {
     city: "",
     description: "",
     logo: "",
+    banner: "",
+    website: "",
   });
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
 
@@ -226,6 +228,10 @@ export default function RegisterBusiness() {
                   <Label htmlFor="biz-whatsapp">WhatsApp Number <span className="text-red-500">*</span></Label>
                   <Input id="biz-whatsapp" value={form.whatsapp} onChange={e => setField("whatsapp", e.target.value)} placeholder="+254 700 000 000" className="mt-1" required data-testid="input-biz-whatsapp" />
                 </div>
+                <div>
+                  <Label htmlFor="biz-website">Website</Label>
+                  <Input id="biz-website" type="url" value={form.website} onChange={e => setField("website", e.target.value)} placeholder="https://yourbusiness.com" className="mt-1" data-testid="input-biz-website" />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -263,6 +269,11 @@ export default function RegisterBusiness() {
               <div>
                 <Label>Business Logo (optional)</Label>
                 <LogoUpload value={form.logo} onChange={url => setField("logo", url)} />
+              </div>
+              <div>
+                <Label>Banner Image (optional)</Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">Add a wide image that will appear at the top of your public business profile.</p>
+                <LogoUpload kind="banner" value={form.banner} onChange={url => setField("banner", url)} />
               </div>
 
               {/* Terms & Conditions */}
