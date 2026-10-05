@@ -64,6 +64,7 @@ export interface IStorage {
 
   // Spare Parts
   getSparePartsByBusinessId(businessId: string): Promise<SparePart[]>;
+  getFeaturedSpareParts(): Promise<(SparePart & { businessName: string; businessCity: string; businessLogo: string | null })[]>;
   createSparePart(part: InsertSparePart): Promise<SparePart>;
   updateSparePart(id: string, data: Partial<SparePart>): Promise<SparePart>;
   deleteSparePart(id: string): Promise<void>;
@@ -99,6 +100,7 @@ export interface IStorage {
 
   // Support Services
   getSupportServicesByBusinessId(businessId: string): Promise<SupportService[]>;
+  getFeaturedSupportServices(): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null })[]>;
   createSupportService(service: InsertSupportService): Promise<SupportService>;
   updateSupportService(id: string, data: Partial<SupportService>): Promise<SupportService>;
   deleteSupportService(id: string): Promise<void>;
@@ -336,6 +338,30 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(spareParts).where(eq(spareParts.businessId, businessId)).orderBy(spareParts.createdAt);
   }
 
+  async getFeaturedSpareParts() {
+    return db
+      .select({
+        id: spareParts.id,
+        businessId: spareParts.businessId,
+        partName: spareParts.partName,
+        carBrand: spareParts.carBrand,
+        carModel: spareParts.carModel,
+        year: spareParts.year,
+        condition: spareParts.condition,
+        price: spareParts.price,
+        description: spareParts.description,
+        image: spareParts.image,
+        createdAt: spareParts.createdAt,
+        businessName: businesses.name,
+        businessCity: businesses.city,
+        businessLogo: businesses.logo,
+      })
+      .from(spareParts)
+      .innerJoin(businesses, eq(spareParts.businessId, businesses.id))
+      .where(and(eq(businesses.status, "approved"), eq(businesses.category, "spare_parts")))
+      .orderBy(desc(spareParts.createdAt))
+      .limit(12);
+  }
   async createSparePart(part: InsertSparePart) {
     const [created] = await db.insert(spareParts).values(part).returning();
     return created;
@@ -544,6 +570,29 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(supportServices).where(eq(supportServices.businessId, businessId)).orderBy(desc(supportServices.createdAt));
   }
 
+  async getFeaturedSupportServices() {
+    return db
+      .select({
+        id: supportServices.id,
+        businessId: supportServices.businessId,
+        name: supportServices.name,
+        description: supportServices.description,
+        startingPrice: supportServices.startingPrice,
+        createdAt: supportServices.createdAt,
+        businessName: businesses.name,
+        businessCity: businesses.city,
+        businessLogo: businesses.logo,
+        businessSubcategory: businesses.subcategory,
+      })
+      .from(supportServices)
+      .innerJoin(businesses, eq(supportServices.businessId, businesses.id))
+      .where(and(eq(businesses.status, "approved"), inArray(businesses.category, ["insurance", "car_wash", "other"])))
+      .orderBy(
+        desc(sql`CASE WHEN ${businesses.subcategory} = 'vehicle_finance' OR ${supportServices.name} ILIKE '%loan%' OR ${supportServices.name} ILIKE '%financ%' OR COALESCE(${supportServices.description}, '') ILIKE '%loan%' OR COALESCE(${supportServices.description}, '') ILIKE '%financ%' THEN 1 ELSE 0 END`),
+        desc(supportServices.createdAt),
+      )
+      .limit(24);
+  }
   async createSupportService(service: InsertSupportService) {
     const [created] = await db.insert(supportServices).values(service).returning();
     return created;
