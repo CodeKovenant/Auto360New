@@ -16,6 +16,7 @@ type BusinessRated = Business & { avgRating: number; reviewCount: number };
 type HomeSections = Record<string, BusinessRated[]>;
 
 const PREMIUM_CATEGORY_ORDER = ["car_dealer", "garage", "spare_parts", "car_wash", "insurance", "other"] as const;
+const AUTOMOTIVE_SUPPORT_BUSINESS_CATEGORIES = new Set<string>(["car_wash", "insurance", "other"]);
 
 const PREMIUM_SECTION_TITLE: Record<(typeof PREMIUM_CATEGORY_ORDER)[number], string> = {
   car_dealer: "Premium Car Dealers",
@@ -27,15 +28,16 @@ const PREMIUM_SECTION_TITLE: Record<(typeof PREMIUM_CATEGORY_ORDER)[number], str
 };
 
 const HOME_SPOTLIGHT_SECTIONS: {
-  category: (typeof PREMIUM_CATEGORY_ORDER)[number];
+  category: (typeof PREMIUM_CATEGORY_ORDER)[number] | "automotive_support";
   title: string;
   subtitle: string;
   href: string;
   icon: LucideIcon;
 }[] = [
-  { category: "spare_parts", title: "Featured Spare Parts Shops", subtitle: "Genuine and quality parts for all vehicle makes", href: "/autospares-dealers", icon: Package },
-  { category: "garage", title: "Featured Garages", subtitle: "Trusted mechanics and auto repair shops near you", href: "/autogarage-repair", icon: Wrench },
   { category: "car_dealer", title: "Featured Car Dealers", subtitle: "Trusted dealers and showrooms near you", href: "/automobile-dealers", icon: Car },
+  { category: "spare_parts", title: "Featured AutoSpares", subtitle: "Genuine and quality parts for all vehicle makes", href: "/autospares-dealers", icon: Package },
+  { category: "garage", title: "Featured Garages", subtitle: "Trusted mechanics and auto repair shops near you", href: "/autogarage-repair", icon: Wrench },
+  { category: "automotive_support", title: "Featured Autosupport", subtitle: "Vehicle finance, tracking, towing and other driver support", href: "/automotive-support", icon: Shield },
   { category: "car_wash", title: "Featured Car Wash", subtitle: "Wash and detailing services", href: "/businesses?category=car_wash", icon: Droplets },
   { category: "insurance", title: "Featured Insurance", subtitle: "Coverage and automotive support", href: "/automotive-support", icon: Shield },
   { category: "other", title: "Other Featured Services", subtitle: "More automotive businesses", href: "/businesses", icon: MoreHorizontal },
@@ -150,13 +152,22 @@ export default function Home() {
     staleTime: 0,
   });
 
+  const { data: automotiveSupportBusinesses, isLoading: automotiveSupportLoading } = useQuery<BusinessRated[]>({
+    queryKey: ["/api/businesses?category=automotive_support"],
+    staleTime: 0,
+  });
+
   /** Premium listings merged ahead of API sections so garages/spares show even if one endpoint is stale. */
   const spotlightByCategory = useMemo(() => {
     const out: Record<string, BusinessRated[]> = {};
     for (const block of HOME_SPOTLIGHT_SECTIONS) {
       const cat = block.category;
-      const fromSections = homeSections?.[cat] ?? [];
-      const premiumInCat = premiumBusinesses?.filter((b) => b.category === cat) ?? [];
+      const fromSections = cat === "automotive_support" ? automotiveSupportBusinesses ?? [] : homeSections?.[cat] ?? [];
+      const premiumInCat = premiumBusinesses?.filter((b) =>
+        cat === "automotive_support"
+          ? AUTOMOTIVE_SUPPORT_BUSINESS_CATEGORIES.has(b.category)
+          : b.category === cat
+      ) ?? [];
       const seen = new Set<string>();
       const merged: BusinessRated[] = [];
       for (const b of premiumInCat) {
@@ -176,7 +187,7 @@ export default function Home() {
       out[cat] = merged;
     }
     return out;
-  }, [homeSections, premiumBusinesses]);
+  }, [homeSections, premiumBusinesses, automotiveSupportBusinesses]);
 
   const premiumByCategory = useMemo(() => {
     const map = new Map<string, BusinessRated[]>();
@@ -436,7 +447,9 @@ export default function Home() {
         const Icon = block.icon;
         const striped = idx % 2 === 1;
         const emptyMessage =
-          block.category === "spare_parts"
+          block.category === "automotive_support"
+            ? "No automotive support providers listed yet."
+            : block.category === "spare_parts"
             ? "No spare parts shops listed yet."
             : block.category === "garage"
               ? "No garages listed yet."
@@ -454,7 +467,9 @@ export default function Home() {
               ? "Register Your Shop"
               : "Register Your Business";
         const testHeading =
-          block.category === "spare_parts"
+          block.category === "automotive_support"
+            ? "featured-autosupport-heading"
+            : block.category === "spare_parts"
             ? "featured-products-heading"
             : block.category === "garage"
               ? "featured-garages-heading"
@@ -479,7 +494,7 @@ export default function Home() {
                   </Button>
                 </Link>
               </div>
-              {list.length === 0 && (homeSectionsLoading || premiumLoading) ? (
+              {list.length === 0 && (homeSectionsLoading || premiumLoading || (block.category === "automotive_support" && automotiveSupportLoading)) ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <Skeleton key={i} className="h-48 rounded-md" />
