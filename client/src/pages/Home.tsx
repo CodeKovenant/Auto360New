@@ -69,6 +69,13 @@ const STEPS = [
   { num: "03", title: "Customers Connect", desc: "Users find and contact your business via phone or WhatsApp." },
 ];
 
+const HERO_SERVICE_SLIDES = [
+  { label: "Automobile Dealers", lead: "Automobile", accent: "Dealers" },
+  { label: "Autospares Dealers", lead: "Autospares", accent: "Dealers" },
+  { label: "Autogarage Repair", lead: "Autogarage", accent: "Repair" },
+  { label: "Automotive Support", lead: "Automotive", accent: "Support" },
+] as const;
+
 type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null };
 type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null };
 type RecentReview = { id: string; name: string; rating: number; comment: string; businessId: string; businessName: string; createdAt: string | Date | null };
@@ -170,8 +177,19 @@ export default function Home() {
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               Trusted Car Services Near You
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-6 drop-shadow-lg" data-testid="hero-heading">
-              All Your Automobile<br />Needs. One Platform.<br /><span className="text-orange-400">Your One-Stop Auto<br />Solution.</span>
+            <h1
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-6 drop-shadow-lg"
+              data-testid="hero-heading"
+              aria-label={HERO_SERVICE_SLIDES.map((slide) => slide.label).join(". ")}
+            >
+              <span className="hero-service-slider" aria-hidden="true">
+                {HERO_SERVICE_SLIDES.map((slide, index) => (
+                  <span key={slide.label} className="hero-service-slider__item" style={{ animationDelay: (index * 4 - 16) + "s" }}>
+                    {slide.lead}{" "}
+                    <span className="text-orange-400">{slide.accent}</span>
+                  </span>
+                ))}
+              </span>
             </h1>
             <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-xl drop-shadow leading-relaxed">
               Connect with verified dealers, spare parts shops &amp; garage services across Kenya's 47 counties.
