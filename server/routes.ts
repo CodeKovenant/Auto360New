@@ -559,6 +559,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Homepage product and service highlights
+  app.get("/api/home/featured-offers", async (_req, res) => {
+    try {
+      const [sparePartsData, supportServicesData] = await Promise.all([
+        storage.getFeaturedSpareParts(),
+        storage.getFeaturedSupportServices(),
+      ]);
+      const supportService = supportServicesData.find((service) =>
+        service.businessSubcategory === "vehicle_finance" || /loan|financ/i.test(service.name + " " + (service.description || ""))
+      ) || supportServicesData[0] || null;
+      res.json({ sparePart: sparePartsData[0] || null, supportService });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   // Spare Parts
   app.get("/api/parts/:businessId", async (req, res) => {
     try {
