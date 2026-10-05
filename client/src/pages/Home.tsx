@@ -10,7 +10,7 @@ import BusinessCard from "@/components/BusinessCard";
 import CarCard from "@/components/CarCard";
 import GarageServiceCard from "@/components/GarageServiceCard";
 import ReviewCard from "@/components/ReviewCard";
-import type { Business, Car as CarType, GarageService } from "@shared/schema";
+import type { Business, Car as CarType, GarageService, SparePart, SupportService } from "@shared/schema";
 
 type BusinessRated = Business & { avgRating: number; reviewCount: number };
 type HomeSections = Record<string, BusinessRated[]>;
@@ -80,6 +80,60 @@ type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dea
 type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null };
 type RecentReview = { id: string; name: string; rating: number; comment: string; businessId: string; businessName: string; createdAt: string | Date | null };
 
+type FeaturedSparePart = SparePart & { businessName: string; businessCity: string; businessLogo: string | null };
+type FeaturedSupportService = SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null };
+type FeaturedHomeOffers = { sparePart: FeaturedSparePart | null; supportService: FeaturedSupportService | null };
+
+type FeaturedListingCardProps = {
+  label: string;
+  title: string;
+  details?: string | null;
+  business?: string | null;
+  image?: string | null;
+  price?: string | null;
+  href: string;
+  icon: LucideIcon;
+  actionLabel: string;
+  testId: string;
+};
+
+function formatFeaturedPrice(price: string | number | null | undefined) {
+  if (price === null || price === undefined || String(price).trim() === "") return null;
+  const value = String(price).trim();
+  if (/^\d+(?:\.\d+)?$/.test(value)) {
+    return "KSh " + Number(value).toLocaleString("en-KE", { maximumFractionDigits: 0 });
+  }
+  return value;
+}
+
+function FeaturedListingCard({ label, title, details, business, image, price, href, icon, actionLabel, testId }: FeaturedListingCardProps) {
+  const Icon = icon;
+  return (
+    <Link href={href} className="group block h-full">
+      <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-800 dark:bg-gray-950" data-testid={testId}>
+        <div className="relative h-40 overflow-hidden bg-gray-100 dark:bg-gray-800">
+          {image ? (
+            <img src={image} alt={title} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <Icon className="h-12 w-12 text-gray-300 dark:text-gray-600" aria-hidden="true" />
+            </div>
+          )}
+          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-gray-800 shadow-sm dark:bg-gray-950/90 dark:text-gray-100">{label}</span>
+        </div>
+        <div className="flex flex-1 flex-col p-4">
+          <h3 className="line-clamp-2 min-h-[2.75rem] font-bold leading-snug text-gray-900 dark:text-white">{title}</h3>
+          {details && <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm leading-relaxed text-gray-500 dark:text-gray-400">{details}</p>}
+          {business && <p className="mt-2 line-clamp-1 text-xs font-medium text-gray-600 dark:text-gray-300">{business}</p>}
+          <div className="mt-auto flex items-end justify-between gap-2 pt-4">
+            {price ? <p className="text-lg font-extrabold text-red-600 dark:text-red-400">{price}</p> : <span className="text-xs text-gray-400">See available listings</span>}
+            <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-red-600 transition-colors group-hover:text-red-700 dark:text-red-400">{actionLabel}<ArrowRight className="h-3.5 w-3.5" /></span>
+          </div>
+        </div>
+      </article>
+    </Link>
+  );
+}
 export default function Home() {
   const [search, setSearch] = useState("");
   const [, navigate] = useLocation();
@@ -142,6 +196,20 @@ export default function Home() {
   const { data: popularServices, isLoading: servicesLoading } = useQuery<ServiceWithGarage[]>({
     queryKey: ["/api/services/popular"],
   });
+  const { data: featuredHomeOffers, isLoading: featuredOffersLoading } = useQuery<FeaturedHomeOffers>({
+    queryKey: ["/api/home/featured-offers"],
+    staleTime: 0,
+  });
+
+  const featuredCar = featuredCars?.[0];
+  const featuredGarageService = popularServices?.[0];
+  const featuredSparePart = featuredHomeOffers?.sparePart;
+  const featuredSupportService = featuredHomeOffers?.supportService;
+  const isVehicleFinance = !!featuredSupportService && (
+    featuredSupportService.businessSubcategory === "vehicle_finance" ||
+    /loan|financ/i.test(featuredSupportService.name + " " + (featuredSupportService.description || ""))
+  );
+
 
   const { data: recentReviews, isLoading: reviewsLoading } = useQuery<RecentReview[]>({
     queryKey: ["/api/reviews/recent"],
@@ -228,6 +296,77 @@ export default function Home() {
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── 1a. FEATURED PRODUCTS & SERVICES ── */}
+      <section className="py-12 bg-gray-50 dark:bg-gray-900">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="mb-1 text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">Featured Products &amp; Services</h2>
+              <p className="text-muted-foreground">A car, spare part, garage service, and automotive support listing picked from approved businesses.</p>
+            </div>
+            <Link href="/businesses">
+              <Button variant="outline" className="flex items-center gap-1">Browse all listings <ChevronRight className="h-4 w-4" /></Button>
+            </Link>
+          </div>
+          {carsLoading || servicesLoading || featuredOffersLoading ? (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-72 rounded-2xl" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+              <FeaturedListingCard
+                label="Car for sale"
+                title={featuredCar?.title || "Explore cars for sale"}
+                details={featuredCar ? [featuredCar.year, featuredCar.condition === "new" ? "Brand new" : "Used"].join(" · ") : "Browse available vehicle listings"}
+                business={featuredCar ? featuredCar.dealerName + " · " + featuredCar.location : "From approved automobile dealers"}
+                image={featuredCar?.images?.[0] || featuredCar?.dealerLogo}
+                price={formatFeaturedPrice(featuredCar?.price)}
+                href={featuredCar ? "/cars/" + featuredCar.id : "/cars"}
+                icon={Car}
+                actionLabel={featuredCar ? "View car" : "Browse cars"}
+                testId="featured-home-car"
+              />
+              <FeaturedListingCard
+                label="Spare part"
+                title={featuredSparePart?.partName || "Explore spare parts"}
+                details={featuredSparePart ? [featuredSparePart.carBrand, featuredSparePart.carModel, featuredSparePart.condition === "new" ? "New" : "Used"].join(" · ") : "Browse parts listed by local dealers"}
+                business={featuredSparePart ? featuredSparePart.businessName + " · " + featuredSparePart.businessCity : "From approved spare-parts dealers"}
+                image={featuredSparePart?.image || featuredSparePart?.businessLogo}
+                price={formatFeaturedPrice(featuredSparePart?.price)}
+                href={featuredSparePart ? "/business/" + featuredSparePart.businessId : "/autospares-dealers"}
+                icon={Package}
+                actionLabel={featuredSparePart ? "View seller" : "Browse parts"}
+                testId="featured-home-spare-part"
+              />
+              <FeaturedListingCard
+                label="Garage service"
+                title={featuredGarageService?.name || "Explore garage services"}
+                details={featuredGarageService?.description || "Find repair and maintenance services"}
+                business={featuredGarageService ? featuredGarageService.garageName + " · " + featuredGarageService.garageCity : "From approved garages"}
+                image={featuredGarageService?.garageLogo}
+                price={formatFeaturedPrice(featuredGarageService?.price)}
+                href={featuredGarageService ? "/services/" + featuredGarageService.id : "/garages/services"}
+                icon={Wrench}
+                actionLabel={featuredGarageService ? "View service" : "Browse services"}
+                testId="featured-home-garage-service"
+              />
+              <FeaturedListingCard
+                label={isVehicleFinance ? "Vehicle finance" : "Automotive support"}
+                title={featuredSupportService?.name || "Explore automotive support"}
+                details={featuredSupportService?.description || (featuredSupportService ? "Support from an approved automotive provider" : "Explore vehicle loans, insurance, and other support")}
+                business={featuredSupportService ? featuredSupportService.businessName + " · " + featuredSupportService.businessCity : "From approved automotive-support providers"}
+                image={featuredSupportService?.businessLogo}
+                price={formatFeaturedPrice(featuredSupportService?.startingPrice)}
+                href={featuredSupportService ? "/business/" + featuredSupportService.businessId : "/automotive-support"}
+                icon={Shield}
+                actionLabel={featuredSupportService ? "View service" : "Browse support"}
+                testId="featured-home-support-service"
+              />
+            </div>
+          )}
         </div>
       </section>
 
