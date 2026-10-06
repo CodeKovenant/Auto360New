@@ -255,9 +255,9 @@ export default function Home() {
     <div className="min-h-screen bg-white dark:bg-gray-950">
 
       {/* ── 1. HERO ── */}
-      <section className="relative overflow-hidden bg-gray-950 text-white">
+      <section className="relative min-h-[70vh] overflow-hidden bg-gray-950 text-white">
         <div
-          className={`hero-banner-slide relative hero-banner-slide--${heroSlidePhase}`}
+          className={`hero-banner-slide relative flex min-h-[70vh] items-center hero-banner-slide--${heroSlidePhase}`}
           style={{
             backgroundImage: "url(/hero-bg.jpeg)",
             backgroundSize: "cover",
