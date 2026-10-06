@@ -143,19 +143,23 @@ export default function Home() {
 
   useEffect(() => {
     let exitTimeout: number | undefined;
+    let offRightFrame: number | undefined;
     let enterFrame: number | undefined;
     const interval = window.setInterval(() => {
       setHeroSlidePhase("leaving");
       exitTimeout = window.setTimeout(() => {
         setHeroSlideIndex((current) => (current + 1) % HERO_SERVICE_SLIDES.length);
         setHeroSlidePhase("off-right");
-        enterFrame = window.requestAnimationFrame(() => setHeroSlidePhase("entering"));
-      }, 450);
+        offRightFrame = window.requestAnimationFrame(() => {
+          enterFrame = window.requestAnimationFrame(() => setHeroSlidePhase("entering"));
+        });
+      }, 750);
     }, 5000);
 
     return () => {
       window.clearInterval(interval);
       if (exitTimeout !== undefined) window.clearTimeout(exitTimeout);
+      if (offRightFrame !== undefined) window.cancelAnimationFrame(offRightFrame);
       if (enterFrame !== undefined) window.cancelAnimationFrame(enterFrame);
     };
   }, []);
