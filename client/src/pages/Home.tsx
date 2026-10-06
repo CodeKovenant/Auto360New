@@ -308,7 +308,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 1a. FEATURED PRODUCTS & SERVICES ── */}
+      {/* ── 1a. TRUST / STATS BAR ── */}
+      <section className="py-8 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {[
+              { num: "500+", label: "Businesses Listed", icon: Building2 },
+              { num: "47", label: "Counties Covered", icon: MapPin },
+              { num: "50+", label: "Car Brands", icon: Car },
+              { num: "100%", label: "Verified Listings", icon: BadgeCheck },
+            ].map(stat => (
+              <div key={stat.label} className="flex flex-col items-center gap-1">
+                <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-1">
+                  <stat.icon className="w-5 h-5 text-red-600 dark:text-red-400" />
+                </div>
+                <span className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">{stat.num}</span>
+                <span className="text-sm text-muted-foreground">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 1b. FEATURED PRODUCTS & SERVICES ── */}
       <section className="py-12 bg-gray-50 dark:bg-gray-900">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -376,28 +398,6 @@ export default function Home() {
               />
             </div>
           )}
-        </div>
-      </section>
-
-      {/* ── 1b. TRUST / STATS BAR ── */}
-      <section className="py-8 bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            {[
-              { num: "500+", label: "Businesses Listed", icon: Building2 },
-              { num: "47", label: "Counties Covered", icon: MapPin },
-              { num: "50+", label: "Car Brands", icon: Car },
-              { num: "100%", label: "Verified Listings", icon: BadgeCheck },
-            ].map(stat => (
-              <div key={stat.label} className="flex flex-col items-center gap-1">
-                <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-1">
-                  <stat.icon className="w-5 h-5 text-red-600 dark:text-red-400" />
-                </div>
-                <span className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">{stat.num}</span>
-                <span className="text-sm text-muted-foreground">{stat.label}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
