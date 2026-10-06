@@ -377,9 +377,9 @@ export default function Home() {
                 business={featuredCar ? featuredCar.dealerName + " · " + featuredCar.location : "From approved automobile dealers"}
                 image={featuredCar?.images?.[0] || featuredCar?.dealerLogo}
                 price={formatFeaturedPrice(featuredCar?.price)}
-                href={featuredCar ? "/cars/" + featuredCar.id : "/cars"}
+                href={featuredCar ? "/business/" + featuredCar.dealerId : "/cars"}
                 icon={Car}
-                actionLabel={featuredCar ? "View car" : "Browse cars"}
+                actionLabel={featuredCar ? "View dealer" : "Browse cars"}
                 testId="featured-home-car"
               />
               <FeaturedListingCard
@@ -401,9 +401,9 @@ export default function Home() {
                 business={featuredGarageService ? featuredGarageService.garageName + " · " + featuredGarageService.garageCity : "From approved garages"}
                 image={featuredGarageService?.garageLogo}
                 price={formatFeaturedPrice(featuredGarageService?.price)}
-                href={featuredGarageService ? "/services/" + featuredGarageService.id : "/garages/services"}
+                href={featuredGarageService ? "/business/" + featuredGarageService.garageId : "/garages/services"}
                 icon={Wrench}
-                actionLabel={featuredGarageService ? "View service" : "Browse services"}
+                actionLabel={featuredGarageService ? "View garage" : "Browse services"}
                 testId="featured-home-garage-service"
               />
               <FeaturedListingCard
@@ -415,7 +415,7 @@ export default function Home() {
                 price={formatFeaturedPrice(featuredSupportService?.startingPrice)}
                 href={featuredSupportService ? "/business/" + featuredSupportService.businessId : "/automotive-support"}
                 icon={Shield}
-                actionLabel={featuredSupportService ? "View service" : "Browse support"}
+                actionLabel={featuredSupportService ? "View provider" : "Browse support"}
                 testId="featured-home-support-service"
               />
             </div>
