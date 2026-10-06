@@ -259,9 +259,9 @@ export default function Home() {
     <div className="min-h-screen bg-white dark:bg-gray-950">
 
       {/* ── 1. HERO ── */}
-      <section className="relative min-h-[70vh] overflow-hidden bg-gray-950 text-white">
+      <section className="relative min-h-[85vh] overflow-hidden bg-gray-950 text-white">
         <div
-          className={`hero-banner-slide relative flex min-h-[70vh] items-center hero-banner-slide--${heroSlidePhase}`}
+          className={`hero-banner-slide relative flex min-h-[85vh] items-center justify-start text-left hero-banner-slide--${heroSlidePhase}`}
           style={{
             backgroundImage: "url(/hero-bg.jpeg)",
             backgroundSize: "cover",
@@ -275,24 +275,24 @@ export default function Home() {
           {/* Fade into the page at the bottom */}
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white dark:from-gray-950 to-transparent" />
 
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-4 border border-white/20">
+          <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-14 md:py-20">
+            <div className="w-full max-w-3xl text-left">
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-5 border border-white/20">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                 Trusted Car Services Near You
               </div>
               <h1
-                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4 drop-shadow-lg"
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-5 drop-shadow-lg"
                 data-testid="hero-heading"
                 aria-label={activeHeroSlide.label}
               >
                 {activeHeroSlide.lead}{" "}
                 <span className="text-orange-400">{activeHeroSlide.accent}</span>
               </h1>
-              <p className="text-lg md:text-xl text-gray-200 mb-5 max-w-xl drop-shadow leading-relaxed">
+              <p className="text-lg md:text-xl text-gray-200 mb-6 max-w-xl drop-shadow leading-relaxed">
                 Connect with verified dealers, spare parts shops &amp; garage services across Kenya's 47 counties.
               </p>
-              <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-xl mb-5">
+              <form onSubmit={handleSearch} className="flex items-center gap-3 max-w-xl mb-6">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
@@ -307,7 +307,7 @@ export default function Home() {
                   Search
                 </Button>
               </form>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
                 <Link href="/cars">
                   <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-cars-hero">
                     <Car className="w-4 h-4 mr-1.5" />
