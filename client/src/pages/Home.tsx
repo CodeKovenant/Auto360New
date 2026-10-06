@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2, BadgeCheck, Store, MapPin, ArrowRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -136,7 +136,29 @@ function FeaturedListingCard({ label, title, details, business, image, price, hr
 }
 export default function Home() {
   const [search, setSearch] = useState("");
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+  const [heroSlidePhase, setHeroSlidePhase] = useState<"idle" | "leaving" | "off-right" | "entering">("idle");
   const [, navigate] = useLocation();
+  const activeHeroSlide = HERO_SERVICE_SLIDES[heroSlideIndex];
+
+  useEffect(() => {
+    let exitTimeout: number | undefined;
+    let enterFrame: number | undefined;
+    const interval = window.setInterval(() => {
+      setHeroSlidePhase("leaving");
+      exitTimeout = window.setTimeout(() => {
+        setHeroSlideIndex((current) => (current + 1) % HERO_SERVICE_SLIDES.length);
+        setHeroSlidePhase("off-right");
+        enterFrame = window.requestAnimationFrame(() => setHeroSlidePhase("entering"));
+      }, 450);
+    }, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+      if (exitTimeout !== undefined) window.clearTimeout(exitTimeout);
+      if (enterFrame !== undefined) window.cancelAnimationFrame(enterFrame);
+    };
+  }, []);
 
   const SPOTLIGHT_LIMIT = 6;
 
@@ -233,76 +255,72 @@ export default function Home() {
     <div className="min-h-screen bg-white dark:bg-gray-950">
 
       {/* ── 1. HERO ── */}
-      <section
-        className="relative text-white overflow-hidden"
-        style={{
-          backgroundImage: "url(/hero-bg.jpeg)",
-          backgroundSize: "cover",
-          backgroundPosition: "center right",
-        }}
-      >
-        {/* Dark gradient overlay — heavy on the left (text side), lighter on the right (car side) */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/30" />
-        {/* Subtle red tint on the left edge for brand color */}
-        <div className="absolute inset-0 bg-gradient-to-br from-red-950/50 via-transparent to-transparent" />
-        {/* Fade into the page at the bottom */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-gray-950 to-transparent" />
+      <section className="relative overflow-hidden bg-gray-950 text-white">
+        <div
+          className={`hero-banner-slide relative hero-banner-slide--${heroSlidePhase}`}
+          style={{
+            backgroundImage: "url(/hero-bg.jpeg)",
+            backgroundSize: "cover",
+            backgroundPosition: "center right",
+          }}
+        >
+          {/* Dark gradient overlay — heavy on the left (text side), lighter on the right (car side) */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/30" />
+          {/* Subtle red tint on the left edge for brand color */}
+          <div className="absolute inset-0 bg-gradient-to-br from-red-950/50 via-transparent to-transparent" />
+          {/* Fade into the page at the bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white dark:from-gray-950 to-transparent" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-6 border border-white/20">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              Trusted Car Services Near You
-            </div>
-            <h1
-              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-6 drop-shadow-lg"
-              data-testid="hero-heading"
-              aria-label={HERO_SERVICE_SLIDES.map((slide) => slide.label).join(". ")}
-            >
-              <span className="hero-service-slider" aria-hidden="true">
-                {HERO_SERVICE_SLIDES.map((slide, index) => (
-                  <span key={slide.label} className="hero-service-slider__item" style={{ animationDelay: (index * 4 - 16) + "s" }}>
-                    {slide.lead}{" "}
-                    <span className="text-orange-400">{slide.accent}</span>
-                  </span>
-                ))}
-              </span>
-            </h1>
-            <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-xl drop-shadow leading-relaxed">
-              Connect with verified dealers, spare parts shops &amp; garage services across Kenya's 47 counties.
-            </p>
-            <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-xl mb-8">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search businesses, spare parts, city..."
-                  className="pl-10 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-0 shadow-lg h-12"
-                  data-testid="input-search-hero"
-                />
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-4 border border-white/20">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                Trusted Car Services Near You
               </div>
-              <Button type="submit" size="lg" className="bg-orange-500 hover:bg-orange-600 text-white h-12 px-6 flex-shrink-0" data-testid="button-search-hero">
-                Search
-              </Button>
-            </form>
-            <div className="flex items-center gap-3 flex-wrap">
-              <Link href="/cars">
-                <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-cars-hero">
-                  <Car className="w-4 h-4 mr-1.5" />
-                  Cars for Sale
+              <h1
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4 drop-shadow-lg"
+                data-testid="hero-heading"
+                aria-label={activeHeroSlide.label}
+              >
+                {activeHeroSlide.lead}{" "}
+                <span className="text-orange-400">{activeHeroSlide.accent}</span>
+              </h1>
+              <p className="text-lg md:text-xl text-gray-200 mb-5 max-w-xl drop-shadow leading-relaxed">
+                Connect with verified dealers, spare parts shops &amp; garage services across Kenya's 47 counties.
+              </p>
+              <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-xl mb-5">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search businesses, spare parts, city..."
+                    className="pl-10 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-0 shadow-lg h-12"
+                    data-testid="input-search-hero"
+                  />
+                </div>
+                <Button type="submit" size="lg" className="bg-orange-500 hover:bg-orange-600 text-white h-12 px-6 flex-shrink-0" data-testid="button-search-hero">
+                  Search
                 </Button>
-              </Link>
-              <Link href="/businesses">
-                <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-hero">
-                  Browse Businesses
-                </Button>
-              </Link>
-              <Link href="/register-business">
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg" data-testid="button-register-hero">
-                  Register Your Business
-                </Button>
-              </Link>
+              </form>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link href="/cars">
+                  <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-cars-hero">
+                    <Car className="w-4 h-4 mr-1.5" />
+                    Cars for Sale
+                  </Button>
+                </Link>
+                <Link href="/businesses">
+                  <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-hero">
+                    Browse Businesses
+                  </Button>
+                </Link>
+                <Link href="/register-business">
+                  <Button className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg" data-testid="button-register-hero">
+                    Register Your Business
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
