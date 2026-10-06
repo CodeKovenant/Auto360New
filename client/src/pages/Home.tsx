@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import BusinessCard from "@/components/BusinessCard";
-import CarCard from "@/components/CarCard";
-import GarageServiceCard from "@/components/GarageServiceCard";
 import ReviewCard from "@/components/ReviewCard";
 import type { Business, Car as CarType, GarageService, SparePart, SupportService } from "@shared/schema";
 
@@ -580,72 +578,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 6. FEATURED SERVICES ── */}
-      <section className="py-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="popular-services-heading">Featured Services</h2>
-              <p className="text-muted-foreground">Popular garage and automotive services</p>
-            </div>
-            <Link href="/garages/services">
-              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-services">
-                All Services <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-          {servicesLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-md" />)}
-            </div>
-          ) : popularServices && popularServices.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {popularServices.slice(0, 6).map(svc => <GarageServiceCard key={svc.id} service={svc} />)}
-            </div>
-          ) : (
-            <div className="text-center py-12 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
-              <Wrench className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-              <p className="text-muted-foreground">No services listed yet.</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── 7. FEATURED CARS ── */}
-      <section className="py-14 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="featured-cars-heading">Featured Cars for Sale</h2>
-              <p className="text-muted-foreground">Browse verified vehicles from trusted dealers</p>
-            </div>
-            <Link href="/cars">
-              <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-cars">
-                View All Cars <ChevronRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-          {carsLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-72 rounded-md" />)}
-            </div>
-          ) : featuredCars && featuredCars.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {featuredCars.slice(0, 6).map(car => <CarCard key={car.id} car={car} />)}
-            </div>
-          ) : (
-            <div className="text-center py-12 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
-              <Car className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
-              <p className="text-muted-foreground">No car listings yet. Check back soon!</p>
-              <Link href="/businesses?category=car_dealer">
-                <Button variant="outline" className="mt-4">Browse Car Dealers</Button>
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── 8. REVIEWS ── */}
+      {/* ── 6. REVIEWS ── */}
       <section className="py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -668,7 +601,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 9. HOW IT WORKS ── */}
+      {/* ── 7. HOW IT WORKS ── */}
       <section className="py-16 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -705,7 +638,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 10. CTA ── */}
+      {/* ── 8. CTA ── */}
       <section className="relative py-20 overflow-hidden bg-gradient-to-br from-red-800 via-red-700 to-red-900 text-white">
         {/* Subtle background pattern */}
         <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "28px 28px" }} />
