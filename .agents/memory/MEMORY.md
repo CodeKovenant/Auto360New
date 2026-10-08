@@ -1,1 +1,1 @@
-- [Auto360 dependency setup](auto360-dependencies.md) — its imported npm lockfile currently hits Replit package firewall and registry failures; don't bypass them.
+- [Auto360 editing scope](auto360-dependencies.md) — make requested code changes only; do not install or update dependencies.
