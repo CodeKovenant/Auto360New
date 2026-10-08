@@ -1,0 +1,235 @@
+You are improving the Auto360 MERN SaaS to fully support the following features:
+
+1️⃣ Main Menu / Navigation
+
+Update the main menu to include four top-level categories:
+
+Automobile Dealers
+
+Auto Spare Part Dealers
+
+Auto Garage
+
+Automotive Support (e.g., insurance, towing, car wash, roadside assistance)
+
+Each menu item links to a filtered listing page for that category.
+
+Automotive Support listing pages should display services/products as cards with images and details.
+
+2️⃣ Business Profile Page Updates (/business/:id)
+
+Each business profile page should include:
+
+2.1 Header
+
+Business Logo
+
+Business Name
+
+Business Type
+
+Location
+
+Average Rating (from reviews)
+
+2.2 Share Buttons
+
+Social media share icons: Facebook, X, Instagram, WhatsApp
+
+Share business profile URL with a pre-filled message
+
+2.3 Map Section
+
+Interactive map showing the business location
+
+Use Leaflet or Mapbox
+
+Display a marker with business name and address
+
+Place below the header or below products/services section
+
+2.4 Services / Products Cards
+
+Automobile Dealers: Cars for sale (CarCard)
+
+Auto Garage: Services offered (GarageServiceCard)
+
+Auto Spare Part Dealers: Spare parts
+
+Each part includes: name, car model/brand, starting price, image
+
+Automotive Support (Insurance, Towing, etc.): Services offered as cards with:
+
+Name of service (e.g., “Comprehensive Insurance”)
+
+Description
+
+Estimated starting price
+
+Image or icon
+
+Card example:
+
+-----------------------------
+| IMAGE                     |
+| Service: Comprehensive Insurance
+| Description: Covers accident, fire, theft
+| Starting Price: KSh 5,000/year
+| [Contact] [WhatsApp]      |
+-----------------------------
+2.5 Reviews Section
+
+Show latest 3–5 reviews
+
+Each review: reviewer name, rating, comment, date
+
+Display average rating at top
+
+2.6 Safety Tips Section
+
+Provide tips for dealing with automotive businesses
+
+Icon: 🛡️
+
+2.7 Contact Section
+
+Phone, WhatsApp, Email, Address
+
+Contact form: Name, Phone, Message
+
+2.8 Report Business Section
+
+Users can report fake, scam, or misleading listings
+
+Fields: Name, Email, Reason, Description
+
+Submits to /api/report
+
+3️⃣ Database Updates
+Business Schema
+Business {
+  name: String,
+  type: String, // Automobile Dealer, Auto Spare Part Dealer, Auto Garage, Automotive Support
+  description: String,
+  logo: String,
+  phone: String,
+  whatsapp: String,
+  email: String,
+  address: String,
+  city: String,
+  location: { type: "Point", coordinates: [longitude, latitude] },
+  approved: Boolean,
+  ownerId: ObjectId,
+  products: [
+    {
+      name: String,
+      description: String,
+      startingPrice: Number,
+      image: String,
+      carBrand: String, // for spare parts
+      carModel: String // for spare parts
+    }
+  ],
+  services: [
+    {
+      name: String,
+      description: String,
+      startingPrice: Number,
+      image: String
+    }
+  ],
+  createdAt: Date
+}
+Spare Part Schema
+SparePart {
+  name: String,
+  carBrand: String,
+  carModel: String,
+  description: String,
+  startingPrice: Number,
+  image: String,
+  dealerId: ObjectId,
+  createdAt: Date
+}
+Insurance / Automotive Support Service Schema
+SupportService {
+  name: String,
+  description: String,
+  startingPrice: Number,
+  image: String,
+  businessId: ObjectId,
+  createdAt: Date
+}
+4️⃣ API Updates
+
+GET /api/business/:id — returns business info + products/services + location
+
+GET /api/products/:businessId — for spare parts
+
+GET /api/services/:businessId — for garage or support services
+
+POST /api/report — submit reported businesses
+
+GET /api/reviews/recent — recent reviews for homepage
+
+GET /api/brands/popular — popular brands for homepage
+
+5️⃣ Frontend Components
+
+CarCard.jsx — car listing cards
+
+GarageServiceCard.jsx — garage service cards
+
+ProductCard.jsx — spare parts cards with images
+
+SupportServiceCard.jsx — automotive support cards (insurance, towing, etc.)
+
+BusinessMap.jsx — map with marker
+
+ReviewCard.jsx — display reviews
+
+ShareButtons.jsx — social media sharing
+
+ReportBusinessForm.jsx — report form
+
+SafetyTips.jsx — safety tips list
+
+6️⃣ Homepage Updates
+
+Top bar:
+
+Welcome message: “Welcome to Auto360”
+
+Email, WhatsApp
+
+Social icons: Facebook, X, Instagram, TikTok
+
+Popular car brands section (clickable logos)
+
+Recent reviews (latest 3–5, linked to business profiles)
+
+Featured cars, garage services, support services as cards
+
+7️⃣ Design Guidelines
+
+Use TailwindCSS, responsive card grids
+
+Hover effect: hover:shadow-lg, hover:scale-105
+
+Map responsive: full width on mobile, centered on desktop
+
+Cards show starting price prominently
+
+Maintain consistent styling across cars, spare parts, garage services, support services
+
+8️⃣ Final Layout of Business Profile Page
+Top Bar (welcome, contact info, social links)
+Business Header (logo, name, type, location, rating)
+Share Buttons (Facebook, X, Instagram, WhatsApp)
+Services / Products / Spare Parts / Support Services (cards grid with images & starting price)
+Map Section (interactive map with marker)
+Reviews Section (latest 3–5 + average rating)
+Safety Tips Section
+Contact Form
+Report Business Form
+Footer

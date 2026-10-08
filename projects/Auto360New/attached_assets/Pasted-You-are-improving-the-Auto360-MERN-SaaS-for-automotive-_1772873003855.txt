@@ -1,0 +1,129 @@
+You are improving the Auto360 MERN SaaS for automotive businesses. Each business profile page (/business/:id) should now include the following new features in addition to existing ones (services/products cards, reviews, contact info, etc.):
+
+1️⃣ Social Media Sharing
+
+Add share buttons for popular social media platforms:
+
+Facebook
+
+X (Twitter)
+
+Instagram
+
+WhatsApp
+
+Functionality:
+
+Clicking the icon shares the business profile URL with a pre-filled message:
+
+Check out this business on Auto360: [Business Name] [Business Profile URL]
+
+Use React components like ShareButtons.jsx
+
+Place below the business header or at the top of the page
+
+Example layout:
+
+Share this business:
+[ Facebook ] [ X ] [ Instagram ] [ WhatsApp ]
+2️⃣ Safety Tips Section
+
+Add a “Safety Tips” section below the business info or above the contact form.
+
+Content (example tips):
+
+Verify the business before making payment.
+
+Meet in a safe public location for transactions.
+
+Avoid sharing unnecessary personal info.
+
+Use official contact channels (WhatsApp / phone / email).
+
+Layout:
+
+---------------------------------------
+🛡️ Safety Tips
+- Always verify the business before paying.
+- Meet in a safe public location.
+- Use WhatsApp or phone for official contact.
+- Do not share personal sensitive info.
+---------------------------------------
+3️⃣ Report Business Form
+
+Add a “Report Business” section at the bottom of the profile page.
+
+Fields:
+
+Name
+
+Email
+
+Reason for reporting (Dropdown: Fake listing / Scam / Misleading info / Other)
+
+Description (optional)
+
+Submit button
+
+API endpoint:
+
+POST /api/report
+
+Stores the report in the database:
+
+Report {
+  businessId: ObjectId
+  name: String
+  email: String
+  reason: String
+  description: String
+  createdAt: Date
+}
+
+Admin can view and act on reported businesses via Admin Dashboard.
+
+4️⃣ Updated Layout of Business Profile Page
+TopBar (Welcome, contact info, social links)
+Business Header (logo, name, type, location, rating)
+Share Buttons (Facebook, X, Instagram, WhatsApp)
+Services / Products (cards grid with starting price)
+Reviews Section (latest 3–5 + average rating)
+Safety Tips Section
+Contact Form
+Report Business Form
+Footer
+5️⃣ Frontend Components
+
+ShareButtons.jsx — reusable social share buttons
+
+SafetyTips.jsx — list of safety tips
+
+ReportBusinessForm.jsx — form with validation
+
+Reuse ProductCard.jsx, ServiceCard.jsx, ReviewCard.jsx
+
+6️⃣ Design Guidelines
+
+Use TailwindCSS
+
+Cards: rounded-xl, shadow-md, hover:scale-105
+
+Forms: responsive, clear error messages
+
+Safety tips highlighted with an icon (🛡️)
+
+Share buttons styled with social media colors
+
+7️⃣ User Flow
+
+Users visit /business/:id
+
+See services/products, reviews, contact info
+
+Can share the business on social media
+
+Read safety tips
+
+Optionally report the business
+
+Messages and reports are sent to business dashboard / admin dashboard
