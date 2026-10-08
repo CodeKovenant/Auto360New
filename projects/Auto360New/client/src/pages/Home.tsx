@@ -272,9 +272,6 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/30" />
           {/* Subtle red tint on the left edge for brand color */}
           <div className="absolute inset-0 bg-gradient-to-br from-red-950/50 via-transparent to-transparent" />
-          {/* Fade into the page at the bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white dark:from-gray-950 to-transparent" />
-
           <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-14 md:py-20">
             <div className="w-full max-w-3xl text-left">
               <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-5 border border-white/20">
