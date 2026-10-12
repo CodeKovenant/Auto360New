@@ -125,7 +125,7 @@ export default function Dashboard() {
     mutationFn: async (profile: Partial<Business>) => { const res = await apiRequest("PUT", "/api/businesses/me", profile); return res.json(); },
     onSuccess: (_result, profile) => {
       toast({ title: "Business updated!" });
-      if (!profile.latitude || !profile.longitude) {
+      if (!String(profile.latitude ?? "").trim() || !String(profile.longitude ?? "").trim()) {
         toast({ title: "No map pin was saved", description: "The address couldn't be matched. You can retry with Find on map." });
       }
       setEditMode(false);

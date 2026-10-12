@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { LoaderCircle, MapPin } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BusinessMap from "@/components/BusinessMap";
 import {
@@ -27,8 +27,11 @@ export default function BusinessLocationPicker({
   const [matches, setMatches] = useState<GeocodedBusinessLocation[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState("");
+  const activeSearch = useRef(0);
 
   useEffect(() => {
+    activeSearch.current += 1;
+    setIsSearching(false);
     setMatches([]);
     setError("");
   }, [address, city]);
@@ -41,18 +44,21 @@ export default function BusinessLocationPicker({
 
     setIsSearching(true);
     setError("");
+    const searchId = activeSearch.current;
     try {
       const results = await findBusinessLocations(address, city);
+      if (searchId !== activeSearch.current) return;
       setMatches(results);
-      onChange(results[0] ?? null);
-      if (results.length === 0) {
+      if (results[0]) {
+        onChange(results[0]);
+      } else {
         setError("No matching map location found. Check the address and try again.");
       }
     } catch (cause) {
+      if (searchId !== activeSearch.current) return;
       setError(cause instanceof Error ? cause.message : "Address lookup is temporarily unavailable.");
-      onChange(null);
     } finally {
-      setIsSearching(false);
+      if (searchId === activeSearch.current) setIsSearching(false);
     }
   }
 
@@ -64,9 +70,12 @@ export default function BusinessLocationPicker({
           <p className="text-xs text-muted-foreground">
             Find a map pin from the street address and county. You can change the match if needed.
           </p>
+          <p className="text-xs text-muted-foreground">
+            Address lookup uses OpenStreetMap and runs only when you click here or save the profile.
+          </p>
         </div>
         <Button type="button" variant="outline" onClick={searchAddress} disabled={isSearching}>
-          {isSearching ? <LoaderCircle className="w-4 h-4 mr-2 animate-spin" /> : <MapPin className="w-4 h-4 mr-2" />}
+          {isSearching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <MapPin className="w-4 h-4 mr-2" />}
           {isSearching ? "Finding location..." : "Find on map"}
         </Button>
       </div>
