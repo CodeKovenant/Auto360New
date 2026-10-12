@@ -13,6 +13,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { BUSINESS_CATEGORIES, AUTOMOTIVE_SUPPORT_SUBCATEGORIES, CAR_BRANDS } from "@shared/schema";
 import LogoUpload from "@/components/LogoUpload";
+import BusinessLocationPicker from "@/components/BusinessLocationPicker";
+import {
+  findBusinessLocations,
+  type GeocodedBusinessLocation,
+} from "@/lib/business-geocoding";
 
 export default function RegisterBusiness() {
   const { user } = useAuth();
@@ -31,16 +36,18 @@ export default function RegisterBusiness() {
     address: "",
     city: "",
     description: "",
-    latitude: "",
-    longitude: "",
     logo: "",
     banner: "",
     website: "",
   });
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<GeocodedBusinessLocation | null>(null);
 
   function setField(field: string, value: string) {
     setForm(prev => ({ ...prev, [field]: value }));
+    if (field === "address" || field === "city") {
+      setSelectedLocation(null);
+    }
   }
 
   function toggleBrand(brand: string) {
@@ -69,25 +76,17 @@ export default function RegisterBusiness() {
       toast({ title: "Select service type", description: "Please select the type of automotive support service.", variant: "destructive" });
       return;
     }
-    const latitude = form.latitude.trim();
-    const longitude = form.longitude.trim();
-    if (Boolean(latitude) !== Boolean(longitude)) {
-      toast({ title: "Incomplete map location", description: "Enter both latitude and longitude, or leave both blank.", variant: "destructive" });
-      return;
-    }
-    if (latitude && (
-      !Number.isFinite(Number(latitude)) ||
-      !Number.isFinite(Number(longitude)) ||
-      Number(latitude) < -90 ||
-      Number(latitude) > 90 ||
-      Number(longitude) < -180 ||
-      Number(longitude) > 180
-    )) {
-      toast({ title: "Invalid map location", description: "Latitude must be between -90 and 90, and longitude between -180 and 180.", variant: "destructive" });
-      return;
-    }
     setLoading(true);
     try {
+      let mapLocation = selectedLocation;
+      if (!mapLocation) {
+        try {
+          const matches = await findBusinessLocations(form.address, form.city);
+          mapLocation = matches[0] ?? null;
+        } catch {
+          // A location lookup should not prevent a business from registering.
+        }
+      }
       // "automotive_support" is a display-only virtual category; map to the real DB enum value
       const dbCategory = form.category === "automotive_support" ? "other" : form.category;
       await apiRequest("POST", "/api/businesses", {
@@ -95,11 +94,17 @@ export default function RegisterBusiness() {
         category: dbCategory,
         ownerId: user.id,
         carBrands: needsBrands ? selectedBrands : [],
-        latitude: latitude || null,
-        longitude: longitude || null,
+        latitude: mapLocation ? String(mapLocation.latitude) : null,
+        longitude: mapLocation ? String(mapLocation.longitude) : null,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
       setSuccess(true);
+      if (!mapLocation) {
+        toast({
+          title: "Listing submitted without a map pin",
+          description: "We couldn't match that address. You can try finding it on the map from your business profile.",
+        });
+      }
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
@@ -286,44 +291,14 @@ export default function RegisterBusiness() {
                 </div>
               </div>
 
-              <div>
-                <Label>Map Coordinates (optional)</Label>
-                <p className="text-xs text-muted-foreground mt-1 mb-2">
-                  Enter both coordinates in decimal degrees to show your business on the map. Example: Nairobi, -1.286389, 36.817223.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="biz-latitude" className="text-xs">Latitude</Label>
-                    <Input
-                      id="biz-latitude"
-                      type="number"
-                      min="-90"
-                      max="90"
-                      step="any"
-                      value={form.latitude}
-                      onChange={e => setField("latitude", e.target.value)}
-                      placeholder="-1.286389"
-                      className="mt-1"
-                      data-testid="input-biz-latitude"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="biz-longitude" className="text-xs">Longitude</Label>
-                    <Input
-                      id="biz-longitude"
-                      type="number"
-                      min="-180"
-                      max="180"
-                      step="any"
-                      value={form.longitude}
-                      onChange={e => setField("longitude", e.target.value)}
-                      placeholder="36.817223"
-                      className="mt-1"
-                      data-testid="input-biz-longitude"
-                    />
-                  </div>
-                </div>
-              </div>
+              <BusinessLocationPicker
+                address={form.address}
+                city={form.city}
+                businessName={form.name}
+                value={selectedLocation}
+                onChange={setSelectedLocation}
+                mapId="register-business-location-map"
+              />
 
               <div>
                 <Label htmlFor="biz-desc">Description <span className="text-red-500">*</span></Label>

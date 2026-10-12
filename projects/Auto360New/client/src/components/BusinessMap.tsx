@@ -6,9 +6,10 @@ interface BusinessMapProps {
   lng: number;
   name: string;
   address: string;
+  mapId?: string;
 }
 
-export default function BusinessMap({ lat, lng, name, address }: BusinessMapProps) {
+export default function BusinessMap({ lat, lng, name, address, mapId = "business-map" }: BusinessMapProps) {
   useEffect(() => {
     let map: any = null;
     let L: any = null;
@@ -25,10 +26,10 @@ export default function BusinessMap({ lat, lng, name, address }: BusinessMapProp
         document.head.appendChild(link);
       }
 
-      const container = document.getElementById("business-map");
+      const container = document.getElementById(mapId);
       if (!container || (container as any)._leaflet_id) return;
 
-      map = L.map("business-map", { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 15);
+      map = L.map(mapId, { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 15);
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -43,9 +44,16 @@ export default function BusinessMap({ lat, lng, name, address }: BusinessMapProp
         popupAnchor: [0, -32],
       });
 
+      const popupContent = document.createElement("div");
+      const heading = document.createElement("strong");
+      heading.textContent = name;
+      const details = document.createElement("small");
+      details.textContent = address;
+      popupContent.append(heading, document.createElement("br"), details);
+
       L.marker([lat, lng], { icon })
         .addTo(map)
-        .bindPopup(`<strong>${name}</strong><br/><small>${address}</small>`, { maxWidth: 200 })
+        .bindPopup(popupContent, { maxWidth: 200 })
         .openPopup();
     }
 
@@ -56,7 +64,7 @@ export default function BusinessMap({ lat, lng, name, address }: BusinessMapProp
         map.remove();
       }
     };
-  }, [lat, lng, name, address]);
+  }, [lat, lng, name, address, mapId]);
 
   return (
     <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -66,8 +74,8 @@ export default function BusinessMap({ lat, lng, name, address }: BusinessMapProp
         <span className="text-xs text-muted-foreground ml-auto">{address}</span>
       </div>
       <div
-        id="business-map"
-        data-testid="business-map"
+        id={mapId}
+        data-testid={mapId === "business-map" ? "business-map" : `${mapId}-container`}
         style={{ height: "280px", width: "100%" }}
       />
     </div>

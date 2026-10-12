@@ -67,6 +67,82 @@ function businessCoordinateError(latitudeValue: unknown, longitudeValue: unknown
   return null;
 }
 
+interface BusinessLocationMatch {
+  latitude: number;
+  longitude: number;
+  displayName: string;
+}
+
+const geocodeCache = new Map<string, { expiresAt: number; results: BusinessLocationMatch[] }>();
+const geocodeInFlight = new Map<string, Promise<BusinessLocationMatch[]>>();
+let geocodeQueue: Promise<unknown> = Promise.resolve();
+let nextGeocodeRequestAt = 0;
+
+function findBusinessLocations(address: string, city: string): Promise<BusinessLocationMatch[]> {
+  const cacheKey = `${address}, ${city}, Kenya`.toLowerCase().replace(/\s+/g, " ").trim();
+  const cached = geocodeCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    geocodeCache.delete(cacheKey);
+    geocodeCache.set(cacheKey, cached);
+    return Promise.resolve(cached.results);
+  }
+  if (cached) geocodeCache.delete(cacheKey);
+
+  const pending = geocodeInFlight.get(cacheKey);
+  if (pending) return pending;
+
+  const request = geocodeQueue.then(async () => {
+    const waitMs = Math.max(0, nextGeocodeRequestAt - Date.now());
+    if (waitMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+    }
+    nextGeocodeRequestAt = Date.now() + 1000;
+
+    const params = new URLSearchParams({
+      q: `${address}, ${city}, Kenya`,
+      format: "jsonv2",
+      limit: "5",
+      countrycodes: "ke",
+      addressdetails: "1",
+    });
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Auto360 Business Directory/1.0 (+https://auto360.co.ke/)",
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) {
+      throw new Error(`OpenStreetMap address lookup returned ${response.status}.`);
+    }
+
+    const payload = await response.json() as Array<{ lat?: string; lon?: string; display_name?: string }>;
+    const results = (Array.isArray(payload) ? payload : [])
+      .map(match => ({
+        latitude: Number(match.lat),
+        longitude: Number(match.lon),
+        displayName: String(match.display_name || ""),
+      }))
+      .filter(match =>
+        Number.isFinite(match.latitude) &&
+        Number.isFinite(match.longitude) &&
+        match.displayName.length > 0,
+      );
+
+    geocodeCache.set(cacheKey, { expiresAt: Date.now() + 24 * 60 * 60 * 1000, results });
+    while (geocodeCache.size > 500) {
+      const oldestKey = geocodeCache.keys().next().value;
+      if (!oldestKey) break;
+      geocodeCache.delete(oldestKey);
+    }
+    return results;
+  });
+
+  geocodeQueue = request.then(() => undefined, () => undefined);
+  geocodeInFlight.set(cacheKey, request);
+  return request.finally(() => geocodeInFlight.delete(cacheKey));
+}
+
 function authMiddleware(req: any, res: any, next: any) {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) return res.status(401).json({ message: "Unauthorized" });
@@ -98,6 +174,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // Serve uploaded logos as static files
   app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
+
+  // Explicit user-triggered lookups only; the queue and cache respect Nominatim's public-service limits.
+  app.get("/api/geocode/business-location", ownerMiddleware, async (req, res) => {
+    const address = String(req.query.address || "").trim();
+    const city = String(req.query.city || "").trim();
+    if (!address || !city) {
+      return res.status(400).json({ message: "Enter a street address and county." });
+    }
+    if (address.length > 200 || city.length > 100) {
+      return res.status(400).json({ message: "The address or county is too long." });
+    }
+
+    try {
+      const results = await findBusinessLocations(address, city);
+      res.json({ results });
+    } catch (e: any) {
+      console.error("[geocode] OpenStreetMap lookup failed:", e.message);
+      res.status(502).json({ message: "Address lookup is temporarily unavailable. Please try again." });
+    }
+  });
 
   // Logo upload endpoint
   app.post("/api/upload/logo", authMiddleware, logoUpload.single("logo"), (req: any, res) => {

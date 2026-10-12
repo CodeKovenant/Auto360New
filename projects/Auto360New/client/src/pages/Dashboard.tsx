@@ -16,6 +16,11 @@ import StarRating from "@/components/StarRating";
 import LogoUpload from "@/components/LogoUpload";
 import PartImageUpload from "@/components/PartImageUpload";
 import BusinessGallery from "@/components/BusinessGallery";
+import BusinessLocationPicker from "@/components/BusinessLocationPicker";
+import {
+  findBusinessLocations,
+  type GeocodedBusinessLocation,
+} from "@/lib/business-geocoding";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +66,8 @@ export default function Dashboard() {
 
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Business>>({});
+  const [selectedLocation, setSelectedLocation] = useState<GeocodedBusinessLocation | null>(null);
+  const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [galleryCarId, setGalleryCarId] = useState<string | null>(null);
 
   // Spare parts state
@@ -100,34 +107,68 @@ export default function Dashboard() {
   });
 
   function startEdit() {
-    if (data?.business) { setEditForm({ ...data.business }); setEditMode(true); }
+    if (data?.business) {
+      setEditForm({ ...data.business });
+      const { latitude, longitude, address, city } = data.business;
+      setSelectedLocation(latitude && longitude
+        ? {
+            latitude: Number(latitude),
+            longitude: Number(longitude),
+            displayName: `${address}, ${city}`,
+          }
+        : null);
+      setEditMode(true);
+    }
   }
 
   const updateMutation = useMutation({
-    mutationFn: async () => { const res = await apiRequest("PUT", "/api/businesses/me", editForm); return res.json(); },
-    onSuccess: () => { toast({ title: "Business updated!" }); setEditMode(false); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    mutationFn: async (profile: Partial<Business>) => { const res = await apiRequest("PUT", "/api/businesses/me", profile); return res.json(); },
+    onSuccess: (_result, profile) => {
+      toast({ title: "Business updated!" });
+      if (!profile.latitude || !profile.longitude) {
+        toast({ title: "No map pin was saved", description: "The address couldn't be matched. You can retry with Find on map." });
+      }
+      setEditMode(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  function saveBusinessProfile() {
-    const latitude = String(editForm.latitude ?? "").trim();
-    const longitude = String(editForm.longitude ?? "").trim();
-    if (Boolean(latitude) !== Boolean(longitude)) {
-      toast({ title: "Incomplete map location", description: "Enter both latitude and longitude, or leave both blank.", variant: "destructive" });
-      return;
+  function changeBusinessLocation(location: GeocodedBusinessLocation | null) {
+    setSelectedLocation(location);
+    setEditForm(previous => ({
+      ...previous,
+      latitude: location ? String(location.latitude) : null,
+      longitude: location ? String(location.longitude) : null,
+    }));
+  }
+
+  async function saveBusinessProfile() {
+    let profile = { ...editForm };
+    if ((!profile.latitude || !profile.longitude) && (profile.latitude || profile.longitude)) {
+      profile = { ...profile, latitude: null, longitude: null };
     }
-    if (latitude && (
-      !Number.isFinite(Number(latitude)) ||
-      !Number.isFinite(Number(longitude)) ||
-      Number(latitude) < -90 ||
-      Number(latitude) > 90 ||
-      Number(longitude) < -180 ||
-      Number(longitude) > 180
-    )) {
-      toast({ title: "Invalid map location", description: "Latitude must be between -90 and 90, and longitude between -180 and 180.", variant: "destructive" });
-      return;
+    if ((!profile.latitude || !profile.longitude) && profile.address && profile.city) {
+      setIsSavingLocation(true);
+      try {
+        const matches = await findBusinessLocations(String(profile.address), String(profile.city));
+        const location = matches[0];
+        if (location) {
+          profile = {
+            ...profile,
+            latitude: String(location.latitude),
+            longitude: String(location.longitude),
+          };
+          setEditForm(profile);
+          setSelectedLocation(location);
+        }
+      } catch {
+        // Save the address even when the map service is unavailable.
+      } finally {
+        setIsSavingLocation(false);
+      }
     }
-    updateMutation.mutate();
+    updateMutation.mutate(profile);
   }
 
   const addPartMutation = useMutation({
@@ -357,7 +398,18 @@ export default function Dashboard() {
                 {[["Business Name", "name"], ["City", "city"], ["Phone", "phone"], ["WhatsApp", "whatsapp"], ["Website", "website"], ["Address", "address"]].map(([label, field]) => (
                   <div key={field} className={field === "address" ? "sm:col-span-2" : ""}>
                     <Label className="text-xs">{label}</Label>
-                    <Input value={(editForm as any)[field] || ""} onChange={e => setEditForm(p => ({ ...p, [field]: e.target.value }))} className="mt-1" />
+                    <Input
+                      value={(editForm as any)[field] || ""}
+                      onChange={e => {
+                        setEditForm(p => ({
+                          ...p,
+                          [field]: e.target.value,
+                          ...(field === "address" || field === "city" ? { latitude: null, longitude: null } : {}),
+                        }));
+                        if (field === "address" || field === "city") setSelectedLocation(null);
+                      }}
+                      className="mt-1"
+                    />
                   </div>
                 ))}
                 <div className="sm:col-span-2">
@@ -417,48 +469,18 @@ export default function Dashboard() {
                     )}
                   </div>
                 )}
-                <div className="sm:col-span-2">
-                  <Label className="text-xs">Map Coordinates (optional)</Label>
-                  <p className="text-xs text-muted-foreground mt-1 mb-2">
-                    Enter both coordinates in decimal degrees to show your business on the map.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="edit-biz-latitude" className="text-xs">Latitude</Label>
-                      <Input
-                        id="edit-biz-latitude"
-                        type="number"
-                        min="-90"
-                        max="90"
-                        step="any"
-                        value={String(editForm.latitude ?? "")}
-                        onChange={e => setEditForm(p => ({ ...p, latitude: e.target.value || null }))}
-                        placeholder="-1.286389"
-                        className="mt-1"
-                        data-testid="input-edit-biz-latitude"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="edit-biz-longitude" className="text-xs">Longitude</Label>
-                      <Input
-                        id="edit-biz-longitude"
-                        type="number"
-                        min="-180"
-                        max="180"
-                        step="any"
-                        value={String(editForm.longitude ?? "")}
-                        onChange={e => setEditForm(p => ({ ...p, longitude: e.target.value || null }))}
-                        placeholder="36.817223"
-                        className="mt-1"
-                        data-testid="input-edit-biz-longitude"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <BusinessLocationPicker
+                  address={String(editForm.address ?? "")}
+                  city={String(editForm.city ?? "")}
+                  businessName={String(editForm.name ?? "")}
+                  value={selectedLocation}
+                  onChange={changeBusinessLocation}
+                  mapId="dashboard-business-location-map"
+                />
               </div>
               <div className="flex gap-2 mt-4">
-                <Button onClick={saveBusinessProfile} disabled={updateMutation.isPending} className="bg-red-600 text-white" data-testid="button-save-edit">
-                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
+                <Button onClick={saveBusinessProfile} disabled={updateMutation.isPending || isSavingLocation} className="bg-red-600 text-white" data-testid="button-save-edit">
+                  {isSavingLocation ? "Finding location..." : updateMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
                 <Button variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
               </div>
