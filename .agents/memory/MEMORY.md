@@ -1,1 +1,2 @@
 - [Auto360 editing scope](auto360-dependencies.md) — make requested code changes only; do not install or update dependencies.
+- [Auto360 admin imports](auto360-import-duplicates.md) — check existing records before every admin upload; never insert duplicates.
