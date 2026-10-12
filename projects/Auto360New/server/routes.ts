@@ -1123,49 +1123,85 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return d;
   }
 
+  function findAdminBusinessImportDuplicates(
+    rows: Record<string, string>[],
+    existingBizRecords: { phone: string; name: string }[],
+  ) {
+    const knownPhones = new Set(
+      existingBizRecords.map((record) => normalizeKeBusinessPhone(record.phone || "")).filter((phone) => phone.length >= 9),
+    );
+    const knownNames = new Set(
+      existingBizRecords.map((record) => (record.name || "").trim().toLowerCase()).filter(Boolean),
+    );
+    const seenPhonesInFile = new Set<string>();
+    const seenNamesInFile = new Set<string>();
+    const duplicateIndexes = new Set<number>();
+    const duplicates: { row: number; name: string; reason: string }[] = [];
+
+    rows.forEach((row, index) => {
+      const phone = normalizeKeBusinessPhone(row.phone || "");
+      const name = (row.name || "").trim().toLowerCase();
+      const reasons: string[] = [];
+
+      if (phone.length >= 9) {
+        if (seenPhonesInFile.has(phone)) reasons.push("phone duplicates another row in this file");
+        else if (knownPhones.has(phone)) reasons.push("phone already exists in the directory");
+        seenPhonesInFile.add(phone);
+      }
+
+      if (name) {
+        if (seenNamesInFile.has(name)) reasons.push("business name duplicates another row in this file");
+        else if (knownNames.has(name)) reasons.push("business name already exists in the directory");
+        seenNamesInFile.add(name);
+      }
+
+      if (reasons.length) {
+        duplicateIndexes.add(index);
+        duplicates.push({
+          row: index + 2,
+          name: row.name?.trim() || "Unnamed business",
+          reason: reasons.join("; "),
+        });
+      }
+    });
+
+    return { duplicateIndexes, duplicates };
+  }
+
   app.post("/api/admin/import/businesses", adminMiddleware, csvUpload.single("file"), async (req: any, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
       const existingBizRecords = await db.select({ phone: businesses.phone, name: businesses.name }).from(businesses);
-      const knownNormalizedPhones = new Set(
-        existingBizRecords.map((r) => normalizeKeBusinessPhone(r.phone || "")).filter((p) => p.length >= 9)
-      );
-      const knownNormalizedNames = new Set(
-        existingBizRecords.map((r) => (r.name || "").trim().toLowerCase()).filter(Boolean)
-      );
-      const seenPhonesInFile = new Set<string>();
-      const seenNamesInFile = new Set<string>();
-      const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
+      const duplicatePlan = findAdminBusinessImportDuplicates(rows, existingBizRecords);
+      const confirmedDuplicates = req.body?.confirmDuplicates === "true";
+      if (duplicatePlan.duplicates.length > 0 && !confirmedDuplicates) {
+        return res.status(409).json({
+          code: "DUPLICATES_FOUND",
+          message: "Some rows already exist. They will be skipped and never imported.",
+          duplicateCount: duplicatePlan.duplicates.length,
+          remainingRows: rows.length - duplicatePlan.duplicates.length,
+          duplicates: duplicatePlan.duplicates.slice(0, 20),
+          omittedDuplicates: Math.max(0, duplicatePlan.duplicates.length - 20),
+        });
+      }
+
+      const results = {
+        imported: 0,
+        failed: 0,
+        skipped: duplicatePlan.duplicates.length,
+        errors: duplicatePlan.duplicates.map((duplicate) =>
+          `Row ${duplicate.row}: skipped duplicate — ${duplicate.reason}`,
+        ),
+      };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
+        if (duplicatePlan.duplicateIndexes.has(i)) continue;
         try {
-          const norm = normalizeKeBusinessPhone(row.phone || "");
-          const normalizedName = (row.name || "").trim().toLowerCase();
-          if (norm.length < 9) {
+          if (normalizeKeBusinessPhone(row.phone || "").length < 9) {
             results.failed++;
             results.errors.push(`Row ${i + 2}: phone missing or too short`);
-            continue;
-          }
-          if (seenPhonesInFile.has(norm)) {
-            results.skipped++;
-            results.errors.push(`Row ${i + 2}: duplicate phone in this file`);
-            continue;
-          }
-          if (knownNormalizedPhones.has(norm)) {
-            results.skipped++;
-            results.errors.push(`Row ${i + 2}: duplicate phone (already in directory)`);
-            continue;
-          }
-          if (normalizedName && seenNamesInFile.has(normalizedName)) {
-            results.skipped++;
-            results.errors.push(`Row ${i + 2}: duplicate business name in this file`);
-            continue;
-          }
-          if (normalizedName && knownNormalizedNames.has(normalizedName)) {
-            results.skipped++;
-            results.errors.push(`Row ${i + 2}: business "${row.name}" already exists in directory`);
             continue;
           }
           const body = insertBusinessSchema.parse({
@@ -1183,12 +1219,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           });
           const created = await storage.createBusiness(body);
           await storage.updateBusiness(created.id, { status: "approved" });
-          knownNormalizedPhones.add(norm);
-          seenPhonesInFile.add(norm);
-          if (normalizedName) {
-            knownNormalizedNames.add(normalizedName);
-            seenNamesInFile.add(normalizedName);
-          }
           results.imported++;
         } catch (e: any) {
           results.failed++;

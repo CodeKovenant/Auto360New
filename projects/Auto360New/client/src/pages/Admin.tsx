@@ -357,15 +357,62 @@ export default function Admin() {
     setImportResult(null);
     try {
       const token = getAuthToken();
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/admin/import/businesses", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Import failed");
+      const upload = async (confirmDuplicates: boolean) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("confirmDuplicates", confirmDuplicates ? "true" : "false");
+        const response = await fetch("/api/admin/import/businesses", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        return { response, data: await response.json() };
+      };
+
+      let { response, data } = await upload(false);
+      if (response.status === 409 && data.code === "DUPLICATES_FOUND") {
+        if (data.remainingRows === 0) {
+          const duplicateErrors = (data.duplicates ?? []).map((duplicate: { row: number; name: string; reason: string }) =>
+            `Row ${duplicate.row}: ${duplicate.name} — ${duplicate.reason}`,
+          );
+          if (data.duplicateCount > duplicateErrors.length) {
+            duplicateErrors.push(`${data.duplicateCount - duplicateErrors.length} additional duplicate rows were not added.`);
+          }
+          setImportResult({
+            imported: 0,
+            failed: 0,
+            skipped: data.duplicateCount,
+            errors: duplicateErrors,
+          });
+          toast({
+            title: "No new businesses to import",
+            description: `${data.duplicateCount} rows already exist. Nothing was uploaded.`,
+          });
+          return;
+        }
+
+        const visibleDuplicates = (data.duplicates ?? []).slice(0, 6);
+        const duplicateLines = visibleDuplicates
+          .map((duplicate: { row: number; name: string; reason: string }) =>
+            `Row ${duplicate.row}: ${duplicate.name} (${duplicate.reason})`,
+          );
+        if (data.duplicateCount > visibleDuplicates.length) {
+          duplicateLines.push(`…and ${data.duplicateCount - visibleDuplicates.length} more duplicate rows`);
+        }
+        const confirmed = window.confirm(
+          `Found ${data.duplicateCount} duplicate row(s). They will be skipped and will not be uploaded.\n\n` +
+          `${duplicateLines.join("\n")}\n\n` +
+          `Attempt to import the other ${data.remainingRows} row(s)?`,
+        );
+        if (!confirmed) {
+          toast({ title: "Import cancelled", description: "No businesses were added." });
+          return;
+        }
+
+        ({ response, data } = await upload(true));
+      }
+
+      if (!response.ok) throw new Error(data.message || "Import failed");
       setImportResult(data);
       if (data.imported > 0 || data.skipped > 0 || data.failed > 0) {
         queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
