@@ -1,4 +1,4 @@
-import { useParams, useLocation } from "wouter";
+import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Gauge, MessageCircle, Car as CarIcon, ChevronLeft, Building2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dea
 
 function formatPrice(price: string | number) {
   const num = Number(price);
-  return `KSh ${num.toLocaleString()}`;
+  return "KSh " + num.toLocaleString();
 }
 
 export default function CarDetail() {
@@ -22,14 +22,14 @@ export default function CarDetail() {
   const { user } = useAuth();
 
   const { data: car, isLoading } = useQuery<CarWithDealer>({
-    queryKey: [`/api/cars/${params.id}`],
+    queryKey: ["/api/cars/" + params.id],
   });
 
   const canManageGallery = !!(user && car && user.id === car.dealerId);
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
+      <div className="mx-auto max-w-4xl space-y-4 px-4 py-8">
         <Skeleton className="h-64 rounded-md" />
         <Skeleton className="h-48 rounded-md" />
       </div>
@@ -38,123 +38,147 @@ export default function CarDetail() {
 
   if (!car) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <CarIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Car not found</h2>
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+        <CarIcon className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+        <h2 className="mb-2 text-xl font-semibold">Car not found</h2>
         <Link href="/cars"><Button variant="outline">Browse Cars</Button></Link>
       </div>
     );
   }
 
   const images = car.images || [];
+  const vehicleTags = [
+    car.brand,
+    car.model,
+    String(car.year),
+    car.condition === "new" ? "Brand new" : "Used",
+    car.fuelType,
+    car.transmission,
+  ].filter(Boolean);
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-950 min-h-screen pb-12">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+    <div className="min-h-screen bg-gray-50 pb-12 dark:bg-gray-950">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         <Link href="/cars">
           <Button variant="ghost" size="sm" className="mb-4">
-            <ChevronLeft className="w-4 h-4 mr-1" />
+            <ChevronLeft className="mr-1 h-4 w-4" />
             Back to Cars
           </Button>
         </Link>
 
-        {/* Featured Image */}
-        <div className="mb-4">
-          {images.length > 0 ? (
-            <div className="grid grid-cols-1 gap-3">
-              <div className="h-72 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800">
-                <img src={images[0]} alt={car.title} className="w-full h-full object-cover" />
-              </div>
-              {images.length > 1 && (
-                <div className="grid grid-cols-3 gap-3">
-                  {images.slice(1, 4).map((img, i) => (
-                    <div key={i} className="h-24 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800">
-                      <img src={img} alt={`${car.title} ${i + 2}`} className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="h-72 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <CarIcon className="w-20 h-20 text-gray-300 dark:text-gray-600" />
-            </div>
-          )}
-        </div>
-
-        {/* Car Gallery — directly below featured image */}
         <div className="mb-6">
-          <Card>
-            <CardContent className="pt-5">
-              <BusinessGallery
-                entityType="car"
-                entityId={car.id}
-                canManage={canManageGallery}
-                title="Car Photos"
-              />
-            </CardContent>
-          </Card>
+          <BusinessGallery
+            entityType="car"
+            entityId={car.id}
+            canManage={canManageGallery}
+            title="Vehicle photos"
+            layout="featured"
+            initialImages={images}
+          />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-5">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-5 lg:col-span-2">
             <Card>
               <CardContent className="pt-5">
-                <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="car-detail-title">{car.title}</h1>
                   <p className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="car-detail-price">{formatPrice(car.price)}</p>
                 </div>
-                <div className="flex gap-2 flex-wrap mb-4">
-                  <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">{car.year}</Badge>
-                  <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 capitalize">{car.fuelType}</Badge>
-                  <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 capitalize">{car.transmission}</Badge>
+
+                <section className="mb-6">
+                  <h2 className="mb-2 text-sm font-semibold text-gray-900 dark:text-white">Listing tags</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {vehicleTags.map((tag, index) => (
+                      <Badge key={tag + "-" + index} className="bg-gray-100 capitalize text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="mb-6">
+                  <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Vehicle details</h2>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/70">
+                      <p className="text-xs text-muted-foreground">Brand</p>
+                      <p className="mt-1 font-medium text-gray-900 dark:text-white">{car.brand}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/70">
+                      <p className="text-xs text-muted-foreground">Model</p>
+                      <p className="mt-1 font-medium text-gray-900 dark:text-white">{car.model}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/70">
+                      <p className="text-xs text-muted-foreground">Year</p>
+                      <p className="mt-1 font-medium text-gray-900 dark:text-white">{car.year}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/70">
+                      <p className="text-xs text-muted-foreground">Condition</p>
+                      <p className="mt-1 font-medium capitalize text-gray-900 dark:text-white">{car.condition === "new" ? "Brand new" : "Used"}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/70">
+                      <p className="text-xs text-muted-foreground">Fuel</p>
+                      <p className="mt-1 font-medium capitalize text-gray-900 dark:text-white">{car.fuelType}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/70">
+                      <p className="text-xs text-muted-foreground">Transmission</p>
+                      <p className="mt-1 font-medium capitalize text-gray-900 dark:text-white">{car.transmission}</p>
+                    </div>
+                  </div>
+                </section>
+
+                <div className="mb-5 flex items-center gap-2 rounded-lg border border-gray-200 p-3 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200">
+                  <MapPin className="h-4 w-4 flex-shrink-0 text-red-500" />
+                  <span className="font-medium">Location:</span>
+                  <span>{car.location}</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Gauge className="w-4 h-4" />
-                    <span>{car.mileage ? `${car.mileage.toLocaleString()} km` : "N/A"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4" />
-                    <span>{car.location}</span>
-                  </div>
-                </div>
+                <section className="border-t border-gray-100 pt-5 dark:border-gray-800">
+                  <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">About this vehicle</h2>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                    {car.description || "The seller has not added a description for this vehicle yet."}
+                  </p>
+                </section>
 
-                {car.description && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">{car.description}</p>
-                )}
+                <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Gauge className="h-4 w-4" />
+                  <span>{car.mileage != null ? car.mileage.toLocaleString() + " km" : "Mileage not provided"}</span>
+                </div>
               </CardContent>
             </Card>
           </div>
 
           <div className="space-y-4">
             <Card>
-             <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Building2 className="w-4 h-4" /> Dealer Info</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Building2 className="h-4 w-4" /> Dealer Info
+                </CardTitle>
+              </CardHeader>
               <CardContent className="space-y-3">
-                 <div className="flex items-center gap-3">
-                   <div className="w-12 h-12 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
-                     {car.dealerLogo ? (
-                       <img src={car.dealerLogo} alt={`${car.dealerName} logo`} className="w-full h-full object-cover" />
-                     ) : (
-                       <Building2 className="w-5 h-5 text-gray-400" />
-                     )}
-                   </div>
-                   <p className="font-semibold text-gray-900 dark:text-white">{car.dealerName}</p>
-                 </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                    {car.dealerLogo ? (
+                      <img src={car.dealerLogo} alt={car.dealerName + " logo"} className="h-full w-full object-cover" />
+                    ) : (
+                      <Building2 className="h-5 w-5 text-gray-400" />
+                    )}
+                  </div>
+                  <p className="font-semibold text-gray-900 dark:text-white">{car.dealerName}</p>
+                </div>
                 <a
-                  href={`https://wa.me/${car.dealerWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm interested in the ${car.title} listed on AutoDirectory. Price: ${formatPrice(car.price)}`)}`}
+                  href={"https://wa.me/" + car.dealerWhatsapp.replace(/\D/g, "") + "?text=" + encodeURIComponent("Hi, I'm interested in the " + car.title + " listed on AutoDirectory. Price: " + formatPrice(car.price))}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block"
                   data-testid="button-whatsapp-dealer"
                 >
                   <Button className="w-full bg-green-600 text-white">
-                    <MessageCircle className="w-4 h-4 mr-2" />
+                    <MessageCircle className="mr-2 h-4 w-4" />
                     Chat on WhatsApp
                   </Button>
                 </a>
-                <Link href={`/business/${car.dealerId}`}>
+                <Link href={"/business/" + car.dealerId}>
                   <Button variant="outline" className="w-full">View Dealer Profile</Button>
                 </Link>
               </CardContent>
