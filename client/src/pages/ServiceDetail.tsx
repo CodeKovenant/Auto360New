@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import BusinessGallery from "@/components/BusinessGallery";
+import RelatedItems from "@/components/RelatedItems";
 import type { GarageService } from "@shared/schema";
 
 type ServiceWithGarage = GarageService & {
@@ -149,6 +150,8 @@ export default function ServiceDetail() {
             </div>
           </CardContent>
         </Card>
+
+        <RelatedItems kind="services" currentId={service.id} location={service.garageCity} />
 
         <Link href="/garages/services" className="mt-6 inline-flex items-center gap-1.5 text-sm text-orange-600 hover:text-orange-700">
           <ArrowLeft className="h-4 w-4" />
