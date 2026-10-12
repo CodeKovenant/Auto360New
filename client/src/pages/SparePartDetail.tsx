@@ -22,8 +22,8 @@ type SparePartWithBusiness = SparePart & {
 
 function formatPartPrice(price: string | null) {
   if (!price) return "Price on request";
-  const normalized = price.replace(/[\\s,]/g, "");
-  if (/^\\d+(\\.\\d+)?$/.test(normalized)) return "KSh " + Number(normalized).toLocaleString();
+  const normalized = price.replace(/[\s,]/g, "");
+  if (/^\d+(\.\d+)?$/.test(normalized)) return "KSh " + Number(normalized).toLocaleString();
   return price;
 }
 
@@ -60,7 +60,7 @@ export default function SparePartDetail() {
 
   const canManage = !!(user && (user.id === part.businessOwnerId || user.role === "admin"));
   const whatsappUrl = part.businessWhatsapp
-    ? "https://wa.me/" + part.businessWhatsapp.replace(/\\D/g, "") + "?text=" + encodeURIComponent("Hi, I'm interested in the " + part.partName + " for " + part.carBrand + " " + part.carModel)
+    ? "https://wa.me/" + part.businessWhatsapp.replace(/\D/g, "") + "?text=" + encodeURIComponent("Hi, I'm interested in the " + part.partName + " for " + part.carBrand + " " + part.carModel)
     : "";
   const tags = ["Spare part", part.condition === "new" ? "New" : "Used", part.carBrand, part.carModel, part.year ? String(part.year) : ""].filter(Boolean);
   const specifications = [
@@ -105,7 +105,7 @@ export default function SparePartDetail() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold leading-tight tracking-tight text-gray-950 dark:text-white sm:text-3xl">{part.partName}</h1>
-                  <p className="mt-2 text-sm text-muted-foreground">Fits {part.carBrand} {part.carModel}{part.year ? " · " + part.year : ""}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">Fits {part.carBrand} {part.carModel}{part.year ? " Â· " + part.year : ""}</p>
                 </div>
                 <div className="border-y border-slate-100 py-4 dark:border-gray-800">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Asking price</p>
