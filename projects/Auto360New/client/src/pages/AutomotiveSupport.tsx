@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import BusinessCard from "@/components/BusinessCard";
-import type { Business } from "@shared/schema";
+import FeaturedBusinessCarousel from "@/components/FeaturedBusinessCarousel";
+import { useFeaturedBusinessSplit, type RatedBusiness } from "@/hooks/useFeaturedBusinessSplit";
 
 const TABS = [
   {
@@ -80,9 +81,11 @@ export default function AutomotiveSupport() {
     ...(county !== "all" ? { city: county } : {}),
   }).toString();
 
-  const { data: businesses, isLoading } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
+  const { data: businesses, isLoading: businessesLoading } = useQuery<RatedBusiness[]>({
     queryKey: [`/api/businesses?${queryString}`],
   });
+  const { featuredBusinesses, regularBusinesses, isFeaturedLoading } = useFeaturedBusinessSplit(businesses);
+  const isLoading = businessesLoading || isFeaturedLoading;
 
   const currentTab = TABS.find(t => t.value === activeTab)!;
 
@@ -197,14 +200,27 @@ export default function AutomotiveSupport() {
           </div>
         ) : businesses && businesses.length > 0 ? (
           <>
+            <FeaturedBusinessCarousel
+              businesses={featuredBusinesses}
+              title={`Featured ${currentTab.label}`}
+              tone="blue"
+            />
             <p className="text-sm text-muted-foreground mb-5" data-testid="support-count">
               {businesses.length} business{businesses.length !== 1 ? "es" : ""} found
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {businesses.map(biz => (
-                <BusinessCard key={biz.id} business={biz} />
-              ))}
-            </div>
+            {regularBusinesses.length > 0 && (
+              <section aria-labelledby="other-support-heading">
+                <h2 id="other-support-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  More {currentTab.label}
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">({regularBusinesses.length})</span>
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {regularBusinesses.map(biz => (
+                    <BusinessCard key={biz.id} business={biz} />
+                  ))}
+                </div>
+              </section>
+            )}
           </>
         ) : (
           <div className="text-center py-20">

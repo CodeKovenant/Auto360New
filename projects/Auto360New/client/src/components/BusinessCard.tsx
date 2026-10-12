@@ -27,7 +27,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
 
   return (
     <div
-      className="group relative bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col"
+      className="group relative h-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col"
       data-testid={`card-business-${business.id}`}
     >
       {/* Category accent bar */}
