@@ -13,22 +13,38 @@ interface Props {
   entityId: string;
   canManage?: boolean;
   title?: string;
+  layout?: "grid" | "featured";
+  initialImages?: string[];
 }
 
-export default function BusinessGallery({ entityType, entityId, canManage = false, title = "Photos" }: Props) {
+type GalleryPhoto = {
+  key: string;
+  id?: string;
+  url: string;
+  caption?: string | null;
+};
+
+export default function BusinessGallery({
+  entityType,
+  entityId,
+  canManage = false,
+  title = "Photos",
+  layout = "grid",
+  initialImages = [],
+}: Props) {
   const { toast } = useToast();
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [caption, setCaption] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const qKey = [`/api/gallery/${entityType}/${entityId}`];
-
+  const qKey = ["/api/gallery/" + entityType + "/" + entityId];
   const { data: images, isLoading } = useQuery<GalleryImage[]>({ queryKey: qKey });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/gallery/${id}`);
+      await apiRequest("DELETE", "/api/gallery/" + id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qKey });
@@ -46,9 +62,9 @@ export default function BusinessGallery({ entityType, entityId, canManage = fals
       formData.append("image", file);
       if (caption.trim()) formData.append("caption", caption.trim());
       const token = localStorage.getItem("auth_token");
-      const res = await fetch(`/api/gallery/${entityType}/${entityId}`, {
+      const res = await fetch("/api/gallery/" + entityType + "/" + entityId, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: token ? { Authorization: "Bearer " + token } : {},
         body: formData,
       });
       if (!res.ok) {
@@ -66,7 +82,17 @@ export default function BusinessGallery({ entityType, entityId, canManage = fals
     }
   }
 
-  const hasImages = images && images.length > 0;
+  const seenUrls = new Set<string>();
+  const photos: GalleryPhoto[] = [
+    ...initialImages.map((url, index) => ({ key: "listing-" + index, url, caption: null })),
+    ...(images || []).map(image => ({ key: image.id, id: image.id, url: image.url, caption: image.caption })),
+  ].filter(photo => {
+    if (!photo.url || seenUrls.has(photo.url)) return false;
+    seenUrls.add(photo.url);
+    return true;
+  });
+  const hasImages = photos.length > 0;
+  const activePhoto = photos.find(photo => photo.url === selectedUrl) || photos[0];
 
   return (
     <div>
@@ -74,7 +100,7 @@ export default function BusinessGallery({ entityType, entityId, canManage = fals
         <div className="flex items-center gap-2">
           <ImageIcon className="w-4 h-4 text-red-500" />
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            {title} {hasImages && `(${images.length})`}
+            {title} {hasImages && "(" + photos.length + ")"}
           </h3>
         </div>
 
@@ -96,7 +122,7 @@ export default function BusinessGallery({ entityType, entityId, canManage = fals
               data-testid="button-upload-gallery"
             >
               <Upload className="w-3.5 h-3.5 mr-1" />
-              {uploading ? "Uploading…" : "Add Photo"}
+              {uploading ? "Uploading..." : "Add Photo"}
             </Button>
             <input
               ref={fileRef}
@@ -110,57 +136,124 @@ export default function BusinessGallery({ entityType, entityId, canManage = fals
         )}
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+      {layout === "featured" ? (
+        <div>
+          {hasImages && activePhoto ? (
+            <>
+              <button
+                type="button"
+                className="group relative block w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800 aspect-[16/9] max-h-[560px]"
+                onClick={() => setLightbox(activePhoto.url)}
+                aria-label="Open selected photo"
+                data-testid="gallery-featured-image"
+              >
+                <img
+                  src={activePhoto.url}
+                  alt={activePhoto.caption || title + " photo"}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                />
+                <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1.5 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  View full size
+                </span>
+              </button>
+              {activePhoto.caption && (
+                <p className="mt-2 text-sm text-muted-foreground">{activePhoto.caption}</p>
+              )}
+              {photos.length > 1 && (
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-2" aria-label={title + " thumbnails"}>
+                  {photos.map((photo, index) => (
+                    <div className="relative flex-shrink-0" key={photo.key}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedUrl(photo.url)}
+                        aria-label={"Show photo " + (index + 1)}
+                        aria-pressed={activePhoto.url === photo.url}
+                        className={"h-16 w-20 sm:h-20 sm:w-28 overflow-hidden rounded-lg border-2 transition " + (activePhoto.url === photo.url ? "border-red-500 ring-2 ring-red-500/20" : "border-transparent opacity-75 hover:opacity-100")}
+                        data-testid={"gallery-thumbnail-" + (index + 1)}
+                      >
+                        <img src={photo.url} alt="" className="h-full w-full object-cover" />
+                      </button>
+                      {canManage && photo.id && (
+                        <button
+                          type="button"
+                          onClick={() => deleteMutation.mutate(photo.id!)}
+                          disabled={deleteMutation.isPending}
+                          className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white shadow hover:bg-red-700 disabled:opacity-50"
+                          aria-label={"Delete photo " + (index + 1)}
+                          data-testid={"button-delete-gallery-" + photo.id}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : isLoading ? (
+            <Skeleton className="aspect-[16/9] w-full rounded-xl" />
+          ) : (
+            <div className="flex aspect-[16/9] w-full flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+              <ImageIcon className="mb-2 h-10 w-10 text-gray-300 dark:text-gray-600" />
+              <p className="text-sm text-muted-foreground">
+                {canManage ? "No photos yet. Add photos to show this listing." : "No photos have been added yet."}
+              </p>
+            </div>
+          )}
+        </div>
+      ) : isLoading ? (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="aspect-square rounded-md" />
           ))}
         </div>
       ) : hasImages ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-          {images.map(img => (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+          {photos.map((photo, index) => (
             <div
-              key={img.id}
-              className="relative group aspect-square rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-              data-testid={`gallery-img-${img.id}`}
+              key={photo.key}
+              className="group relative aspect-square overflow-hidden rounded-md border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"
+              data-testid={"gallery-img-" + (photo.id || index)}
             >
               <img
-                src={img.url}
-                alt={img.caption || "Gallery image"}
-                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                src={photo.url}
+                alt={photo.caption || "Gallery image"}
+                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100">
+              <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/0 opacity-0 transition-colors group-hover:bg-black/40 group-hover:opacity-100">
                 <button
-                  onClick={() => setLightbox(img.url)}
-                  className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                  type="button"
+                  onClick={() => setLightbox(photo.url)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 transition-colors hover:bg-white"
                   title="View full size"
-                  data-testid={`button-view-gallery-${img.id}`}
+                  data-testid={"button-view-gallery-" + (photo.id || index)}
                 >
-                  <ZoomIn className="w-3.5 h-3.5 text-gray-800" />
+                  <ZoomIn className="h-3.5 w-3.5 text-gray-800" />
                 </button>
-                {canManage && (
+                {canManage && photo.id && (
                   <button
-                    onClick={() => deleteMutation.mutate(img.id)}
+                    type="button"
+                    onClick={() => deleteMutation.mutate(photo.id!)}
                     disabled={deleteMutation.isPending}
-                    className="w-7 h-7 rounded-full bg-red-600/90 flex items-center justify-center hover:bg-red-600 transition-colors"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600/90 hover:bg-red-600"
                     title="Delete image"
-                    data-testid={`button-delete-gallery-${img.id}`}
+                    data-testid={"button-delete-gallery-" + photo.id}
                   >
-                    <Trash2 className="w-3.5 h-3.5 text-white" />
+                    <Trash2 className="h-3.5 w-3.5 text-white" />
                   </button>
                 )}
               </div>
-              {img.caption && (
-                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-1 text-white text-[10px] leading-tight truncate">
-                  {img.caption}
+              {photo.caption && (
+                <div className="absolute bottom-0 left-0 right-0 truncate bg-black/60 px-1.5 py-1 text-[10px] leading-tight text-white">
+                  {photo.caption}
                 </div>
               )}
             </div>
           ))}
         </div>
       ) : (
-        <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-dashed border-gray-300 dark:border-gray-700">
-          <ImageIcon className="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+        <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 py-8 text-center dark:border-gray-700 dark:bg-gray-800/50">
+          <ImageIcon className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
           <p className="text-xs text-muted-foreground">
             {canManage ? "No photos yet. Click 'Add Photo' to upload." : "No gallery photos yet."}
           </p>
@@ -169,21 +262,23 @@ export default function BusinessGallery({ entityType, entityId, canManage = fals
 
       {lightbox && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
           onClick={() => setLightbox(null)}
           data-testid="gallery-lightbox"
         >
           <button
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+            type="button"
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30"
             onClick={() => setLightbox(null)}
+            aria-label="Close photo"
             data-testid="button-close-lightbox"
           >
-            <X className="w-5 h-5 text-white" />
+            <X className="h-5 w-5 text-white" />
           </button>
           <img
             src={lightbox}
             alt="Full size"
-            className="max-w-full max-h-[90vh] rounded-lg object-contain"
+            className="max-h-[90vh] max-w-full rounded-lg object-contain"
             onClick={e => e.stopPropagation()}
           />
         </div>
