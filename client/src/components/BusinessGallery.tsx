@@ -179,7 +179,7 @@ export default function BusinessGallery({
                           onClick={() => deleteMutation.mutate(photo.id!)}
                           disabled={deleteMutation.isPending}
                           className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-white shadow hover:bg-red-700 disabled:opacity-50"
-                          aria-label="Delete photo " + (index + 1)
+                          aria-label={"Delete photo " + (index + 1)}
                           data-testid={"button-delete-gallery-" + photo.id}
                         >
                           <Trash2 className="h-3 w-3" />
