@@ -338,7 +338,7 @@ export default function Admin() {
   }
 
   function downloadTemplate() {
-    const csv = "name,category,phone,whatsapp,address,city,description,subcategory,carBrands\nExample Motors,car_dealer,+254700000000,+254700000000,123 Example Road,Nairobi,A great dealership,,Toyota|Honda\n";
+    const csv = "name,category,phone,whatsapp,address,city,description,subcategory,carBrands,latitude,longitude\nExample Motors,car_dealer,+254700000000,+254700000000,123 Example Road,Nairobi,A great dealership,,Toyota|Honda,-1.286389,36.817223\n";
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1071,7 +1071,7 @@ export default function Admin() {
                   <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1">Required CSV columns:</p>
                   <p className="text-xs text-blue-700 dark:text-blue-400 font-mono">name, category, phone, whatsapp, address, city</p>
                   <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-                    Optional: description, subcategory, carBrands (pipe-separated, e.g. <span className="font-mono">Toyota|Honda</span>)
+                    Optional: description, subcategory, carBrands (pipe-separated, e.g. <span className="font-mono">Toyota|Honda</span>), latitude, longitude (decimal degrees; provide both together)
                   </p>
                   <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
                     Categories: car_dealer, garage, spare_parts, car_wash, insurance, other

@@ -31,6 +31,8 @@ export default function RegisterBusiness() {
     address: "",
     city: "",
     description: "",
+    latitude: "",
+    longitude: "",
     logo: "",
     banner: "",
     website: "",
@@ -47,7 +49,7 @@ export default function RegisterBusiness() {
     );
   }
 
-  const needsBrands = form.category === "garage" || form.category === "spare_parts";
+  const needsBrands = form.category === "car_dealer" || form.category === "garage" || form.category === "spare_parts";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -67,6 +69,23 @@ export default function RegisterBusiness() {
       toast({ title: "Select service type", description: "Please select the type of automotive support service.", variant: "destructive" });
       return;
     }
+    const latitude = form.latitude.trim();
+    const longitude = form.longitude.trim();
+    if (Boolean(latitude) !== Boolean(longitude)) {
+      toast({ title: "Incomplete map location", description: "Enter both latitude and longitude, or leave both blank.", variant: "destructive" });
+      return;
+    }
+    if (latitude && (
+      !Number.isFinite(Number(latitude)) ||
+      !Number.isFinite(Number(longitude)) ||
+      Number(latitude) < -90 ||
+      Number(latitude) > 90 ||
+      Number(longitude) < -180 ||
+      Number(longitude) > 180
+    )) {
+      toast({ title: "Invalid map location", description: "Latitude must be between -90 and 90, and longitude between -180 and 180.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       // "automotive_support" is a display-only virtual category; map to the real DB enum value
@@ -76,6 +95,8 @@ export default function RegisterBusiness() {
         category: dbCategory,
         ownerId: user.id,
         carBrands: needsBrands ? selectedBrands : [],
+        latitude: latitude || null,
+        longitude: longitude || null,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
       setSuccess(true);
@@ -183,7 +204,11 @@ export default function RegisterBusiness() {
               {needsBrands && (
                 <div>
                   <Label>
-                    Car Brands You Deal With
+                    {form.category === "car_dealer"
+                      ? "Car Brands You Sell"
+                      : form.category === "spare_parts"
+                        ? "Car Brands You Stock Parts For"
+                        : "Car Brands You Service"}
                     <span className="text-muted-foreground text-xs font-normal ml-1">(select all that apply)</span>
                   </Label>
                   <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2" data-testid="grid-car-brands">
@@ -258,6 +283,45 @@ export default function RegisterBusiness() {
                 <div>
                   <Label htmlFor="biz-address">Address <span className="text-red-500">*</span></Label>
                   <Input id="biz-address" value={form.address} onChange={e => setField("address", e.target.value)} placeholder="123 Main Street" className="mt-1" required data-testid="input-biz-address" />
+                </div>
+              </div>
+
+              <div>
+                <Label>Map Coordinates (optional)</Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                  Enter both coordinates in decimal degrees to show your business on the map. Example: Nairobi, -1.286389, 36.817223.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="biz-latitude" className="text-xs">Latitude</Label>
+                    <Input
+                      id="biz-latitude"
+                      type="number"
+                      min="-90"
+                      max="90"
+                      step="any"
+                      value={form.latitude}
+                      onChange={e => setField("latitude", e.target.value)}
+                      placeholder="-1.286389"
+                      className="mt-1"
+                      data-testid="input-biz-latitude"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="biz-longitude" className="text-xs">Longitude</Label>
+                    <Input
+                      id="biz-longitude"
+                      type="number"
+                      min="-180"
+                      max="180"
+                      step="any"
+                      value={form.longitude}
+                      onChange={e => setField("longitude", e.target.value)}
+                      placeholder="36.817223"
+                      className="mt-1"
+                      data-testid="input-biz-longitude"
+                    />
+                  </div>
                 </div>
               </div>
 

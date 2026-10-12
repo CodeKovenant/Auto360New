@@ -412,7 +412,11 @@ export default function BusinessProfile() {
             {business.carBrands && business.carBrands.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                  {business.category === "spare_parts" ? "Car Parts Brands" : "Car Brands Serviced"}
+                   {business.category === "car_dealer"
+                     ? "Car Brands Sold"
+                     : business.category === "spare_parts"
+                       ? "Car Parts Brands"
+                       : "Car Brands Serviced"}
                 </p>
                 <div className="flex flex-wrap gap-1.5" data-testid="business-brands">
                   {business.carBrands.map(brand => (

@@ -46,6 +46,27 @@ const galleryUpload = makeUpload(galleryDir, "gallery");
 
 const JWT_SECRET = process.env.SESSION_SECRET || "autodirectory-secret-key";
 
+function businessCoordinateError(latitudeValue: unknown, longitudeValue: unknown): string | null {
+  const latitude = latitudeValue == null ? "" : String(latitudeValue).trim();
+  const longitude = longitudeValue == null ? "" : String(longitudeValue).trim();
+  if (!latitude && !longitude) return null;
+  if (!latitude || !longitude) return "Latitude and longitude must both be provided.";
+
+  const latitudeNumber = Number(latitude);
+  const longitudeNumber = Number(longitude);
+  if (
+    !Number.isFinite(latitudeNumber) ||
+    !Number.isFinite(longitudeNumber) ||
+    latitudeNumber < -90 ||
+    latitudeNumber > 90 ||
+    longitudeNumber < -180 ||
+    longitudeNumber > 180
+  ) {
+    return "Latitude must be between -90 and 90, and longitude between -180 and 180.";
+  }
+  return null;
+}
+
 function authMiddleware(req: any, res: any, next: any) {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) return res.status(401).json({ message: "Unauthorized" });
@@ -258,6 +279,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/businesses", authMiddleware, async (req, res) => {
     try {
       const user = (req as any).user;
+      const coordinateError = businessCoordinateError(req.body?.latitude, req.body?.longitude);
+      if (coordinateError) return res.status(400).json({ message: coordinateError });
       const body = insertBusinessSchema.parse({ ...req.body, ownerId: user.id });
       const biz = await storage.createBusiness(body);
 
@@ -348,6 +371,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const user = (req as any).user;
       const biz = await storage.getBusinessByOwnerId(user.id);
       if (!biz) return res.status(404).json({ message: "Business not found" });
+      const body = req.body || {};
+      if (
+        Object.prototype.hasOwnProperty.call(body, "latitude") ||
+        Object.prototype.hasOwnProperty.call(body, "longitude")
+      ) {
+        const coordinateError = businessCoordinateError(
+          Object.prototype.hasOwnProperty.call(body, "latitude") ? body.latitude : biz.latitude,
+          Object.prototype.hasOwnProperty.call(body, "longitude") ? body.longitude : biz.longitude,
+        );
+        if (coordinateError) return res.status(400).json({ message: coordinateError });
+      }
       const ownerCannotSet = new Set([
         "id",
         "ownerId",
@@ -1204,6 +1238,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             results.errors.push(`Row ${i + 2}: phone missing or too short`);
             continue;
           }
+          const latitude = (row.latitude || "").trim();
+          const longitude = (row.longitude || "").trim();
+          const coordinateError = businessCoordinateError(latitude, longitude);
+          if (coordinateError) throw new Error(coordinateError);
           const body = insertBusinessSchema.parse({
             ownerId: req.user.id,
             name: row.name || "",
@@ -1215,6 +1253,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             description: (row.description ?? "").trim() || "Imported listing",
             subcategory: row.subcategory || null,
             carBrands: row.carBrands ? row.carBrands.split("|") : null,
+            latitude: latitude || null,
+            longitude: longitude || null,
             premium: false,
           });
           const created = await storage.createBusiness(body);

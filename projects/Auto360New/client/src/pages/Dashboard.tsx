@@ -109,6 +109,27 @@ export default function Dashboard() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  function saveBusinessProfile() {
+    const latitude = String(editForm.latitude ?? "").trim();
+    const longitude = String(editForm.longitude ?? "").trim();
+    if (Boolean(latitude) !== Boolean(longitude)) {
+      toast({ title: "Incomplete map location", description: "Enter both latitude and longitude, or leave both blank.", variant: "destructive" });
+      return;
+    }
+    if (latitude && (
+      !Number.isFinite(Number(latitude)) ||
+      !Number.isFinite(Number(longitude)) ||
+      Number(latitude) < -90 ||
+      Number(latitude) > 90 ||
+      Number(longitude) < -180 ||
+      Number(longitude) > 180
+    )) {
+      toast({ title: "Invalid map location", description: "Latitude must be between -90 and 90, and longitude between -180 and 180.", variant: "destructive" });
+      return;
+    }
+    updateMutation.mutate();
+  }
+
   const addPartMutation = useMutation({
     mutationFn: async () => { const res = await apiRequest("POST", "/api/parts", { ...newPart, businessId: data?.business.id }); return res.json(); },
     onSuccess: () => { toast({ title: "Part added!" }); setNewPart({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "", image: "" }); setShowAddPart(false); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
@@ -352,10 +373,14 @@ export default function Dashboard() {
                   <p className="text-xs text-muted-foreground mt-1 mb-2">This image appears at the top of your public business profile.</p>
                   <LogoUpload kind="banner" value={editForm.banner || ""} onChange={url => setEditForm(p => ({ ...p, banner: url }))} />
                 </div>
-                {(editForm.category === "garage" || editForm.category === "spare_parts") && (
+                {(editForm.category === "car_dealer" || editForm.category === "garage" || editForm.category === "spare_parts") && (
                   <div className="sm:col-span-2">
                     <Label className="text-xs">
-                      Car Brands {editForm.category === "spare_parts" ? "You Stock Parts For" : "You Service"}
+                      Car Brands {editForm.category === "car_dealer"
+                        ? "You Sell"
+                        : editForm.category === "spare_parts"
+                          ? "You Stock Parts For"
+                          : "You Service"}
                       <span className="text-muted-foreground font-normal ml-1">(select all that apply)</span>
                     </Label>
                     <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -392,9 +417,47 @@ export default function Dashboard() {
                     )}
                   </div>
                 )}
+                <div className="sm:col-span-2">
+                  <Label className="text-xs">Map Coordinates (optional)</Label>
+                  <p className="text-xs text-muted-foreground mt-1 mb-2">
+                    Enter both coordinates in decimal degrees to show your business on the map.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-biz-latitude" className="text-xs">Latitude</Label>
+                      <Input
+                        id="edit-biz-latitude"
+                        type="number"
+                        min="-90"
+                        max="90"
+                        step="any"
+                        value={String(editForm.latitude ?? "")}
+                        onChange={e => setEditForm(p => ({ ...p, latitude: e.target.value || null }))}
+                        placeholder="-1.286389"
+                        className="mt-1"
+                        data-testid="input-edit-biz-latitude"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-biz-longitude" className="text-xs">Longitude</Label>
+                      <Input
+                        id="edit-biz-longitude"
+                        type="number"
+                        min="-180"
+                        max="180"
+                        step="any"
+                        value={String(editForm.longitude ?? "")}
+                        onChange={e => setEditForm(p => ({ ...p, longitude: e.target.value || null }))}
+                        placeholder="36.817223"
+                        className="mt-1"
+                        data-testid="input-edit-biz-longitude"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="flex gap-2 mt-4">
-                <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending} className="bg-red-600 text-white" data-testid="button-save-edit">
+                <Button onClick={saveBusinessProfile} disabled={updateMutation.isPending} className="bg-red-600 text-white" data-testid="button-save-edit">
                   {updateMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
                 <Button variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
