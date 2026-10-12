@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Car as CarType } from "@shared/schema";
 import { Link } from "wouter";
 import BusinessGallery from "@/components/BusinessGallery";
+import RelatedItems from "@/components/RelatedItems";
 import { useAuth } from "@/hooks/use-auth";
 
 type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null };
@@ -185,6 +186,7 @@ export default function CarDetail() {
             </Card>
           </div>
         </div>
+        <RelatedItems kind="cars" currentId={car.id} brand={car.brand} location={car.location} />
       </div>
     </div>
   );
