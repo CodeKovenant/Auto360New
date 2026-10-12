@@ -22,6 +22,7 @@ import BrandPage from "@/pages/BrandPage";
 import VerifyEmail from "@/pages/VerifyEmail";
 import AutoDealers from "@/pages/AutoDealers";
 import AutoSpares from "@/pages/AutoSpares";
+import SparePartDetail from "@/pages/SparePartDetail";
 import AutoGarages from "@/pages/AutoGarages";
 import Terms from "@/pages/Terms";
 import NotFound from "@/pages/not-found";
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/cars" component={Cars} />
       <Route path="/cars/:id" component={CarDetail} />
       <Route path="/services/:id" component={ServiceDetail} />
+      <Route path="/parts/:id" component={SparePartDetail} />
       <Route path="/garages/services" component={GarageServices} />
       <Route path="/automotive-support" component={AutomotiveSupport} />
       <Route path="/brand/:brand" component={BrandPage} />
