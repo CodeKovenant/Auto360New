@@ -64,6 +64,7 @@ export interface IStorage {
 
   // Spare Parts
   getSparePartsByBusinessId(businessId: string): Promise<SparePart[]>;
+  getSparePartById(id: string): Promise<(SparePart & { businessName: string; businessCity: string; businessAddress: string; businessPhone: string; businessWhatsapp: string; businessLogo: string | null; businessOwnerId: string }) | undefined>;
   getFeaturedSpareParts(): Promise<(SparePart & { businessName: string; businessCity: string; businessLogo: string | null })[]>;
   createSparePart(part: InsertSparePart): Promise<SparePart>;
   updateSparePart(id: string, data: Partial<SparePart>): Promise<SparePart>;
@@ -336,6 +337,34 @@ export class DatabaseStorage implements IStorage {
 
   async getSparePartsByBusinessId(businessId: string) {
     return db.select().from(spareParts).where(eq(spareParts.businessId, businessId)).orderBy(spareParts.createdAt);
+  }
+
+  async getSparePartById(id: string) {
+    const [part] = await db
+      .select({
+        id: spareParts.id,
+        businessId: spareParts.businessId,
+        partName: spareParts.partName,
+        carBrand: spareParts.carBrand,
+        carModel: spareParts.carModel,
+        year: spareParts.year,
+        condition: spareParts.condition,
+        price: spareParts.price,
+        description: spareParts.description,
+        image: spareParts.image,
+        createdAt: spareParts.createdAt,
+        businessName: businesses.name,
+        businessCity: businesses.city,
+        businessAddress: businesses.address,
+        businessPhone: businesses.phone,
+        businessWhatsapp: businesses.whatsapp,
+        businessLogo: businesses.logo,
+        businessOwnerId: businesses.ownerId,
+      })
+      .from(spareParts)
+      .innerJoin(businesses, eq(spareParts.businessId, businesses.id))
+      .where(and(eq(spareParts.id, id), eq(businesses.status, "approved"), eq(businesses.category, "spare_parts")));
+    return part;
   }
 
   async getFeaturedSpareParts() {

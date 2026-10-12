@@ -576,6 +576,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Spare Parts
+  app.get("/api/spare-parts/:id", async (req, res) => {
+    try {
+      const part = await storage.getSparePartById(req.params.id);
+      if (!part) return res.status(404).json({ message: "Spare part not found" });
+      res.json(part);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/parts/:businessId", async (req, res) => {
     try {
       const parts = await storage.getSparePartsByBusinessId(req.params.businessId);

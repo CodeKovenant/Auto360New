@@ -545,7 +545,7 @@ export default function BusinessProfile() {
                     <div className="p-3">
                     <div className="flex items-start justify-between gap-2 flex-wrap">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-gray-900 dark:text-white">{part.partName}</p>
+                        <Link href={"/parts/" + part.id} className="font-medium text-sm text-gray-900 hover:text-orange-600 dark:text-white">{part.partName}</Link>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {part.carBrand} {part.carModel} {part.year && `• ${part.year}`}
                         </p>
