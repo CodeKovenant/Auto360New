@@ -95,14 +95,13 @@ export default function BusinessCard({ business }: BusinessCardProps) {
             <MessageCircle className="w-3.5 h-3.5" />
             WhatsApp
           </a>
-          <Link href={`/business/${business.id}`} className="flex-1">
-            <button
-              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors group/btn"
-              data-testid={`button-view-${business.id}`}
-            >
-              View Profile
-              <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-0.5 transition-transform" />
-            </button>
+          <Link
+            href={`/business/${business.id}`}
+            className="flex-1 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors group/btn"
+            data-testid={`button-view-${business.id}`}
+          >
+            View Profile
+            <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-0.5 transition-transform" />
           </Link>
         </div>
       </div>
