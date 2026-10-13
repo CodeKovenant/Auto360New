@@ -402,7 +402,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Admin routes
   app.get("/api/admin/featured", adminMiddleware, async (_req, res) => {
     try {
-      const approvedBusinesses = await storage.getApprovedBusinesses();
+      const [approvedBusinesses, pendingBusinesses] = await Promise.all([
+        storage.getApprovedBusinesses(),
+        storage.getPendingBusinesses(),
+      ]);
       const [cars, garageServices, sparePartGroups, supportServiceGroups] = await Promise.all([
         storage.getCars(),
         storage.getGarageServices(),
@@ -417,13 +420,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             .map((biz) => storage.getSupportServicesByBusinessId(biz.id))
         ),
       ]);
-      const businessNames = new Map(approvedBusinesses.map((biz) => [biz.id, biz.name]));
+      const businessCatalog = [...approvedBusinesses, ...pendingBusinesses];
+      const businessNames = new Map(businessCatalog.map((biz) => [biz.id, biz.name]));
       const items = [
-        ...approvedBusinesses.map((biz) => ({
+        ...businessCatalog.map((biz) => ({
           id: biz.id,
           type: "business",
           name: biz.name,
-          subtitle: `${biz.category.replace(/_/g, " ")} · ${biz.city}`,
+          subtitle: `${biz.category.replace(/_/g, " ")} · ${biz.city} · ${biz.status}`,
           featured: !!biz.featured,
         })),
         ...cars.map((car) => ({
