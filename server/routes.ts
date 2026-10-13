@@ -1414,6 +1414,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/admin/import/businesses", adminMiddleware, csvUpload.single("file"), async (req: any, res) => {
     try {
+      const requestedCategory = typeof req.body?.category === "string" ? req.body.category.trim() : "";
+      const businessCategoryMap: Record<string, "car_dealer" | "spare_parts" | "garage" | "other"> = {
+        car_dealer: "car_dealer",
+        spare_parts: "spare_parts",
+        garage: "garage",
+        automotive_support: "other",
+      };
+      const category = businessCategoryMap[requestedCategory];
+      if (!category) return res.status(400).json({ message: "Select a valid business category before importing" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
@@ -1460,7 +1469,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const body = insertBusinessSchema.parse({
             ownerId: req.user.id,
             name: row.name || "",
-            category: row.category || "other",
+            category,
             phone: row.phone || "",
             whatsapp: row.whatsapp || row.phone || "",
             address: row.address || "",
