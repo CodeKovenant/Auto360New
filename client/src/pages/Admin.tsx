@@ -61,6 +61,14 @@ const FEATURED_ITEM_GROUPS: { type: FeaturedItemType; title: string }[] = [
   { type: "support_service", title: "Automotive support services" },
 ];
 
+const FEATURED_ITEM_ROUTES: Record<FeaturedItemType, string> = {
+  business: "/business",
+  car: "/cars",
+  part: "/parts",
+  garage_service: "/services",
+  support_service: "/support-services",
+};
+
 type AdminImportType = "businesses" | "cars" | "parts" | "services" | "support-services";
 
 const ADMIN_IMPORT_CONFIG: Record<AdminImportType, { label: string; requiredColumns: string[]; optionalColumns: string[]; description: string }> = {
@@ -241,12 +249,12 @@ function BusinessCard({
                 )}
 
                 <div className="pt-1">
-                  <Link href={`/business/${biz.id}`}>
-                    <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800" data-testid={`link-view-profile-${biz.id}`}>
+                  <Button asChild size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800">
+                    <Link href={`/business/${biz.id}`} data-testid={`link-view-profile-${biz.id}`}>
                       <ExternalLink className="w-3.5 h-3.5 mr-1" />
                       View Public Profile
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -831,18 +839,25 @@ export default function Admin() {
                                   </div>
                                   <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  variant={item.featured ? "default" : "outline"}
-                                  className={item.featured ? "shrink-0 bg-amber-500 text-white hover:bg-amber-600" : "shrink-0"}
-                                  onClick={() => toggleFeaturedMutation.mutate({ item, featured: !item.featured })}
-                                  disabled={toggleFeaturedMutation.isPending}
-                                  aria-pressed={item.featured}
-                                  data-testid={`button-toggle-featured-${item.type}-${item.id}`}
-                                >
-                                  <Star className={`mr-1 h-4 w-4 ${item.featured ? "fill-current" : ""}`} />
-                                  {item.featured ? "Featured" : "Set featured"}
-                                </Button>
+                                <div className="flex shrink-0 items-center gap-2">
+                                  <Button asChild size="sm" variant="outline">
+                                    <Link href={`${FEATURED_ITEM_ROUTES[item.type]}/${item.id}`} data-testid={`button-view-featured-${item.type}-${item.id}`}>
+                                      View
+                                    </Link>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant={item.featured ? "default" : "outline"}
+                                    className={item.featured ? "bg-amber-500 text-white hover:bg-amber-600" : ""}
+                                    onClick={() => toggleFeaturedMutation.mutate({ item, featured: !item.featured })}
+                                    disabled={toggleFeaturedMutation.isPending}
+                                    aria-pressed={item.featured}
+                                    data-testid={`button-toggle-featured-${item.type}-${item.id}`}
+                                  >
+                                    <Star className={`mr-1 h-4 w-4 ${item.featured ? "fill-current" : ""}`} />
+                                    {item.featured ? "Featured" : "Set featured"}
+                                  </Button>
+                                </div>
                               </CardContent>
                             </Card>
                           ))}
@@ -1407,12 +1422,21 @@ export default function Admin() {
                         ? <CheckCircle className="w-4 h-4 text-green-600" />
                         : <AlertCircle className="w-4 h-4 text-orange-500" />}
                       <p className="text-sm font-semibold">
-                        {importResult.imported} imported
-                        {(importResult.skipped ?? 0) > 0 && ", " + importResult.skipped + " skipped (duplicates)"}
-                        {importResult.failed > 0 && ", " + importResult.failed + " failed"}
+                        {importType === "businesses" ? (
+                          <>
+                            {importResult.imported} business{importResult.imported === 1 ? "" : "es"} imported, {importResult.skipped ?? 0} already existed
+                            {importResult.failed > 0 && ", " + importResult.failed + " failed"}
+                          </>
+                        ) : (
+                          <>
+                            {importResult.imported} imported
+                            {(importResult.skipped ?? 0) > 0 && ", " + importResult.skipped + " skipped (duplicates)"}
+                            {importResult.failed > 0 && ", " + importResult.failed + " failed"}
+                          </>
+                        )}
                       </p>
                     </div>
-                    {importResult.errors.length > 0 && (
+                    {importType !== "businesses" && importResult.errors.length > 0 && (
                       <ul className="space-y-1 mt-2">
                         {importResult.errors.slice(0, 10).map((err, i) => (
                           <li key={i} className="text-xs text-orange-700 dark:text-orange-300">{err}</li>
