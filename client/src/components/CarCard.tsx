@@ -131,13 +131,12 @@ export default function CarCard({ car }: CarCardProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-2 mt-auto">
-          <Link href={`/cars/${car.id}`} className="flex-1">
-            <button
-              className="w-full text-xs font-semibold py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              data-testid={`button-view-car-${car.id}`}
-            >
-              View Details
-            </button>
+          <Link
+            href={`/cars/${car.id}`}
+            className="flex-1 text-center text-xs font-semibold py-2 px-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            data-testid={`button-view-car-${car.id}`}
+          >
+            View Details
           </Link>
           <a
             href={`https://wa.me/${car.dealerWhatsapp?.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm interested in the ${car.title} listed on Auto360.`)}`}
