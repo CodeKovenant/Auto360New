@@ -22,14 +22,20 @@ import { useToast } from "@/hooks/use-toast";
 import type { Business, Message, Review, SparePart, Car as CarType, GarageService, SupportService } from "@shared/schema";
 import { BUSINESS_CATEGORIES, FUEL_TYPES, TRANSMISSIONS, CAR_CONDITIONS, PART_CONDITIONS, CAR_BRANDS } from "@shared/schema";
 
+type OwnerDashboardBusiness = Omit<Business, "featured">;
+type OwnerDashboardPart = Omit<SparePart, "featured">;
+type OwnerDashboardCar = Omit<CarType, "featured">;
+type OwnerDashboardGarageService = Omit<GarageService, "featured">;
+type OwnerDashboardSupportService = Omit<SupportService, "featured">;
+
 interface DashboardData {
-  business: Business;
+  business: OwnerDashboardBusiness;
   messages: Message[];
   reviews: Review[];
-  spareParts: SparePart[];
-  cars: CarType[];
-  garageServices: GarageService[];
-  supportServices: SupportService[];
+  spareParts: OwnerDashboardPart[];
+  cars: OwnerDashboardCar[];
+  garageServices: OwnerDashboardGarageService[];
+  supportServices: OwnerDashboardSupportService[];
 }
 
 function statusBadge(status: string) {
@@ -60,27 +66,27 @@ export default function Dashboard() {
   });
 
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<Business>>({});
+  const [editForm, setEditForm] = useState<Partial<OwnerDashboardBusiness>>({});
   const [galleryCarId, setGalleryCarId] = useState<string | null>(null);
 
   // Spare parts state
   const [newPart, setNewPart] = useState({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "", image: "" });
   const [showAddPart, setShowAddPart] = useState(false);
-  const [editingPart, setEditingPart] = useState<SparePart | null>(null);
+  const [editingPart, setEditingPart] = useState<OwnerDashboardPart | null>(null);
 
   // Support services state
   const [newSupportService, setNewSupportService] = useState({ name: "", description: "", startingPrice: "" });
   const [showAddSupportService, setShowAddSupportService] = useState(false);
-  const [editingSupportService, setEditingSupportService] = useState<SupportService | null>(null);
+  const [editingSupportService, setEditingSupportService] = useState<OwnerDashboardSupportService | null>(null);
 
   // Car state
   const [showAddCar, setShowAddCar] = useState(false);
-  const [editingCar, setEditingCar] = useState<CarType | null>(null);
+  const [editingCar, setEditingCar] = useState<OwnerDashboardCar | null>(null);
   const [newCar, setNewCar] = useState({ title: "", brand: "", model: "", year: new Date().getFullYear(), price: "", mileage: "", fuelType: "petrol", transmission: "automatic", condition: "used", description: "", location: "", images: "" });
 
   // Service state
   const [showAddService, setShowAddService] = useState(false);
-  const [editingService, setEditingService] = useState<GarageService | null>(null);
+  const [editingService, setEditingService] = useState<OwnerDashboardGarageService | null>(null);
   const [newService, setNewService] = useState({ name: "", description: "", price: "", popular: false });
 
   // Import modal state
@@ -122,7 +128,7 @@ export default function Dashboard() {
   });
 
   const updatePartMutation = useMutation({
-    mutationFn: async (part: SparePart) => { const res = await apiRequest("PUT", `/api/parts/${part.id}`, part); return res.json(); },
+    mutationFn: async (part: OwnerDashboardPart) => { const res = await apiRequest("PUT", `/api/parts/${part.id}`, part); return res.json(); },
     onSuccess: () => { toast({ title: "Part updated!" }); setEditingPart(null); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -134,7 +140,7 @@ export default function Dashboard() {
   });
 
   const updateSupportServiceMutation = useMutation({
-    mutationFn: async (svc: SupportService) => { const res = await apiRequest("PUT", `/api/support-services/${svc.id}`, svc); return res.json(); },
+    mutationFn: async (svc: OwnerDashboardSupportService) => { const res = await apiRequest("PUT", `/api/support-services/${svc.id}`, svc); return res.json(); },
     onSuccess: () => { toast({ title: "Service updated!" }); setEditingSupportService(null); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -162,7 +168,7 @@ export default function Dashboard() {
   });
 
   const updateCarMutation = useMutation({
-    mutationFn: async (car: CarType) => { const res = await apiRequest("PUT", `/api/cars/${car.id}`, car); return res.json(); },
+    mutationFn: async (car: OwnerDashboardCar) => { const res = await apiRequest("PUT", `/api/cars/${car.id}`, car); return res.json(); },
     onSuccess: () => { toast({ title: "Car updated!" }); setEditingCar(null); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -180,7 +186,7 @@ export default function Dashboard() {
   });
 
   const updateServiceMutation = useMutation({
-    mutationFn: async (svc: GarageService) => { const res = await apiRequest("PUT", `/api/services/${svc.id}`, svc); return res.json(); },
+    mutationFn: async (svc: OwnerDashboardGarageService) => { const res = await apiRequest("PUT", `/api/services/${svc.id}`, svc); return res.json(); },
     onSuccess: () => { toast({ title: "Service updated!" }); setEditingService(null); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });

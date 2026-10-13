@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, ilike, and, or, sql, gte, lte, desc, inArray, isNull } from "drizzle-orm";
+import { eq, ilike, and, or, sql, gte, lte, desc, inArray, isNull, getTableColumns } from "drizzle-orm";
 import {
   users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports, galleryImages,
   type User, type InsertUser,
@@ -20,6 +20,12 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL,
     ? { rejectUnauthorized: false }
     : false, });
 export const db = drizzle(pool);
+
+function ownerColumnsWithoutFeatured<T extends { featured: unknown }>(columns: T): Omit<T, "featured"> {
+  const { featured, ...ownerColumns } = columns;
+  void featured;
+  return ownerColumns;
+}
 
 let persistentUploadsTableReady: Promise<void> | null = null;
 
@@ -163,7 +169,7 @@ export interface IStorage {
 
   // Businesses
   getBusinessById(id: string): Promise<Business | undefined>;
-  getBusinessByOwnerId(ownerId: string): Promise<Business | undefined>;
+  getBusinessByOwnerId(ownerId: string): Promise<Omit<Business, "featured"> | undefined>;
   getAllBusinesses(filters?: { category?: string; subcategory?: string; city?: string; q?: string; minRating?: number }): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   getFeaturedBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   getPremiumBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
@@ -177,6 +183,7 @@ export interface IStorage {
 
   // Spare Parts
   getSparePartsByBusinessId(businessId: string): Promise<SparePart[]>;
+  getOwnerDashboardSparePartsByBusinessId(businessId: string): Promise<Omit<SparePart, "featured">[]>;
   getSparePartById(id: string): Promise<(SparePart & { businessName: string; businessCity: string; businessAddress: string; businessPhone: string; businessWhatsapp: string; businessLogo: string | null; businessOwnerId: string }) | undefined>;
   getFeaturedSpareParts(): Promise<(SparePart & { businessName: string; businessCity: string; businessLogo: string | null })[]>;
   createSparePart(part: InsertSparePart): Promise<SparePart>;
@@ -199,6 +206,7 @@ export interface IStorage {
   getFeaturedCars(): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null })[]>;
   getCarById(id: string): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null }) | undefined>;
   getCarsByDealerId(dealerId: string): Promise<Car[]>;
+  getOwnerDashboardCarsByDealerId(dealerId: string): Promise<Omit<Car, "featured">[]>;
   createCar(car: InsertCar): Promise<Car>;
   updateCar(id: string, data: Partial<Car>): Promise<Car>;
   deleteCar(id: string): Promise<void>;
@@ -209,12 +217,14 @@ export interface IStorage {
   getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
   getGarageServiceById(id: string): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null }) | undefined>;
   getGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
+  getOwnerDashboardGarageServicesByGarageId(garageId: string): Promise<Omit<GarageService, "featured">[]>;
   createGarageService(service: InsertGarageService): Promise<GarageService>;
   updateGarageService(id: string, data: Partial<GarageService>): Promise<GarageService>;
   deleteGarageService(id: string): Promise<void>;
 
   // Support Services
   getSupportServicesByBusinessId(businessId: string): Promise<SupportService[]>;
+  getOwnerDashboardSupportServicesByBusinessId(businessId: string): Promise<Omit<SupportService, "featured">[]>;
   getSupportServiceById(id: string): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; businessPhone: string; businessWhatsapp: string; businessAddress: string }) | undefined>;
   getFeaturedSupportServices(): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null })[]>;
   createSupportService(service: InsertSupportService): Promise<SupportService>;
@@ -275,7 +285,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBusinessByOwnerId(ownerId: string) {
-    const [biz] = await db.select().from(businesses).where(eq(businesses.ownerId, ownerId));
+    const [biz] = await db
+      .select(ownerColumnsWithoutFeatured(getTableColumns(businesses)))
+      .from(businesses)
+      .where(eq(businesses.ownerId, ownerId));
     return biz;
   }
 
@@ -429,6 +442,14 @@ export class DatabaseStorage implements IStorage {
 
   async getSparePartsByBusinessId(businessId: string) {
     return db.select().from(spareParts).where(eq(spareParts.businessId, businessId)).orderBy(desc(spareParts.featured), desc(spareParts.createdAt));
+  }
+
+  async getOwnerDashboardSparePartsByBusinessId(businessId: string) {
+    return db
+      .select(ownerColumnsWithoutFeatured(getTableColumns(spareParts)))
+      .from(spareParts)
+      .where(eq(spareParts.businessId, businessId))
+      .orderBy(desc(spareParts.createdAt));
   }
 
   async getSparePartById(id: string) {
@@ -592,6 +613,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(sql`CASE WHEN ${cars.featured} IS TRUE THEN 1 ELSE 0 END`), desc(cars.createdAt));
   }
 
+  async getOwnerDashboardCarsByDealerId(dealerId: string) {
+    return db
+      .select(ownerColumnsWithoutFeatured(getTableColumns(cars)))
+      .from(cars)
+      .where(eq(cars.dealerId, dealerId))
+      .orderBy(desc(cars.createdAt));
+  }
+
   async createCar(car: InsertCar) {
     const [created] = await db.insert(cars).values(car).returning();
     return created;
@@ -683,6 +712,14 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(garageServices).where(eq(garageServices.garageId, garageId)).orderBy(desc(garageServices.featured), desc(garageServices.createdAt));
   }
 
+  async getOwnerDashboardGarageServicesByGarageId(garageId: string) {
+    return db
+      .select(ownerColumnsWithoutFeatured(getTableColumns(garageServices)))
+      .from(garageServices)
+      .where(eq(garageServices.garageId, garageId))
+      .orderBy(desc(garageServices.createdAt));
+  }
+
   async createGarageService(service: InsertGarageService) {
     const [created] = await db.insert(garageServices).values(service).returning();
     return created;
@@ -700,6 +737,14 @@ export class DatabaseStorage implements IStorage {
   // Support Services
   async getSupportServicesByBusinessId(businessId: string) {
     return db.select().from(supportServices).where(eq(supportServices.businessId, businessId)).orderBy(desc(supportServices.featured), desc(supportServices.createdAt));
+  }
+
+  async getOwnerDashboardSupportServicesByBusinessId(businessId: string) {
+    return db
+      .select(ownerColumnsWithoutFeatured(getTableColumns(supportServices)))
+      .from(supportServices)
+      .where(eq(supportServices.businessId, businessId))
+      .orderBy(desc(supportServices.createdAt));
   }
 
   async getSupportServiceById(id: string) {
