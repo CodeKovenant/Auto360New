@@ -84,6 +84,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+{business.whatsapp?.trim() && (
           <a
             href={`https://wa.me/${business.whatsapp?.replace(/\D/g, "")}`}
             target="_blank"
@@ -95,6 +96,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
             <MessageCircle className="w-3.5 h-3.5" />
             WhatsApp
           </a>
+          )}
           <Link
             href={`/business/${business.id}`}
             className="flex-1 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors group/btn"

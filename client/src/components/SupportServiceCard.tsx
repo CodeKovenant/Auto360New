@@ -74,6 +74,7 @@ export default function SupportServiceCard({ service, businessName, businessPhon
             Call
           </button>
         </a>
+{businessWhatsapp?.trim() && (
         <a href={waLink} target="_blank" rel="noopener noreferrer" className="flex-1">
           <button
             className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white transition-colors shadow-sm shadow-green-200 dark:shadow-none"
@@ -83,6 +84,7 @@ export default function SupportServiceCard({ service, businessName, businessPhon
             WhatsApp
           </button>
         </a>
+        )}
       </div>
     </div>
   );

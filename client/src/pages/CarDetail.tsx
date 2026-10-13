@@ -168,6 +168,7 @@ export default function CarDetail() {
                   </div>
                   <p className="font-semibold text-gray-900 dark:text-white">{car.dealerName}</p>
                 </div>
+{car.dealerWhatsapp?.trim() && (
                 <a
                   href={"https://wa.me/" + car.dealerWhatsapp.replace(/\D/g, "") + "?text=" + encodeURIComponent("Hi, I'm interested in the " + car.title + " listed on AutoDirectory. Price: " + formatPrice(car.price))}
                   target="_blank"
@@ -180,6 +181,7 @@ export default function CarDetail() {
                     Chat on WhatsApp
                   </Button>
                 </a>
+                )}
                 <Link href={"/business/" + car.dealerId}>
                   <Button variant="outline" className="w-full">View Dealer Profile</Button>
                 </Link>

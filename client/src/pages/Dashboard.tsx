@@ -110,7 +110,7 @@ export default function Dashboard() {
   }
 
   const updateMutation = useMutation({
-    mutationFn: async () => { const res = await apiRequest("PUT", "/api/businesses/me", editForm); return res.json(); },
+    mutationFn: async () => { const payload = { ...editForm, latitude: String(editForm.latitude ?? "").trim() || null, longitude: String(editForm.longitude ?? "").trim() || null }; const res = await apiRequest("PUT", "/api/businesses/me", payload); return res.json(); },
     onSuccess: () => { toast({ title: "Business updated!" }); setEditMode(false); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -270,7 +270,7 @@ export default function Dashboard() {
               onClick={() => resendMutation.mutate()}
               disabled={resendMutation.isPending}
             >
-              {resendMutation.isPending ? "Sending…" : "Resend"}
+              {resendMutation.isPending ? "Sendingâ¦" : "Resend"}
             </Button>
           </div>
         )}
@@ -319,7 +319,7 @@ export default function Dashboard() {
                   <div className="flex items-start gap-3 flex-1">
                     <Sparkles className="w-7 h-7 text-orange-500 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-gray-900 dark:text-white text-sm">Get Premium — KSh {mpesaConfig?.amount?.toLocaleString() ?? "2,000"} / {mpesaConfig?.days ?? 30} days</p>
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm">Get Premium â KSh {mpesaConfig?.amount?.toLocaleString() ?? "2,000"} / {mpesaConfig?.days ?? 30} days</p>
                       <p className="text-xs text-muted-foreground mt-0.5">Stand out with a blue verified checkmark and appear in the Premium section on the homepage.</p>
                     </div>
                   </div>
@@ -357,10 +357,10 @@ export default function Dashboard() {
             <CardHeader><CardTitle className="text-base">Edit Business Profile</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {[["Business Name", "name"], ["City", "city"], ["Phone", "phone"], ["WhatsApp", "whatsapp"], ["Website", "website"], ["Address", "address"]].map(([label, field]) => (
+                {[["Business Name", "name"], ["Subcategory", "subcategory"], ["City", "city"], ["Phone", "phone"], ["WhatsApp", "whatsapp"], ["Website", "website"], ["Latitude", "latitude"], ["Longitude", "longitude"], ["Address", "address"]].map(([label, field]) => (
                   <div key={field} className={field === "address" ? "sm:col-span-2" : ""}>
                     <Label className="text-xs">{label}</Label>
-                    <Input value={(editForm as any)[field] || ""} onChange={e => setEditForm(p => ({ ...p, [field]: e.target.value }))} className="mt-1" />
+                    <Input type={field === "latitude" || field === "longitude" ? "number" : "text"} step={field === "latitude" || field === "longitude" ? "any" : undefined} value={(editForm as any)[field] ?? ""} onChange={e => setEditForm(p => ({ ...p, [field]: e.target.value }))} className="mt-1" />
                   </div>
                 ))}
                 <div className="sm:col-span-2">
@@ -404,7 +404,7 @@ export default function Dashboard() {
                             <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center text-xs font-bold transition-colors ${
                               checked ? "bg-red-600 border-red-600 text-white" : "border-gray-300 dark:border-gray-600"
                             }`}>
-                              {checked ? "✓" : ""}
+                              {checked ? "â" : ""}
                             </span>
                             {brand}
                           </button>
@@ -568,7 +568,7 @@ export default function Dashboard() {
                                     </Badge>
                                   )}
                                 </div>
-                                <p className="text-sm text-muted-foreground">{car.brand} {car.model} • {car.year} • {car.location}</p>
+                                <p className="text-sm text-muted-foreground">{car.brand} {car.model} â¢ {car.year} â¢ {car.location}</p>
                                 <p className="text-base font-bold text-red-600 dark:text-red-400 mt-0.5">KSh {Number(car.price).toLocaleString()}</p>
                               </div>
                               <div className="flex gap-2">
@@ -819,7 +819,7 @@ export default function Dashboard() {
                               <div className="flex items-start justify-between gap-2 flex-wrap">
                                 <div>
                                   <p className="font-medium text-sm text-gray-900 dark:text-white">{part.partName}</p>
-                                  <p className="text-xs text-muted-foreground mt-0.5">{part.carBrand} {part.carModel} {part.year && `• ${part.year}`}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">{part.carBrand} {part.carModel} {part.year && `â¢ ${part.year}`}</p>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">{part.condition === "new" ? "New" : "Used"}</Badge>
