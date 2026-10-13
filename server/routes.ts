@@ -453,10 +453,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const [msgs, revs, parts, carsData, servicesData, supportSvcs] = await Promise.all([
         storage.getMessagesByBusinessId(business.id),
         storage.getReviewsByBusinessId(business.id),
-        storage.getSparePartsByBusinessId(business.id),
-        business.category === "car_dealer" ? storage.getCarsByDealerId(business.id) : Promise.resolve([]),
-        business.category === "garage" ? storage.getGarageServicesByGarageId(business.id) : Promise.resolve([]),
-        isSupport ? storage.getSupportServicesByBusinessId(business.id) : Promise.resolve([]),
+        storage.getOwnerDashboardSparePartsByBusinessId(business.id),
+        business.category === "car_dealer" ? storage.getOwnerDashboardCarsByDealerId(business.id) : Promise.resolve([]),
+        business.category === "garage" ? storage.getOwnerDashboardGarageServicesByGarageId(business.id) : Promise.resolve([]),
+        isSupport ? storage.getOwnerDashboardSupportServicesByBusinessId(business.id) : Promise.resolve([]),
       ]);
       res.json({ business, messages: msgs, reviews: revs, spareParts: parts, cars: carsData, garageServices: servicesData, supportServices: supportSvcs });
     } catch (e: any) {
