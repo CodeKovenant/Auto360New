@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import BusinessCard from "@/components/BusinessCard";
+import FeaturedBusinessCarousel from "@/components/FeaturedBusinessCarousel";
 import type { Business } from "@shared/schema";
 
 const TABS = [
@@ -66,6 +67,7 @@ export default function AutomotiveSupport() {
   const [search, setSearch] = useState("");
   const [county, setCounty] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [showAllBusinesses, setShowAllBusinesses] = useState(false);
 
   useEffect(() => {
     const p = new URLSearchParams(searchStr);
@@ -83,6 +85,14 @@ export default function AutomotiveSupport() {
   const { data: businesses, isLoading } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
     queryKey: [`/api/businesses?${queryString}`],
   });
+
+  const featuredBusinesses = businesses?.filter((biz) => biz.featured) ?? [];
+  const otherBusinesses = businesses?.filter((biz) => !biz.featured) ?? [];
+  const visibleOtherBusinesses = showAllBusinesses ? otherBusinesses : otherBusinesses.slice(0, 50);
+
+  useEffect(() => {
+    setShowAllBusinesses(false);
+  }, [queryString]);
 
   const currentTab = TABS.find(t => t.value === activeTab)!;
 
@@ -189,6 +199,10 @@ export default function AutomotiveSupport() {
 
       {/* Results */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <FeaturedBusinessCarousel
+          businesses={featuredBusinesses}
+          title="Featured Automotive Support"
+        />
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -200,11 +214,32 @@ export default function AutomotiveSupport() {
             <p className="text-sm text-muted-foreground mb-5" data-testid="support-count">
               {businesses.length} business{businesses.length !== 1 ? "es" : ""} found
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {businesses.map(biz => (
-                <BusinessCard key={biz.id} business={biz} />
-              ))}
-            </div>
+            {otherBusinesses.length > 0 ? (
+              <>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Other listings</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {visibleOtherBusinesses.map(biz => (
+                    <BusinessCard key={biz.id} business={biz} />
+                  ))}
+                </div>
+                {otherBusinesses.length > 50 && (
+                  <div className="mt-8 flex justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowAllBusinesses((expanded) => !expanded)}
+                      data-testid="button-view-all-support"
+                    >
+                      {showAllBusinesses ? "Show fewer listings" : <>View all {otherBusinesses.length} listings</>}
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                No other listings to show yet.
+              </p>
+            )}
           </>
         ) : (
           <div className="text-center py-20">
