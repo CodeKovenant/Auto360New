@@ -227,7 +227,7 @@ function BusinessCard({
 }
 
 export default function Admin() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
@@ -412,6 +412,11 @@ export default function Admin() {
     setImportResult(null);
     try {
       const token = getAuthToken();
+      if (!token) {
+        logout();
+        navigate("/login");
+        throw new Error("Your session has expired. Please sign in again.");
+      }
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch("/api/admin/import/businesses", {
@@ -419,6 +424,11 @@ export default function Admin() {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
+      if (res.status === 401) {
+        logout();
+        navigate("/login");
+        throw new Error("Your session has expired. Please sign in again.");
+      }
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Import failed");
       setImportResult(data);
