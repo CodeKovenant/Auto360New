@@ -2,6 +2,8 @@ import { useRef, useState } from "react";
 import { Upload, X, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 
 interface LogoUploadProps {
   value: string;
@@ -11,6 +13,8 @@ interface LogoUploadProps {
 
 export default function LogoUpload({ value, onChange, kind = "logo" }: LogoUploadProps) {
   const { toast } = useToast();
+  const { user, logout } = useAuth();
+  const [, navigate] = useLocation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const isBanner = kind === "banner";
@@ -25,17 +29,35 @@ export default function LogoUpload({ value, onChange, kind = "logo" }: LogoUploa
       return;
     }
 
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      toast({ title: "Sign in required", description: `Please sign in before uploading a ${label.toLowerCase()}.`, variant: "destructive" });
+      if (user) {
+        logout();
+        navigate("/login");
+      } else {
+        navigate("/register");
+      }
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
     setUploading(true);
     try {
-      const token = localStorage.getItem("auth_token");
       const formData = new FormData();
       formData.append(kind, file);
 
       const res = await fetch(`/api/upload/${kind}`, {
         method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
+
+      if (res.status === 401) {
+        logout();
+        navigate("/login");
+        throw new Error("Your session has expired. Please sign in again.");
+      }
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: "Upload failed" }));
