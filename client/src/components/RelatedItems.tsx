@@ -37,7 +37,7 @@ function formatSupportPrice(price: string | null) {
   if (!price) return null;
   const amount = Number(price);
   if (Number.isFinite(amount)) return "From KSh " + amount.toLocaleString();
-  return /^from\\s/i.test(price) ? price : "From " + price;
+  return price.trim().toLowerCase().startsWith("from ") ? price : "From " + price;
 }
 
 export default function RelatedItems({ kind, currentId, location, brand, businessId, businessName }: Props) {
