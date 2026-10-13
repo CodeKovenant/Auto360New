@@ -37,7 +37,14 @@ interface AdminData {
 }
 
 type FeaturedItemType = "business" | "car" | "part" | "garage_service" | "support_service";
-type FeaturedItem = { id: string; type: FeaturedItemType; name: string; subtitle: string; featured: boolean };
+type FeaturedItem = {
+  id: string;
+  type: FeaturedItemType;
+  name: string;
+  subtitle: string;
+  featured: boolean;
+  status?: "pending" | "approved";
+};
 
 const FEATURED_ITEM_GROUPS: { type: FeaturedItemType; title: string }[] = [
   { type: "business", title: "Businesses" },
@@ -270,6 +277,7 @@ export default function Admin() {
     onSuccess: () => {
       toast({ title: "Business approved!" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
@@ -284,6 +292,7 @@ export default function Admin() {
     onSuccess: () => {
       toast({ title: "Business rejected." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
     },
@@ -297,6 +306,7 @@ export default function Admin() {
     onSuccess: () => {
       toast({ title: "Business deleted." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
@@ -649,7 +659,7 @@ export default function Admin() {
             ) : (
               <div className="space-y-7">
                 <p className="text-sm text-muted-foreground">
-                  Choose which approved businesses and listings appear as Featured. This does not change paid Premium status.
+                  Admins can feature pending businesses, but they stay hidden publicly until approved. Featured status does not change paid Premium status.
                 </p>
                 {FEATURED_ITEM_GROUPS.map(({ type, title }) => {
                   const groupItems = (featuredItems || []).filter((item) => item.type === type);
@@ -660,14 +670,23 @@ export default function Admin() {
                         <Badge variant="secondary">{groupItems.length}</Badge>
                       </div>
                       {groupItems.length === 0 ? (
-                        <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No approved items in this group.</p>
+                        <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                          {type === "business" ? "No pending or approved businesses yet." : "No eligible items in this group."}
+                        </p>
                       ) : (
                         <div className="space-y-2">
                           {groupItems.map((item) => (
                             <Card key={`${item.type}-${item.id}`}>
                               <CardContent className="flex items-center justify-between gap-3 py-3">
                                 <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{item.name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{item.name}</p>
+                                    {item.type === "business" && item.status === "pending" && (
+                                      <Badge className="shrink-0 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
+                                        Pending approval
+                                      </Badge>
+                                    )}
+                                  </div>
                                   <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
                                 </div>
                                 <Button

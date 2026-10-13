@@ -250,7 +250,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/businesses/:id", async (req, res) => {
     try {
       const business = await storage.getBusinessById(req.params.id);
-      if (!business) return res.status(404).json({ message: "Business not found" });
+      if (!business || business.status !== "approved") {
+        return res.status(404).json({ message: "Business not found" });
+      }
       const [revs, parts, { avgRating, reviewCount }, supportSvcs] = await Promise.all([
         storage.getReviewsByBusinessId(req.params.id),
         storage.getSparePartsByBusinessId(req.params.id),
@@ -402,7 +404,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Admin routes
   app.get("/api/admin/featured", adminMiddleware, async (_req, res) => {
     try {
-      const approvedBusinesses = await storage.getApprovedBusinesses();
+      const [approvedBusinesses, pendingBusinesses] = await Promise.all([
+        storage.getApprovedBusinesses(),
+        storage.getPendingBusinesses(),
+      ]);
+      const featureableBusinesses = [...approvedBusinesses, ...pendingBusinesses];
       const [cars, garageServices, sparePartGroups, supportServiceGroups] = await Promise.all([
         storage.getCars(),
         storage.getGarageServices(),
@@ -417,14 +423,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             .map((biz) => storage.getSupportServicesByBusinessId(biz.id))
         ),
       ]);
-      const businessNames = new Map(approvedBusinesses.map((biz) => [biz.id, biz.name]));
+      const businessNames = new Map(featureableBusinesses.map((biz) => [biz.id, biz.name]));
       const items = [
-        ...approvedBusinesses.map((biz) => ({
+        ...featureableBusinesses.map((biz) => ({
           id: biz.id,
           type: "business",
           name: biz.name,
           subtitle: `${biz.category.replace(/_/g, " ")} · ${biz.city}`,
           featured: !!biz.featured,
+          status: biz.status,
         })),
         ...cars.map((car) => ({
           id: car.id,
