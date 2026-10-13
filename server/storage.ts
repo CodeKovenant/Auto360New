@@ -101,6 +101,7 @@ export interface IStorage {
 
   // Support Services
   getSupportServicesByBusinessId(businessId: string): Promise<SupportService[]>;
+  getSupportServiceById(id: string): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; businessPhone: string; businessWhatsapp: string; businessAddress: string }) | undefined>;
   getFeaturedSupportServices(): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null })[]>;
   createSupportService(service: InsertSupportService): Promise<SupportService>;
   updateSupportService(id: string, data: Partial<SupportService>): Promise<SupportService>;
@@ -597,6 +598,29 @@ export class DatabaseStorage implements IStorage {
   // Support Services
   async getSupportServicesByBusinessId(businessId: string) {
     return db.select().from(supportServices).where(eq(supportServices.businessId, businessId)).orderBy(desc(supportServices.createdAt));
+  }
+
+  async getSupportServiceById(id: string) {
+    const [service] = await db
+      .select({
+        id: supportServices.id,
+        businessId: supportServices.businessId,
+        name: supportServices.name,
+        description: supportServices.description,
+        startingPrice: supportServices.startingPrice,
+        createdAt: supportServices.createdAt,
+        businessName: businesses.name,
+        businessCity: businesses.city,
+        businessLogo: businesses.logo,
+        businessSubcategory: businesses.subcategory,
+        businessPhone: businesses.phone,
+        businessWhatsapp: businesses.whatsapp,
+        businessAddress: businesses.address,
+      })
+      .from(supportServices)
+      .innerJoin(businesses, eq(supportServices.businessId, businesses.id))
+      .where(and(eq(supportServices.id, id), eq(businesses.status, "approved")));
+    return service;
   }
 
   async getFeaturedSupportServices() {
