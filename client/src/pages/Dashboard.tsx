@@ -46,7 +46,7 @@ export default function Dashboard() {
 
   if (!user || user.role !== "owner") { navigate("/login"); return null; }
 
-  const { data, isLoading } = useQuery<DashboardData>({ queryKey: ["/api/dashboard"] });
+  const { data, isLoading, isError, error, isFetching, refetch } = useQuery<DashboardData>({ queryKey: ["/api/dashboard"] });
 
   const { data: emailStatus } = useQuery<{ verified: boolean; email: string }>({
     queryKey: ["/api/me/email-verified"],
@@ -194,6 +194,24 @@ export default function Dashboard() {
   if (isLoading) return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-4">
       <Skeleton className="h-24 rounded-md" /><Skeleton className="h-48 rounded-md" />
+    </div>
+  );
+
+  if (isError) return (
+    <div className="max-w-5xl mx-auto px-4 py-16 text-center">
+      <AlertTriangle className="w-14 h-14 text-amber-500 mx-auto mb-4" />
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Couldn't load business details</h2>
+      <p className="text-muted-foreground mb-4">
+        The dashboard request failed. This doesn't necessarily mean your business wasn't registered.
+      </p>
+      {error instanceof Error && (
+        <p className="text-sm text-red-600 dark:text-red-400 mb-5 break-words" role="alert">
+          {error.message}
+        </p>
+      )}
+      <Button onClick={() => refetch()} disabled={isFetching} variant="outline">
+        {isFetching ? "Retrying..." : "Try again"}
+      </Button>
     </div>
   );
 
