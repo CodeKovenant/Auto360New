@@ -1426,49 +1426,34 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
-      const existingBizRecords = await db.select({ phone: businesses.phone, name: businesses.name }).from(businesses);
-      const knownNormalizedPhones = new Set(
-        existingBizRecords.map((r) => normalizeKeBusinessPhone(r.phone || "")).filter((p) => p.length >= 9)
-      );
+      const existingBizRecords = await db.select({ name: businesses.name }).from(businesses);
       const knownNormalizedNames = new Set(
-        existingBizRecords.map((r) => (r.name || "").trim().toLowerCase()).filter(Boolean)
+        existingBizRecords.map((r) => (r.name || "").trim().replace(/\s+/g, " ").toLowerCase()).filter(Boolean)
       );
-      const seenPhonesInFile = new Set<string>();
-      const seenNamesInFile = new Set<string>();
       const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
+          const businessName = (row.name || "").trim();
+          const normalizedName = businessName.replace(/\s+/g, " ").toLowerCase();
+          if (!normalizedName) {
+            results.failed++;
+            results.errors.push(`Row ${i + 2}: business name is required`);
+            continue;
+          }
+          if (knownNormalizedNames.has(normalizedName)) {
+            results.skipped++;
+            continue;
+          }
           const norm = normalizeKeBusinessPhone(row.phone || "");
-          const normalizedName = (row.name || "").trim().toLowerCase();
           if (norm.length < 9) {
             results.failed++;
             results.errors.push(`Row ${i + 2}: phone missing or too short`);
             continue;
           }
-          if (seenPhonesInFile.has(norm)) {
-            results.skipped++;
-            results.errors.push(`Row ${i + 2}: duplicate phone in this file`);
-            continue;
-          }
-          if (knownNormalizedPhones.has(norm)) {
-            results.skipped++;
-            results.errors.push(`Row ${i + 2}: duplicate phone (already in directory)`);
-            continue;
-          }
-          if (normalizedName && seenNamesInFile.has(normalizedName)) {
-            results.skipped++;
-            results.errors.push(`Row ${i + 2}: duplicate business name in this file`);
-            continue;
-          }
-          if (normalizedName && knownNormalizedNames.has(normalizedName)) {
-            results.skipped++;
-            results.errors.push(`Row ${i + 2}: business "${row.name}" already exists in directory`);
-            continue;
-          }
           const body = insertBusinessSchema.parse({
             ownerId: req.user.id,
-            name: row.name || "",
+            name: businessName,
             category,
             phone: row.phone || "",
             whatsapp: row.whatsapp || row.phone || "",
@@ -1481,12 +1466,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           });
           const created = await storage.createBusiness(body);
           await storage.updateBusiness(created.id, { status: "approved" });
-          knownNormalizedPhones.add(norm);
-          seenPhonesInFile.add(norm);
-          if (normalizedName) {
-            knownNormalizedNames.add(normalizedName);
-            seenNamesInFile.add(normalizedName);
-          }
+          knownNormalizedNames.add(normalizedName);
           results.imported++;
         } catch (e: any) {
           results.failed++;
