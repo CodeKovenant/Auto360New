@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Search, Package, MapPin, BadgeCheck, ChevronRight, Building2, SlidersHorizontal, X, Wrench, ShieldCheck } from "lucide-react";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import BusinessCard from "@/components/BusinessCard";
+import FeaturedBusinessCarousel from "@/components/FeaturedBusinessCarousel";
 import type { Business } from "@shared/schema";
 
 const KENYA_COUNTIES = [
@@ -30,6 +31,7 @@ export default function AutoSpares() {
   const [city, setCity] = useState("all");
   const [minRating, setMinRating] = useState("0");
   const [showFilters, setShowFilters] = useState(false);
+  const [showAllBusinesses, setShowAllBusinesses] = useState(false);
 
   const queryString = new URLSearchParams({
     category: "spare_parts",
@@ -41,6 +43,14 @@ export default function AutoSpares() {
   const { data: businesses, isLoading } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
     queryKey: [`/api/businesses?${queryString}`],
   });
+
+  const featuredBusinesses = businesses?.filter((biz) => biz.featured) ?? [];
+  const otherBusinesses = businesses?.filter((biz) => !biz.featured) ?? [];
+  const visibleOtherBusinesses = showAllBusinesses ? otherBusinesses : otherBusinesses.slice(0, 50);
+
+  useEffect(() => {
+    setShowAllBusinesses(false);
+  }, [queryString]);
 
   const hasFilters = search || city !== "all" || minRating !== "0";
 
@@ -200,6 +210,10 @@ export default function AutoSpares() {
 
       {/* ── LISTINGS ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <FeaturedBusinessCarousel
+          businesses={featuredBusinesses}
+          title="Featured Spare Parts Dealers"
+        />
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -219,11 +233,32 @@ export default function AutoSpares() {
                 </Button>
               </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {businesses.map(biz => (
-                <BusinessCard key={biz.id} business={biz} />
-              ))}
-            </div>
+            {otherBusinesses.length > 0 ? (
+              <>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Other listings</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {visibleOtherBusinesses.map(biz => (
+                    <BusinessCard key={biz.id} business={biz} />
+                  ))}
+                </div>
+                {otherBusinesses.length > 50 && (
+                  <div className="mt-8 flex justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowAllBusinesses((expanded) => !expanded)}
+                      data-testid="button-view-all-spares"
+                    >
+                      {showAllBusinesses ? "Show fewer listings" : <>View all {otherBusinesses.length} listings</>}
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                No other listings to show yet.
+              </p>
+            )}
           </>
         ) : (
           <div className="text-center py-20">
