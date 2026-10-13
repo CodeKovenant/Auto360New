@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, ilike, and, or, sql, gte, lte, desc, inArray, notInArray, isNull } from "drizzle-orm";
+import { eq, ilike, and, or, sql, gte, lte, desc, inArray, isNull } from "drizzle-orm";
 import {
   users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports, galleryImages,
   type User, type InsertUser,
@@ -92,6 +92,7 @@ export interface IStorage {
 
   // Garage Services
   getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
+  getFeaturedGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
   getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
   getGarageServiceById(id: string): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null }) | undefined>;
   getGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
@@ -210,7 +211,7 @@ export class DatabaseStorage implements IStorage {
         )!
       );
     }
-    const bizList = await db.select().from(businesses).where(and(...conditions)).orderBy(businesses.createdAt);
+    const bizList = await db.select().from(businesses).where(and(...conditions)).orderBy(desc(businesses.featured), desc(businesses.createdAt));
     const bizWithRatings = await Promise.all(
       bizList.map(async (biz) => {
         const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
@@ -239,7 +240,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFeaturedBusinesses() {
-    const bizList = await db.select().from(businesses).where(eq(businesses.status, "approved")).orderBy(businesses.createdAt).limit(6);
+    const bizList = await db
+      .select()
+      .from(businesses)
+      .where(and(eq(businesses.status, "approved"), eq(businesses.featured, true)))
+      .orderBy(desc(businesses.createdAt))
+      .limit(6);
     return Promise.all(
       bizList.map(async (biz) => {
         const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
@@ -255,46 +261,18 @@ export class DatabaseStorage implements IStorage {
     const result: Record<string, (Business & { avgRating: number; reviewCount: number })[]> = {};
 
     for (const category of categories) {
-      const premiumRaw = await db
+      const categoryBusinesses = await db
         .select()
         .from(businesses)
-        .where(
-          and(
-            eq(businesses.status, "approved"),
-            sql`${businesses.premium} IS TRUE`,
-            eq(businesses.category, category),
-            premiumSubscriptionStillActive()
-          )
+        .where(and(eq(businesses.status, "approved"), eq(businesses.category, category)))
+        .orderBy(
+          desc(businesses.featured),
+          desc(sql`CASE WHEN ${businesses.premium} IS TRUE THEN 1 ELSE 0 END`),
+          desc(businesses.createdAt)
         )
-        .orderBy(desc(businesses.createdAt));
-
-      const premiumSlice = premiumRaw.slice(0, cap);
-      const ids = new Set(premiumSlice.map((b) => b.id));
-      const need = cap - premiumSlice.length;
-      let filler: Business[] = [];
-      if (need > 0) {
-        const nonPremium = sql`${businesses.premium} IS NOT TRUE`;
-        const base = and(
-          eq(businesses.status, "approved"),
-          eq(businesses.category, category),
-          nonPremium
-        );
-        filler =
-          ids.size === 0
-            ? await db.select().from(businesses).where(base).orderBy(desc(businesses.createdAt)).limit(need)
-            : await db
-                .select()
-                .from(businesses)
-                .where(and(base, notInArray(businesses.id, Array.from(ids))))
-                .orderBy(desc(businesses.createdAt))
-                .limit(need);
-      }
-
-      const merged = [...premiumSlice, ...filler]
-        .sort((a, b) => Number(!!b.premium) - Number(!!a.premium))
-        .slice(0, cap);
+        .limit(cap);
       result[category] = await Promise.all(
-        merged.map(async (biz) => {
+        categoryBusinesses.map(async (biz) => {
           const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
           return { ...biz, avgRating, reviewCount };
         })
@@ -337,7 +315,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSparePartsByBusinessId(businessId: string) {
-    return db.select().from(spareParts).where(eq(spareParts.businessId, businessId)).orderBy(spareParts.createdAt);
+    return db.select().from(spareParts).where(eq(spareParts.businessId, businessId)).orderBy(desc(spareParts.featured), desc(spareParts.createdAt));
   }
 
   async getSparePartById(id: string) {
@@ -353,6 +331,7 @@ export class DatabaseStorage implements IStorage {
         price: spareParts.price,
         description: spareParts.description,
         image: spareParts.image,
+        featured: spareParts.featured,
         createdAt: spareParts.createdAt,
         businessName: businesses.name,
         businessCity: businesses.city,
@@ -381,6 +360,7 @@ export class DatabaseStorage implements IStorage {
         price: spareParts.price,
         description: spareParts.description,
         image: spareParts.image,
+        featured: spareParts.featured,
         createdAt: spareParts.createdAt,
         businessName: businesses.name,
         businessCity: businesses.city,
@@ -388,7 +368,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(spareParts)
       .innerJoin(businesses, eq(spareParts.businessId, businesses.id))
-      .where(and(eq(businesses.status, "approved"), eq(businesses.category, "spare_parts")))
+      .where(and(eq(businesses.status, "approved"), eq(businesses.category, "spare_parts"), eq(spareParts.featured, true)))
       .orderBy(desc(spareParts.createdAt))
       .limit(12);
   }
@@ -472,7 +452,7 @@ export class DatabaseStorage implements IStorage {
 
     const carList = await db.select().from(cars)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(cars.createdAt));
+      .orderBy(desc(sql`CASE WHEN ${cars.featured} IS TRUE THEN 1 ELSE 0 END`), desc(cars.createdAt));
 
     const filtered = carList.filter(c => dealerIds.includes(c.dealerId));
     return Promise.all(filtered.map(c => this.enrichCar(c)));
@@ -484,11 +464,6 @@ export class DatabaseStorage implements IStorage {
     if (dealerIds.length === 0) return [];
     const carList = await db.select().from(cars).where(eq(cars.featured, true)).orderBy(desc(cars.createdAt)).limit(6);
     const filtered = carList.filter(c => dealerIds.includes(c.dealerId));
-    if (filtered.length < 4) {
-      const all = await db.select().from(cars).orderBy(desc(cars.createdAt)).limit(6);
-      const allFiltered = all.filter(c => dealerIds.includes(c.dealerId));
-      return Promise.all(allFiltered.slice(0, 6).map(c => this.enrichCar(c)));
-    }
     return Promise.all(filtered.map(c => this.enrichCar(c)));
   }
 
@@ -499,7 +474,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCarsByDealerId(dealerId: string) {
-    return db.select().from(cars).where(eq(cars.dealerId, dealerId)).orderBy(desc(cars.createdAt));
+    return db.select().from(cars)
+      .where(eq(cars.dealerId, dealerId))
+      .orderBy(desc(sql`CASE WHEN ${cars.featured} IS TRUE THEN 1 ELSE 0 END`), desc(cars.createdAt));
   }
 
   async createCar(car: InsertCar) {
@@ -535,7 +512,7 @@ export class DatabaseStorage implements IStorage {
 
     const svcList = await db.select().from(garageServices)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(garageServices.createdAt));
+      .orderBy(desc(garageServices.featured), desc(garageServices.createdAt));
 
     let filtered = svcList.filter(s => garageIds.includes(s.garageId));
     if (filters?.location) {
@@ -560,6 +537,18 @@ export class DatabaseStorage implements IStorage {
     return Promise.all(filtered.map(s => this.enrichService(s)));
   }
 
+  async getFeaturedGarageServices() {
+    const approvedGarages = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.category, "garage")));
+    const garageIds = approvedGarages.map(g => g.id);
+    if (garageIds.length === 0) return [];
+
+    const featuredServices = await db.select().from(garageServices)
+      .where(and(inArray(garageServices.garageId, garageIds), eq(garageServices.featured, true)))
+      .orderBy(desc(garageServices.createdAt))
+      .limit(6);
+    return Promise.all(featuredServices.map(service => this.enrichService(service)));
+  }
+
   async getGarageServiceById(id: string) {
     const [service] = await db.select().from(garageServices).where(eq(garageServices.id, id));
     if (!service) return undefined;
@@ -578,7 +567,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getGarageServicesByGarageId(garageId: string) {
-    return db.select().from(garageServices).where(eq(garageServices.garageId, garageId)).orderBy(desc(garageServices.createdAt));
+    return db.select().from(garageServices).where(eq(garageServices.garageId, garageId)).orderBy(desc(garageServices.featured), desc(garageServices.createdAt));
   }
 
   async createGarageService(service: InsertGarageService) {
@@ -597,7 +586,7 @@ export class DatabaseStorage implements IStorage {
 
   // Support Services
   async getSupportServicesByBusinessId(businessId: string) {
-    return db.select().from(supportServices).where(eq(supportServices.businessId, businessId)).orderBy(desc(supportServices.createdAt));
+    return db.select().from(supportServices).where(eq(supportServices.businessId, businessId)).orderBy(desc(supportServices.featured), desc(supportServices.createdAt));
   }
 
   async getSupportServiceById(id: string) {
@@ -608,6 +597,7 @@ export class DatabaseStorage implements IStorage {
         name: supportServices.name,
         description: supportServices.description,
         startingPrice: supportServices.startingPrice,
+        featured: supportServices.featured,
         createdAt: supportServices.createdAt,
         businessName: businesses.name,
         businessCity: businesses.city,
@@ -631,6 +621,7 @@ export class DatabaseStorage implements IStorage {
         name: supportServices.name,
         description: supportServices.description,
         startingPrice: supportServices.startingPrice,
+        featured: supportServices.featured,
         createdAt: supportServices.createdAt,
         businessName: businesses.name,
         businessCity: businesses.city,
@@ -639,7 +630,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(supportServices)
       .innerJoin(businesses, eq(supportServices.businessId, businesses.id))
-      .where(and(eq(businesses.status, "approved"), inArray(businesses.category, ["insurance", "car_wash", "other"])))
+      .where(and(eq(businesses.status, "approved"), inArray(businesses.category, ["insurance", "car_wash", "other"]), eq(supportServices.featured, true)))
       .orderBy(
         desc(sql`CASE WHEN ${businesses.subcategory} = 'vehicle_finance' OR ${supportServices.name} ILIKE '%loan%' OR ${supportServices.name} ILIKE '%financ%' OR COALESCE(${supportServices.description}, '') ILIKE '%loan%' OR COALESCE(${supportServices.description}, '') ILIKE '%financ%' THEN 1 ELSE 0 END`),
         desc(supportServices.createdAt),

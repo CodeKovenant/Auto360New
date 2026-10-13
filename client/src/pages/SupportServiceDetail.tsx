@@ -72,6 +72,7 @@ export default function SupportServiceDetail() {
               </div>
               <div className="min-w-0">
                 <Badge className="mb-2 border-white/25 bg-white/15 text-white">Automotive support</Badge>
+                {service.featured && <Badge className="mb-2 ml-2 border-amber-200/40 bg-amber-300/20 text-amber-100">★ Featured</Badge>}
                 <h1 className="text-2xl font-bold sm:text-3xl" data-testid="support-service-detail-name">{service.name}</h1>
                 <p className="mt-1 text-orange-100">{service.businessName}</p>
               </div>

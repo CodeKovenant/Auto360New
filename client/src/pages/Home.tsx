@@ -95,6 +95,7 @@ type FeaturedListingCardProps = {
   icon: LucideIcon;
   actionLabel: string;
   testId: string;
+  isFeatured?: boolean;
 };
 
 function formatFeaturedPrice(price: string | number | null | undefined) {
@@ -106,7 +107,7 @@ function formatFeaturedPrice(price: string | number | null | undefined) {
   return value;
 }
 
-function FeaturedListingCard({ label, title, details, business, image, price, href, icon, actionLabel, testId }: FeaturedListingCardProps) {
+function FeaturedListingCard({ label, title, details, business, image, price, href, icon, actionLabel, testId, isFeatured = false }: FeaturedListingCardProps) {
   const Icon = icon;
   return (
     <Link href={href} className="group block h-full">
@@ -120,6 +121,7 @@ function FeaturedListingCard({ label, title, details, business, image, price, hr
             </div>
           )}
           <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-gray-800 shadow-sm dark:bg-gray-950/90 dark:text-gray-100">{label}</span>
+          {isFeatured && <span className="absolute right-3 top-3 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950 shadow-sm">★ Featured</span>}
         </div>
         <div className="flex flex-1 flex-col p-4">
           <h3 className="line-clamp-2 min-h-[2.75rem] font-bold leading-snug text-gray-900 dark:text-white">{title}</h3>
@@ -181,7 +183,7 @@ export default function Home() {
     staleTime: 0,
   });
 
-  /** Premium listings merged ahead of API sections so garages/spares show even if one endpoint is stale. */
+  /** Admin-featured listings come before paid Premium listings; Premium remains a separate status. */
   const spotlightByCategory = useMemo(() => {
     const out: Record<string, BusinessRated[]> = {};
     for (const block of HOME_SPOTLIGHT_SECTIONS) {
@@ -194,6 +196,14 @@ export default function Home() {
       ) ?? [];
       const seen = new Set<string>();
       const merged: BusinessRated[] = [];
+      const featuredInCat = fromSections.filter((b) => b.featured);
+      for (const b of featuredInCat) {
+        if (merged.length >= SPOTLIGHT_LIMIT) break;
+        if (!seen.has(b.id)) {
+          seen.add(b.id);
+          merged.push(b);
+        }
+      }
       for (const b of premiumInCat) {
         if (merged.length >= SPOTLIGHT_LIMIT) break;
         if (!seen.has(b.id)) {
@@ -228,8 +238,8 @@ export default function Home() {
     queryKey: ["/api/cars/featured"],
   });
 
-  const { data: popularServices, isLoading: servicesLoading } = useQuery<ServiceWithGarage[]>({
-    queryKey: ["/api/services/popular"],
+  const { data: featuredGarageServices, isLoading: servicesLoading } = useQuery<ServiceWithGarage[]>({
+    queryKey: ["/api/services/featured"],
   });
   const { data: featuredHomeOffers, isLoading: featuredOffersLoading } = useQuery<FeaturedHomeOffers>({
     queryKey: ["/api/home/featured-offers"],
@@ -237,7 +247,7 @@ export default function Home() {
   });
 
   const featuredCar = featuredCars?.[0];
-  const featuredGarageService = popularServices?.[0];
+  const featuredGarageService = featuredGarageServices?.[0];
   const featuredSparePart = featuredHomeOffers?.sparePart;
   const featuredSupportService = featuredHomeOffers?.supportService;
   const isVehicleFinance = !!featuredSupportService && (
@@ -379,6 +389,7 @@ export default function Home() {
                 icon={Car}
                 actionLabel={featuredCar ? "View listing" : "Browse cars"}
                 testId="featured-home-car"
+                isFeatured={!!featuredCar}
               />
               <FeaturedListingCard
                 label="Spare part"
@@ -391,6 +402,7 @@ export default function Home() {
                 icon={Package}
                 actionLabel={featuredSparePart ? "View listing" : "Browse parts"}
                 testId="featured-home-spare-part"
+                isFeatured={!!featuredSparePart}
               />
               <FeaturedListingCard
                 label="Garage service"
@@ -403,6 +415,7 @@ export default function Home() {
                 icon={Wrench}
                 actionLabel={featuredGarageService ? "View listing" : "Browse services"}
                 testId="featured-home-garage-service"
+                isFeatured={!!featuredGarageService?.featured}
               />
               <FeaturedListingCard
                 label={isVehicleFinance ? "Vehicle finance" : "Automotive support"}
@@ -415,6 +428,7 @@ export default function Home() {
                 icon={Shield}
                 actionLabel={featuredSupportService ? "View listing" : "Browse support"}
                 testId="featured-home-support-service"
+                isFeatured={!!featuredSupportService}
               />
             </div>
           )}
@@ -459,7 +473,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── 3. FEATURED BUSINESSES BY CATEGORY (premium listings appear first for every type) ── */}
+      {/* ── 3. FEATURED BUSINESSES BY CATEGORY (admin-featured, then Premium) ── */}
       {HOME_SPOTLIGHT_SECTIONS.map((block, idx) => {
         const list = spotlightByCategory[block.category] ?? [];
         const Icon = block.icon;

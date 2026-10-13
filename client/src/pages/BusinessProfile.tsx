@@ -351,7 +351,10 @@ export default function BusinessProfile() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <Badge className="mb-2 bg-white/10 text-white border-white/20">{categoryLabel}</Badge>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Badge className="bg-white/10 text-white border-white/20">{categoryLabel}</Badge>
+                {business.featured && <Badge className="border-amber-300/40 bg-amber-400/20 text-amber-100">★ Featured</Badge>}
+              </div>
               <h1 className="text-2xl md:text-3xl font-bold mb-1 truncate" data-testid="business-name">{business.name}</h1>
               <div className="flex items-center gap-1 text-red-200 mb-2">
                 <MapPin className="w-4 h-4 flex-shrink-0" />
@@ -550,9 +553,12 @@ export default function BusinessProfile() {
                           {part.carBrand} {part.carModel} {part.year && `• ${part.year}`}
                         </p>
                       </div>
-                      <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">
-                        {part.condition === "new" ? "New" : "Used"}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {part.featured && <Badge className="bg-amber-100 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">★ Featured</Badge>}
+                        <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">
+                          {part.condition === "new" ? "New" : "Used"}
+                        </Badge>
+                      </div>
                     </div>
                     {part.price && <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-1.5">{part.price}</p>}
                     {part.description && <p className="text-xs text-muted-foreground mt-1">{part.description}</p>}

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { MapPin, MessageCircle, Building2, BadgeCheck, ArrowRight } from "lucide-react";
+import { MapPin, MessageCircle, Building2, BadgeCheck, ArrowRight, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import StarRating from "./StarRating";
 import type { Business } from "@shared/schema";
@@ -55,6 +55,11 @@ export default function BusinessCard({ business }: BusinessCardProps) {
                 {getCategoryLabel(business.category)}
               </span>
             </div>
+            {business.featured && (
+              <Badge className="mt-1.5 inline-flex items-center gap-1 bg-amber-100 text-[10px] text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300">
+                <Star className="h-3 w-3 fill-current" /> Featured
+              </Badge>
+            )}
             <div className="flex items-center gap-1.5 mt-1">
               <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
               <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{business.city}</span>

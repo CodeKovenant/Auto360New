@@ -50,7 +50,7 @@ export default function ServiceDetail() {
   const whatsappUrl = service.garageWhatsapp
     ? "https://wa.me/" + service.garageWhatsapp.replace(/\D/g, "") + "?text=" + encodeURIComponent("Hi, I need help with: " + service.name)
     : "";
-  const serviceTags = ["Garage service", ...(service.popular ? ["Popular service"] : [])];
+  const serviceTags = ["Garage service", ...(service.featured ? ["Featured"] : []), ...(service.popular ? ["Popular service"] : [])];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12 dark:bg-gray-950">
