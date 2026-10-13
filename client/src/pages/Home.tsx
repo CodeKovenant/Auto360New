@@ -277,7 +277,7 @@ export default function Home() {
 
           <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-14 md:py-20">
             <div className="w-full max-w-3xl text-left">
-              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-5 border border-white/20">
+              <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-1.5 rounded-full text-sm font-medium mb-5 border border-white/20">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                 Trusted Car Services Near You
               </div>
@@ -309,13 +309,13 @@ export default function Home() {
               </form>
               <div className="flex items-center gap-3 flex-wrap">
                 <Link href="/cars">
-                  <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-cars-hero">
+                  <Button variant="outline" className="border-white/40 text-white bg-white/10 hover:bg-white/20" data-testid="button-browse-cars-hero">
                     <Car className="w-4 h-4 mr-1.5" />
                     Cars for Sale
                   </Button>
                 </Link>
                 <Link href="/businesses">
-                  <Button variant="outline" className="border-white/40 text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" data-testid="button-browse-hero">
+                  <Button variant="outline" className="border-white/40 text-white bg-white/10 hover:bg-white/20" data-testid="button-browse-hero">
                     Browse Businesses
                   </Button>
                 </Link>
@@ -377,9 +377,9 @@ export default function Home() {
                 business={featuredCar ? featuredCar.dealerName + " · " + featuredCar.location : "From approved automobile dealers"}
                 image={featuredCar?.images?.[0] || featuredCar?.dealerLogo}
                 price={formatFeaturedPrice(featuredCar?.price)}
-                href={featuredCar ? "/business/" + featuredCar.dealerId : "/cars"}
+                href={featuredCar ? "/cars/" + featuredCar.id : "/cars"}
                 icon={Car}
-                actionLabel={featuredCar ? "View dealer" : "Browse cars"}
+                actionLabel={featuredCar ? "View listing" : "Browse cars"}
                 testId="featured-home-car"
               />
               <FeaturedListingCard
@@ -389,9 +389,9 @@ export default function Home() {
                 business={featuredSparePart ? featuredSparePart.businessName + " · " + featuredSparePart.businessCity : "From approved spare-parts dealers"}
                 image={featuredSparePart?.image || featuredSparePart?.businessLogo}
                 price={formatFeaturedPrice(featuredSparePart?.price)}
-                href={featuredSparePart ? "/business/" + featuredSparePart.businessId : "/autospares-dealers"}
+                href={featuredSparePart ? "/parts/" + featuredSparePart.id : "/autospares-dealers"}
                 icon={Package}
-                actionLabel={featuredSparePart ? "View seller" : "Browse parts"}
+                actionLabel={featuredSparePart ? "View listing" : "Browse parts"}
                 testId="featured-home-spare-part"
               />
               <FeaturedListingCard
@@ -401,9 +401,9 @@ export default function Home() {
                 business={featuredGarageService ? featuredGarageService.garageName + " · " + featuredGarageService.garageCity : "From approved garages"}
                 image={featuredGarageService?.garageLogo}
                 price={formatFeaturedPrice(featuredGarageService?.price)}
-                href={featuredGarageService ? "/business/" + featuredGarageService.garageId : "/garages/services"}
+                href={featuredGarageService ? "/services/" + featuredGarageService.id : "/garages/services"}
                 icon={Wrench}
-                actionLabel={featuredGarageService ? "View garage" : "Browse services"}
+                actionLabel={featuredGarageService ? "View listing" : "Browse services"}
                 testId="featured-home-garage-service"
               />
               <FeaturedListingCard
@@ -413,9 +413,9 @@ export default function Home() {
                 business={featuredSupportService ? featuredSupportService.businessName + " · " + featuredSupportService.businessCity : "From approved automotive-support providers"}
                 image={featuredSupportService?.businessLogo}
                 price={formatFeaturedPrice(featuredSupportService?.startingPrice)}
-                href={featuredSupportService ? "/business/" + featuredSupportService.businessId : "/automotive-support"}
+                href={featuredSupportService ? "/support-services/" + featuredSupportService.id : "/automotive-support"}
                 icon={Shield}
-                actionLabel={featuredSupportService ? "View provider" : "Browse support"}
+                actionLabel={featuredSupportService ? "View listing" : "Browse support"}
                 testId="featured-home-support-service"
               />
             </div>
