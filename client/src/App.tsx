@@ -18,6 +18,7 @@ import CarDetail from "@/pages/CarDetail";
 import GarageServices from "@/pages/GarageServices";
 import ServiceDetail from "@/pages/ServiceDetail";
 import AutomotiveSupport from "@/pages/AutomotiveSupport";
+import SupportServiceDetail from "@/pages/SupportServiceDetail";
 import BrandPage from "@/pages/BrandPage";
 import VerifyEmail from "@/pages/VerifyEmail";
 import AutoDealers from "@/pages/AutoDealers";
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/cars/:id" component={CarDetail} />
       <Route path="/services/:id" component={ServiceDetail} />
       <Route path="/parts/:id" component={SparePartDetail} />
+      <Route path="/support-services/:id" component={SupportServiceDetail} />
       <Route path="/garages/services" component={GarageServices} />
       <Route path="/automotive-support" component={AutomotiveSupport} />
       <Route path="/brand/:brand" component={BrandPage} />

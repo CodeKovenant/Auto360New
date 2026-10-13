@@ -799,6 +799,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Support Services (insurance, car wash, other automotive)
+  app.get("/api/support-service/:id", async (req, res) => {
+    try {
+      const service = await storage.getSupportServiceById(req.params.id);
+      if (!service) return res.status(404).json({ message: "Support service not found" });
+      res.json(service);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/support-services/:businessId", async (req, res) => {
     try {
       const svcs = await storage.getSupportServicesByBusinessId(req.params.businessId);
