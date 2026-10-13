@@ -1,7 +1,10 @@
 import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
-import { storage, db } from "./storage";
+import {
+  storage, db, ensurePersistentUploadsTable, savePersistentUpload, getPersistentUpload,
+  hasPersistentUpload, deletePersistentUpload, createCarIfNotDuplicate, createSparePartIfNotDuplicate,
+} from "./storage";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -22,15 +25,9 @@ if (!fs.existsSync(bannersDir)) fs.mkdirSync(bannersDir, { recursive: true });
 if (!fs.existsSync(partsDir)) fs.mkdirSync(partsDir, { recursive: true });
 if (!fs.existsSync(galleryDir)) fs.mkdirSync(galleryDir, { recursive: true });
 
-function makeUpload(dest: string, prefix: string) {
+function makeUpload() {
   return multer({
-    storage: multer.diskStorage({
-      destination: (_req, _file, cb) => cb(null, dest),
-      filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname).toLowerCase();
-        cb(null, `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-      },
-    }),
+    storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
       if (file.mimetype.startsWith("image/")) cb(null, true);
@@ -39,10 +36,46 @@ function makeUpload(dest: string, prefix: string) {
   });
 }
 
-const logoUpload = makeUpload(logosDir, "logo");
-const bannerUpload = makeUpload(bannersDir, "banner");
-const partImageUpload = makeUpload(partsDir, "part");
-const galleryUpload = makeUpload(galleryDir, "gallery");
+function contentTypeForLegacyUpload(filename: string): string {
+  const types: Record<string, string> = {
+    ".avif": "image/avif", ".gif": "image/gif", ".jpeg": "image/jpeg", ".jpg": "image/jpeg",
+    ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp",
+  };
+  return types[path.extname(filename).toLowerCase()] || "application/octet-stream";
+}
+
+async function saveUploadedFile(file: any, folder: string, prefix: string): Promise<string> {
+  const rawExtension = path.extname(file.originalname).toLowerCase();
+  const extension = /^\.[a-z0-9]{1,10}$/.test(rawExtension) ? rawExtension : "";
+  const filename = prefix + "-" + Date.now() + "-" + crypto.randomUUID() + extension;
+  const storageKey = folder + "/" + filename;
+  await savePersistentUpload(storageKey, file.mimetype || contentTypeForLegacyUpload(filename), file.buffer);
+  return "/uploads/" + storageKey;
+}
+
+async function migrateLegacyUploads(): Promise<number> {
+  const folders = ["logos", "banners", "parts", "gallery"];
+  let migrated = 0;
+  for (const folder of folders) {
+    const directory = path.resolve(process.cwd(), "uploads", folder);
+    if (!fs.existsSync(directory)) continue;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      const storageKey = folder + "/" + entry.name;
+      if (await hasPersistentUpload(storageKey)) continue;
+      const filePath = path.join(directory, entry.name);
+      const content = fs.readFileSync(filePath);
+      await savePersistentUpload(storageKey, contentTypeForLegacyUpload(entry.name), content);
+      migrated++;
+    }
+  }
+  return migrated;
+}
+
+const logoUpload = makeUpload();
+const bannerUpload = makeUpload();
+const partImageUpload = makeUpload();
+const galleryUpload = makeUpload();
 
 const JWT_SECRET = process.env.SESSION_SECRET || "autodirectory-secret-key";
 
@@ -82,29 +115,59 @@ function omitFields(body: unknown, fields: string[]) {
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+  await ensurePersistentUploadsTable();
+  const migratedUploads = await migrateLegacyUploads();
+  if (migratedUploads > 0) console.log("[uploads] migrated " + migratedUploads + " legacy files to PostgreSQL");
 
-  // Serve uploaded logos as static files
+  // Prefer durable database-backed media; retain local static fallback for legacy assets.
+  app.use("/uploads", async (req, res, next) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    const storageKey = req.path.replace(/^\/+/, "");
+    if (!storageKey || storageKey.includes("..") || storageKey.includes("\\")) return next();
+    try {
+      const upload = await getPersistentUpload(storageKey);
+      if (!upload) return next();
+      res.setHeader("Content-Type", upload.contentType);
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      return res.send(upload.data);
+    } catch (error) {
+      return next(error);
+    }
+  });
   app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
-  // Logo upload endpoint
-  app.post("/api/upload/logo", authMiddleware, logoUpload.single("logo"), (req: any, res) => {
-    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-    const url = `/uploads/logos/${req.file.filename}`;
-    res.json({ url });
+  app.post("/api/upload/logo", authMiddleware, logoUpload.single("logo"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const url = await saveUploadedFile(req.file, "logos", "logo");
+      res.json({ url });
+    } catch (e: any) {
+      console.error("[uploads] logo persistence failed:", e.message);
+      res.status(500).json({ message: "Could not store uploaded logo" });
+    }
   });
 
-  // Business banner upload endpoint
-  app.post("/api/upload/banner", authMiddleware, bannerUpload.single("banner"), (req: any, res) => {
-    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-    const url = `/uploads/banners/${req.file.filename}`;
-    res.json({ url });
+  app.post("/api/upload/banner", authMiddleware, bannerUpload.single("banner"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const url = await saveUploadedFile(req.file, "banners", "banner");
+      res.json({ url });
+    } catch (e: any) {
+      console.error("[uploads] banner persistence failed:", e.message);
+      res.status(500).json({ message: "Could not store uploaded banner" });
+    }
   });
 
-  // Spare part image upload endpoint
-  app.post("/api/upload/part-image", authMiddleware, partImageUpload.single("image"), (req: any, res) => {
-    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-    const url = `/uploads/parts/${req.file.filename}`;
-    res.json({ url });
+  app.post("/api/upload/part-image", authMiddleware, partImageUpload.single("image"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const url = await saveUploadedFile(req.file, "parts", "part");
+      res.json({ url });
+    } catch (e: any) {
+      console.error("[uploads] part image persistence failed:", e.message);
+      res.status(500).json({ message: "Could not store uploaded part image" });
+    }
   });
 
   // Auth routes
@@ -250,7 +313,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/businesses/:id", async (req, res) => {
     try {
       const business = await storage.getBusinessById(req.params.id);
-      if (!business) return res.status(404).json({ message: "Business not found" });
+      if (!business || business.status !== "approved") {
+        return res.status(404).json({ message: "Business not found" });
+      }
       const [revs, parts, { avgRating, reviewCount }, supportSvcs] = await Promise.all([
         storage.getReviewsByBusinessId(req.params.id),
         storage.getSparePartsByBusinessId(req.params.id),
@@ -406,6 +471,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         storage.getApprovedBusinesses(),
         storage.getPendingBusinesses(),
       ]);
+      const featureableBusinesses = [...approvedBusinesses, ...pendingBusinesses];
       const [cars, garageServices, sparePartGroups, supportServiceGroups] = await Promise.all([
         storage.getCars(),
         storage.getGarageServices(),
@@ -420,15 +486,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             .map((biz) => storage.getSupportServicesByBusinessId(biz.id))
         ),
       ]);
-      const businessCatalog = [...approvedBusinesses, ...pendingBusinesses];
-      const businessNames = new Map(businessCatalog.map((biz) => [biz.id, biz.name]));
+      const businessNames = new Map(featureableBusinesses.map((biz) => [biz.id, biz.name]));
       const items = [
-        ...businessCatalog.map((biz) => ({
+        ...featureableBusinesses.map((biz) => ({
           id: biz.id,
           type: "business",
           name: biz.name,
-          subtitle: `${biz.category.replace(/_/g, " ")} · ${biz.city} · ${biz.status}`,
+          subtitle: `${biz.category.replace(/_/g, " ")} · ${biz.city}`,
           featured: !!biz.featured,
+          status: biz.status,
         })),
         ...cars.map((car) => ({
           id: car.id,
@@ -707,8 +773,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/parts", ownerMiddleware, async (req, res) => {
     try {
       const body = insertSparePartSchema.parse(req.body);
-      const part = await storage.createSparePart(body);
-      res.json(part);
+      const result = await createSparePartIfNotDuplicate(body);
+      if (result.duplicate) {
+        return res.status(409).json({ message: "An identical spare-part listing already exists", duplicate: true, existingId: result.record.id });
+      }
+      res.json(result.record);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
@@ -818,8 +887,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!biz || biz.category !== "car_dealer") return res.status(403).json({ message: "Only car dealers can add car listings" });
       if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
       const body = insertCarSchema.parse({ ...req.body, dealerId: biz.id });
-      const car = await storage.createCar(body);
-      res.json(car);
+      const result = await createCarIfNotDuplicate(body);
+      if (result.duplicate) {
+        return res.status(409).json({ message: "An identical car listing already exists", duplicate: true, existingId: result.record.id });
+      }
+      res.json(result.record);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
@@ -1022,7 +1094,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
-      const results = { imported: 0, failed: 0, errors: [] as string[] };
+      const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
@@ -1042,7 +1114,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             images: [],
             featured: false,
           });
-          await storage.createCar(body);
+          const created = await createCarIfNotDuplicate(body);
+          if (created.duplicate) {
+            results.skipped++;
+            results.errors.push(`Row ${i + 2}: identical car listing already exists; skipped`);
+            continue;
+          }
           results.imported++;
         } catch (e: any) {
           results.failed++;
@@ -1062,7 +1139,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
-      const results = { imported: 0, failed: 0, errors: [] as string[] };
+      const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
@@ -1077,7 +1154,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             description: row.description || null,
             image: row.image || null,
           });
-          await storage.createSparePart(body);
+          const created = await createSparePartIfNotDuplicate(body);
+          if (created.duplicate) {
+            results.skipped++;
+            results.errors.push(`Row ${i + 2}: identical spare-part listing already exists; skipped`);
+            continue;
+          }
           results.imported++;
         } catch (e: any) {
           results.failed++;
@@ -1365,7 +1447,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       if (!req.file) return res.status(400).json({ message: "No image file uploaded" });
       const { entityType, entityId } = req.params;
-      const url = `/uploads/gallery/${req.file.filename}`;
+      const url = await saveUploadedFile(req.file, "gallery", "gallery");
       const caption = req.body.caption || null;
       const image = await storage.addGalleryImage({ entityType, entityId, url, caption });
       res.json(image);
@@ -1379,6 +1461,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const image = await storage.getGalleryImageById(req.params.id);
       if (!image) return res.status(404).json({ message: "Image not found" });
       await storage.deleteGalleryImage(req.params.id);
+      const storageKey = image.url.startsWith("/uploads/") ? image.url.slice("/uploads/".length) : null;
+      if (storageKey) await deletePersistentUpload(storageKey);
       const filePath = path.resolve(process.cwd(), image.url.replace(/^\//, ""));
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       res.json({ success: true });

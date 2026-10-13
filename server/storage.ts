@@ -21,6 +21,119 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL,
     : false, });
 export const db = drizzle(pool);
 
+let persistentUploadsTableReady: Promise<void> | null = null;
+
+export async function ensurePersistentUploadsTable(): Promise<void> {
+  if (!persistentUploadsTableReady) {
+    persistentUploadsTableReady = pool.query(
+      `CREATE TABLE IF NOT EXISTS persistent_uploads (
+        storage_key text PRIMARY KEY,
+        content_type text NOT NULL,
+        content bytea NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT NOW()
+      )`
+    ).then(() => undefined).catch((error) => {
+      persistentUploadsTableReady = null;
+      throw error;
+    });
+  }
+  await persistentUploadsTableReady;
+}
+
+export async function savePersistentUpload(storageKey: string, contentType: string, content: Buffer): Promise<void> {
+  await ensurePersistentUploadsTable();
+  await pool.query(
+    `INSERT INTO persistent_uploads (storage_key, content_type, content)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (storage_key) DO NOTHING`,
+    [storageKey, contentType, content]
+  );
+}
+
+export async function getPersistentUpload(storageKey: string): Promise<{ contentType: string; data: Buffer } | undefined> {
+  await ensurePersistentUploadsTable();
+  const result = await pool.query(
+    "SELECT content_type, content FROM persistent_uploads WHERE storage_key = $1",
+    [storageKey]
+  );
+  const row = result.rows[0];
+  return row ? { contentType: row.content_type, data: row.content } : undefined;
+}
+
+export async function hasPersistentUpload(storageKey: string): Promise<boolean> {
+  await ensurePersistentUploadsTable();
+  const result = await pool.query(
+    "SELECT 1 FROM persistent_uploads WHERE storage_key = $1 LIMIT 1",
+    [storageKey]
+  );
+  return result.rowCount > 0;
+}
+
+export async function deletePersistentUpload(storageKey: string): Promise<void> {
+  await ensurePersistentUploadsTable();
+  await pool.query("DELETE FROM persistent_uploads WHERE storage_key = $1", [storageKey]);
+}
+
+function normalizedListingText(value: unknown): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function normalizedListingPrice(value: unknown): string {
+  const text = normalizedListingText(value).replace(/,/g, "");
+  const amount = Number(text);
+  return Number.isFinite(amount) ? amount.toFixed(2) : text;
+}
+
+export async function createCarIfNotDuplicate(car: InsertCar): Promise<{ record: Car; duplicate: boolean }> {
+  const key = JSON.stringify([
+    "car", car.dealerId, normalizedListingText(car.title), normalizedListingText(car.brand),
+    normalizedListingText(car.model), car.year, normalizedListingPrice(car.price), car.mileage ?? null,
+    normalizedListingText(car.fuelType), normalizedListingText(car.transmission), normalizedListingText(car.condition),
+  ]);
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${key})::bigint)`);
+    const [existing] = await tx.select().from(cars).where(and(
+      eq(cars.dealerId, car.dealerId),
+      sql`LOWER(BTRIM(${cars.title})) = ${normalizedListingText(car.title)}`,
+      sql`LOWER(BTRIM(${cars.brand})) = ${normalizedListingText(car.brand)}`,
+      sql`LOWER(BTRIM(${cars.model})) = ${normalizedListingText(car.model)}`,
+      eq(cars.year, car.year),
+      sql`${cars.price} = ${car.price}`,
+      sql`${cars.mileage} IS NOT DISTINCT FROM ${car.mileage ?? null}`,
+      eq(cars.fuelType, car.fuelType),
+      eq(cars.transmission, car.transmission),
+      eq(cars.condition, car.condition),
+    )).limit(1);
+    if (existing) return { record: existing, duplicate: true };
+    const [record] = await tx.insert(cars).values(car).returning();
+    return { record, duplicate: false };
+  });
+}
+
+export async function createSparePartIfNotDuplicate(part: InsertSparePart): Promise<{ record: SparePart; duplicate: boolean }> {
+  const key = JSON.stringify([
+    "part", part.businessId, normalizedListingText(part.partName), normalizedListingText(part.carBrand),
+    normalizedListingText(part.carModel), normalizedListingText(part.year), normalizedListingText(part.condition),
+    normalizedListingText(part.price),
+  ]);
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${key})::bigint)`);
+    const [existing] = await tx.select().from(spareParts).where(and(
+      eq(spareParts.businessId, part.businessId),
+      sql`LOWER(BTRIM(${spareParts.partName})) = ${normalizedListingText(part.partName)}`,
+      sql`LOWER(BTRIM(${spareParts.carBrand})) = ${normalizedListingText(part.carBrand)}`,
+      sql`LOWER(BTRIM(${spareParts.carModel})) = ${normalizedListingText(part.carModel)}`,
+      sql`LOWER(BTRIM(COALESCE(${spareParts.year}, ''))) = ${normalizedListingText(part.year)}`,
+      eq(spareParts.condition, part.condition),
+      sql`LOWER(BTRIM(COALESCE(${spareParts.price}, ''))) = ${normalizedListingText(part.price)}`,
+    )).limit(1);
+    if (existing) return { record: existing, duplicate: true };
+    const [record] = await tx.insert(spareParts).values(part).returning();
+    return { record, duplicate: false };
+  });
+}
+
+
 /** Active premium window evaluated in Postgres (avoids JS vs timestamp-without-timezone skew). */
 function premiumSubscriptionStillActive() {
   return or(isNull(businesses.premiumExpiresAt), sql`${businesses.premiumExpiresAt} > NOW()`);

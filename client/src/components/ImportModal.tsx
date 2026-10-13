@@ -18,6 +18,7 @@ interface ImportModalProps {
 interface ImportResult {
   imported: number;
   failed: number;
+  skipped?: number;
   errors: string[];
 }
 
@@ -264,7 +265,7 @@ export default function ImportModal({ open, onClose, type }: ImportModalProps) {
           {/* Result */}
           {result && (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="flex items-center gap-2 rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-4 py-3">
                   <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
                   <div>
@@ -279,12 +280,19 @@ export default function ImportModal({ open, onClose, type }: ImportModalProps) {
                     <p className={`text-xs ${result.failed > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}>failed</p>
                   </div>
                 </div>
+                <div className={`flex items-center gap-2 rounded-md border px-4 py-3 ${(result.skipped ?? 0) > 0 ? "border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20" : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"}`}>
+                  <AlertCircle className={`w-5 h-5 flex-shrink-0 ${(result.skipped ?? 0) > 0 ? "text-amber-600" : "text-gray-400"}`} />
+                  <div>
+                    <p className={`text-lg font-bold ${(result.skipped ?? 0) > 0 ? "text-amber-700 dark:text-amber-300" : "text-gray-500"}`}>{result.skipped ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">duplicates skipped</p>
+                  </div>
+                </div>
               </div>
               {result.errors.length > 0 && (
                 <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 p-3">
                   <div className="flex items-center gap-1.5 mb-2">
                     <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-                    <p className="text-xs font-medium text-red-700 dark:text-red-300">Errors</p>
+                    <p className="text-xs font-medium text-red-700 dark:text-red-300">Skipped rows and errors</p>
                   </div>
                   <ul className="space-y-1">
                     {result.errors.slice(0, 10).map((err, i) => (
