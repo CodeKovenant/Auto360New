@@ -47,7 +47,7 @@ export default function SupportServiceDetail() {
 
   const phoneDigits = service.businessWhatsapp.replace(/\D/g, "");
   const whatsappUrl = phoneDigits
-    ? "https://wa.me/" + phoneDigits + "?text=" + encodeURIComponent("Hi, I'm interested in your \"" + service.name + "\" service. Please provide more details.")
+    ? "https://wa.me/" + phoneDigits + "?text=" + encodeURIComponent("Hi, I'm interested in your " + service.name + " service. Please provide more details.")
     : "";
 
   return (
