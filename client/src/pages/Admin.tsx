@@ -66,9 +66,9 @@ type AdminImportType = "businesses" | "cars" | "parts" | "services" | "support-s
 const ADMIN_IMPORT_CONFIG: Record<AdminImportType, { label: string; requiredColumns: string[]; optionalColumns: string[]; description: string }> = {
   businesses: {
     label: "Businesses",
-    requiredColumns: ["name", "category", "phone", "whatsapp", "address", "city"],
+    requiredColumns: ["name", "phone", "whatsapp", "address", "city"],
     optionalColumns: ["description", "subcategory", "carBrands"],
-    description: "Business rows are auto-approved and published immediately.",
+    description: "Select a category for this batch; imported businesses are auto-approved and published immediately.",
   },
   cars: {
     label: "Cars",
@@ -110,6 +110,14 @@ const ADMIN_IMPORT_OPTIONS: { value: AdminImportType; label: string }[] = [
   { value: "services", label: "Garage Services" },
   { value: "support-services", label: "Support Services" },
 ];
+
+const ADMIN_BUSINESS_IMPORT_CATEGORIES = [
+  { value: "car_dealer", label: "Automobile Dealers" },
+  { value: "spare_parts", label: "Autospares Dealers" },
+  { value: "garage", label: "Autogarage Repair" },
+  { value: "automotive_support", label: "Automotive Support" },
+] as const;
+type AdminBusinessImportCategory = typeof ADMIN_BUSINESS_IMPORT_CATEGORIES[number]["value"];
 
 function getCategoryLabel(cat: string) {
   return BUSINESS_CATEGORIES.find(c => c.value === cat)?.label || cat;
@@ -436,6 +444,7 @@ export default function Admin() {
   const [importResult, setImportResult] = useState<{ imported: number; failed: number; skipped: number; errors: string[] } | null>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [importType, setImportType] = useState<AdminImportType>("businesses");
+  const [importBusinessCategory, setImportBusinessCategory] = useState<AdminBusinessImportCategory | "">("");
   const [importBusinessId, setImportBusinessId] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
 
@@ -460,7 +469,7 @@ export default function Admin() {
     try {
       let csv: Blob;
       if (importType === "businesses") {
-        csv = new Blob(["name,category,phone,whatsapp,address,city,description,subcategory,carBrands\nExample Motors,car_dealer,+254700000000,+254700000000,123 Example Road,Nairobi,A great dealership,,Toyota|Honda\n"], { type: "text/csv" });
+        csv = new Blob(["name,phone,whatsapp,address,city,description,subcategory,carBrands\nExample Motors,+254700000000,+254700000000,123 Example Road,Nairobi,A great dealership,,Toyota|Honda\n"], { type: "text/csv" });
       } else {
         const token = getAuthToken();
         const res = await fetch("/api/import/template/" + importType, {
@@ -494,6 +503,10 @@ export default function Admin() {
       toast({ title: "Invalid file", description: "Please upload a CSV file", variant: "destructive" });
       return;
     }
+    if (importType === "businesses" && !importBusinessCategory) {
+      toast({ title: "Choose a category", description: "Select a business category before importing.", variant: "destructive" });
+      return;
+    }
     if (importType !== "businesses" && !importBusinessId) {
       toast({ title: "Choose a business", description: "Select an approved business before importing listings.", variant: "destructive" });
       return;
@@ -509,7 +522,8 @@ export default function Admin() {
       }
       const formData = new FormData();
       formData.append("file", file);
-      if (importType !== "businesses") formData.append("businessId", importBusinessId);
+      if (importType === "businesses") formData.append("category", importBusinessCategory);
+      else formData.append("businessId", importBusinessId);
       const importPath = importType === "businesses" ? "/api/admin/import/businesses" : "/api/import/" + importType;
       const res = await fetch(importPath, {
         method: "POST",
@@ -1264,6 +1278,7 @@ export default function Admin() {
                       onChange={e => {
                         const nextType = e.target.value as AdminImportType;
                         setImportType(nextType);
+                        setImportBusinessCategory("");
                         setImportBusinessId("");
                         setImportFile(null);
                         setImportResult(null);
@@ -1276,7 +1291,23 @@ export default function Admin() {
                     </select>
                   </div>
 
-                  {importType !== "businesses" && (
+                  {importType === "businesses" ? (
+                    <div>
+                      <label htmlFor="admin-import-business-category" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Business category for this import</label>
+                      <select
+                        id="admin-import-business-category"
+                        value={importBusinessCategory}
+                        disabled={importLoading}
+                        onChange={e => { setImportBusinessCategory(e.target.value as AdminBusinessImportCategory | ""); setImportResult(null); }}
+                        className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm"
+                        data-testid="admin-import-business-category"
+                      >
+                        <option value="">Select a category…</option>
+                        {ADMIN_BUSINESS_IMPORT_CATEGORIES.map(category => <option key={category.value} value={category.value}>{category.label}</option>)}
+                      </select>
+                      <p className="text-xs text-muted-foreground mt-1">The selected category will be applied to every business in the CSV.</p>
+                    </div>
+                  ) : (
                     <div>
                       <label htmlFor="admin-import-business" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Assign listings to an approved business</label>
                       <select
@@ -1312,7 +1343,7 @@ export default function Admin() {
                   {importConfig.optionalColumns.length > 0 && (
                     <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">Optional: <span className="font-mono">{importConfig.optionalColumns.join(", ")}</span></p>
                   )}
-                  {importType === "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">Business categories: car_dealer, garage, spare_parts, car_wash, insurance, other. Imported businesses are auto-approved.</p>}
+                  {importType === "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">The selected category applies to every row; any category column in the CSV is ignored. Imported businesses are auto-approved.</p>}
                   {importType !== "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">The selected business determines where these listings appear. Check the type and business before importing.</p>}
                 </div>
 
@@ -1360,7 +1391,7 @@ export default function Admin() {
                 <div className="flex justify-end">
                   <Button
                     onClick={() => { if (importFile) handleImportFile(importFile); }}
-                    disabled={!importFile || importLoading || (importType !== "businesses" && (!importBusinessId || importBusinessOptions.length === 0))}
+                    disabled={!importFile || importLoading || (importType === "businesses" ? !importBusinessCategory : (!importBusinessId || importBusinessOptions.length === 0))}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                     data-testid="admin-import-submit"
                   >
