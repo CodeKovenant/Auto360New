@@ -48,7 +48,7 @@ function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" |
   );
 }
 
-// ── Share Buttons ─────────────────────────────────────────────────────────────
+// ââ Share Buttons âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function ShareButtons({ businessName }: { businessName: string }) {
   const profileUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareText = `Check out ${businessName} on AutoDirectory Kenya: ${profileUrl}`;
@@ -107,11 +107,11 @@ function ShareButtons({ businessName }: { businessName: string }) {
   );
 }
 
-// ── Safety Tips ───────────────────────────────────────────────────────────────
+// ââ Safety Tips âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const SAFETY_TIPS = [
   "Verify the business registration before making any payment.",
   "For high-value transactions, meet in a safe, public location.",
-  "Use official channels — WhatsApp, phone, or the contact form on this page.",
+  "Use official channels â WhatsApp, phone, or the contact form on this page.",
   "Do not share sensitive personal or financial information upfront.",
   "Request a receipt or written agreement for any service rendered.",
 ];
@@ -137,7 +137,7 @@ function SafetyTips() {
   );
 }
 
-// ── Report Business Form ───────────────────────────────────────────────────────
+// ââ Report Business Form âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function ReportBusinessForm({ businessId }: { businessId: string }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -238,7 +238,7 @@ function ReportBusinessForm({ businessId }: { businessId: string }) {
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ââ Main Page âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function BusinessProfile() {
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -326,7 +326,7 @@ export default function BusinessProfile() {
   const { business, reviews, spareParts, supportServices } = data;
   const categoryLabel = BUSINESS_CATEGORIES.find(c => c.value === business.category)?.label || business.category;
   const avgRating = business.avgRating || 0;
-  const hasMap = business.latitude && business.longitude;
+  const hasLocation = !!(business.address?.trim() || business.city?.trim());
   const canManage = !!(user && (user.id === business.ownerId || user.role === "admin"));
   const websiteHref = business.website
     ? (/^https?:\/\//i.test(business.website) ? business.website : `https://${business.website}`)
@@ -353,7 +353,7 @@ export default function BusinessProfile() {
             <div className="flex-1 min-w-0">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Badge className="bg-white/10 text-white border-white/20">{categoryLabel}</Badge>
-                {business.featured && <Badge className="border-amber-300/40 bg-amber-400/20 text-amber-100">★ Featured</Badge>}
+                {business.featured && <Badge className="border-amber-300/40 bg-amber-400/20 text-amber-100">â Featured</Badge>}
               </div>
               <h1 className="text-2xl md:text-3xl font-bold mb-1 truncate" data-testid="business-name">{business.name}</h1>
               <div className="flex items-center gap-1 text-red-200 mb-2">
@@ -443,7 +443,7 @@ export default function BusinessProfile() {
           </CardContent>
         </Card>
 
-        {/* Automotive Support — Support services */}
+        {/* Automotive Support â Support services */}
         {isSupport && (
           <div>
             <div className="flex items-center gap-2 mb-4">
@@ -473,7 +473,7 @@ export default function BusinessProfile() {
           </div>
         )}
 
-        {/* Car Dealer — Car listings */}
+        {/* Car Dealer â Car listings */}
         {isDealer && (
           <div>
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -500,7 +500,7 @@ export default function BusinessProfile() {
           </div>
         )}
 
-        {/* Garage — Services */}
+        {/* Garage â Services */}
         {isGarage && (
           <div>
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -550,11 +550,11 @@ export default function BusinessProfile() {
                       <div className="flex-1 min-w-0">
                         <Link href={"/parts/" + part.id} className="font-medium text-sm text-gray-900 hover:text-orange-600 dark:text-white">{part.partName}</Link>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {part.carBrand} {part.carModel} {part.year && `• ${part.year}`}
+                          {part.carBrand} {part.carModel} {part.year && `â¢ ${part.year}`}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-1">
-                        {part.featured && <Badge className="bg-amber-100 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">★ Featured</Badge>}
+                        {part.featured && <Badge className="bg-amber-100 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">â Featured</Badge>}
                         <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">
                           {part.condition === "new" ? "New" : "Used"}
                         </Badge>
@@ -593,13 +593,12 @@ export default function BusinessProfile() {
           </Card>
         )}
 
-        {/* Map Section */}
-        {hasMap && (
+        {/* Map Section: resolve the entered address and city instead of requiring coordinates */}
+        {hasLocation && (
           <BusinessMap
-            lat={parseFloat(business.latitude as string)}
-            lng={parseFloat(business.longitude as string)}
             name={business.name}
-            address={`${business.address}, ${business.city}`}
+            address={business.address}
+            city={business.city}
           />
         )}
 
