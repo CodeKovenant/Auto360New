@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { MapPin, Wrench, Building2, MessageCircle, ChevronDown, ChevronUp, Images, Flame } from "lucide-react";
+import { MapPin, Wrench, Building2, MessageCircle, ChevronDown, ChevronUp, Images, Flame, Star } from "lucide-react";
 import BusinessGallery from "@/components/BusinessGallery";
 import type { GarageService } from "@shared/schema";
 
@@ -53,6 +53,11 @@ export default function GarageServiceCard({ service, garageId, canManage = false
               {service.popular && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 flex-shrink-0">
                   <Flame className="w-2.5 h-2.5" /> Popular
+                </span>
+              )}
+              {service.featured && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 flex-shrink-0">
+                  <Star className="w-2.5 h-2.5 fill-current" /> Featured
                 </span>
               )}
             </div>

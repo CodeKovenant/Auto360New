@@ -52,6 +52,7 @@ export default function CarDetail() {
     car.brand,
     car.model,
     String(car.year),
+    ...(car.featured ? ["Featured"] : []),
     car.condition === "new" ? "Brand new" : "Used",
     car.fuelType,
     car.transmission,

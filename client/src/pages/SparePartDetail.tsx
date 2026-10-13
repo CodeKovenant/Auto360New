@@ -101,6 +101,7 @@ export default function SparePartDetail() {
               <CardContent className="space-y-5 p-5 sm:p-6">
                 <div className="flex flex-wrap gap-2">
                   <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100 dark:bg-orange-950 dark:text-orange-300">Auto part</Badge>
+                  {part.featured && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300">★ Featured</Badge>}
                   <Badge variant={part.condition === "new" ? "default" : "secondary"}>{part.condition === "new" ? "New" : "Used"}</Badge>
                 </div>
                 <div>

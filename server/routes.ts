@@ -73,6 +73,14 @@ function ownerMiddleware(req: any, res: any, next: any) {
   });
 }
 
+function omitFields(body: unknown, fields: string[]) {
+  const values = body && typeof body === "object" && !Array.isArray(body)
+    ? body as Record<string, unknown>
+    : {};
+  const blocked = new Set(fields);
+  return Object.fromEntries(Object.entries(values).filter(([key]) => !blocked.has(key))) as Record<string, any>;
+}
+
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
 
   // Serve uploaded logos as static files
@@ -355,6 +363,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         "status",
         "premium",
         "premiumExpiresAt",
+        "featured",
       ]);
       const allowedFields = Object.fromEntries(
         Object.entries(req.body || {}).filter(([k]) => !ownerCannotSet.has(k))
@@ -391,6 +400,102 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Admin routes
+  app.get("/api/admin/featured", adminMiddleware, async (_req, res) => {
+    try {
+      const approvedBusinesses = await storage.getApprovedBusinesses();
+      const [cars, garageServices, sparePartGroups, supportServiceGroups] = await Promise.all([
+        storage.getCars(),
+        storage.getGarageServices(),
+        Promise.all(
+          approvedBusinesses
+            .filter((biz) => biz.category === "spare_parts")
+            .map((biz) => storage.getSparePartsByBusinessId(biz.id))
+        ),
+        Promise.all(
+          approvedBusinesses
+            .filter((biz) => ["insurance", "car_wash", "other"].includes(biz.category))
+            .map((biz) => storage.getSupportServicesByBusinessId(biz.id))
+        ),
+      ]);
+      const businessNames = new Map(approvedBusinesses.map((biz) => [biz.id, biz.name]));
+      const items = [
+        ...approvedBusinesses.map((biz) => ({
+          id: biz.id,
+          type: "business",
+          name: biz.name,
+          subtitle: `${biz.category.replace(/_/g, " ")} · ${biz.city}`,
+          featured: !!biz.featured,
+        })),
+        ...cars.map((car) => ({
+          id: car.id,
+          type: "car",
+          name: car.title,
+          subtitle: `${car.brand} ${car.model} · ${car.dealerName}`,
+          featured: !!car.featured,
+        })),
+        ...garageServices.map((service) => ({
+          id: service.id,
+          type: "garage_service",
+          name: service.name,
+          subtitle: `Garage service · ${service.garageName}`,
+          featured: !!service.featured,
+        })),
+        ...sparePartGroups.flat().map((part) => ({
+          id: part.id,
+          type: "part",
+          name: part.partName,
+          subtitle: `Spare part · ${businessNames.get(part.businessId) || "Business"}`,
+          featured: !!part.featured,
+        })),
+        ...supportServiceGroups.flat().map((service) => ({
+          id: service.id,
+          type: "support_service",
+          name: service.name,
+          subtitle: `Automotive support · ${businessNames.get(service.businessId) || "Business"}`,
+          featured: !!service.featured,
+        })),
+      ].sort((a, b) => Number(b.featured) - Number(a.featured) || a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
+      res.json(items);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/admin/featured/:type/:id", adminMiddleware, async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      if (!["business", "car", "part", "garage_service", "support_service"].includes(type)) {
+        return res.status(400).json({ message: "Unsupported featured item type" });
+      }
+      if (typeof req.body?.featured !== "boolean") {
+        return res.status(400).json({ message: "featured must be a boolean" });
+      }
+
+      let item: any;
+      switch (type) {
+        case "business":
+          item = await storage.updateBusiness(id, { featured: req.body.featured });
+          break;
+        case "car":
+          item = await storage.updateCar(id, { featured: req.body.featured });
+          break;
+        case "part":
+          item = await storage.updateSparePart(id, { featured: req.body.featured });
+          break;
+        case "garage_service":
+          item = await storage.updateGarageService(id, { featured: req.body.featured });
+          break;
+        case "support_service":
+          item = await storage.updateSupportService(id, { featured: req.body.featured });
+          break;
+      }
+      if (!item) return res.status(404).json({ message: "Featured item not found" });
+      res.json({ id: item.id, type, featured: !!item.featured });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   app.get("/api/admin", adminMiddleware, async (req, res) => {
     try {
       const [pending, approved, rejected, allReviews, allUsers] = await Promise.all([
@@ -607,7 +712,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/parts/:id", ownerMiddleware, async (req, res) => {
     try {
-      const part = await storage.updateSparePart(req.params.id, req.body);
+      const part = await storage.updateSparePart(req.params.id, omitFields(req.body, ["id", "businessId", "createdAt", "featured"]));
       res.json(part);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -718,7 +823,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/cars/:id", ownerMiddleware, async (req, res) => {
     try {
-      const { id, dealerId, createdAt, ...data } = req.body;
+      const data = omitFields(req.body, ["id", "dealerId", "createdAt", "featured"]);
       const car = await storage.updateCar(req.params.id, data);
       res.json(car);
     } catch (e: any) {
@@ -736,6 +841,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Garage Services
+  app.get("/api/services/featured", async (_req, res) => {
+    try {
+      const services = await storage.getFeaturedGarageServices();
+      res.json(services);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/services/popular", async (req, res) => {
     try {
       const svcs = await storage.getPopularGarageServices();
@@ -781,7 +895,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/services/:id", ownerMiddleware, async (req, res) => {
     try {
-      const { id, garageId, createdAt, ...data } = req.body;
+      const data = omitFields(req.body, ["id", "garageId", "createdAt", "featured"]);
       const svc = await storage.updateGarageService(req.params.id, data);
       res.json(svc);
     } catch (e: any) {
@@ -835,7 +949,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/support-services/:id", ownerMiddleware, async (req, res) => {
     try {
-      const { id, businessId, createdAt, ...data } = req.body;
+      const data = omitFields(req.body, ["id", "businessId", "createdAt", "featured"]);
       const svc = await storage.updateSupportService(req.params.id, data);
       res.json(svc);
     } catch (e: any) {

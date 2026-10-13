@@ -35,9 +35,16 @@ export default function SupportServiceCard({ service, businessName, businessPhon
           <ServiceIcon className={`w-5 h-5 ${color}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-snug" data-testid={`text-service-name-${service.id}`}>
-            {service.name}
-          </h3>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-snug" data-testid={`text-service-name-${service.id}`}>
+              {service.name}
+            </h3>
+            {service.featured && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                <Star className="h-2.5 w-2.5 fill-current" /> Featured
+              </span>
+            )}
+          </div>
           {service.description && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">
               {service.description}

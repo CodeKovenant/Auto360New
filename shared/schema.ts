@@ -46,6 +46,7 @@ export const businesses = pgTable("businesses", {
   latitude: numeric("latitude"),
   longitude: numeric("longitude"),
   status: businessStatusEnum("status").notNull().default("pending"),
+  featured: boolean("featured").notNull().default(false),
   premium: boolean("premium").default(false),
   premiumExpiresAt: timestamp("premium_expires_at"),
   carBrands: text("car_brands").array(),
@@ -63,6 +64,7 @@ export const spareParts = pgTable("spare_parts", {
   price: text("price"),
   description: text("description"),
   image: text("image"),
+  featured: boolean("featured").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -112,6 +114,7 @@ export const garageServices = pgTable("garage_services", {
   name: text("name").notNull(),
   description: text("description"),
   price: text("price"),
+  featured: boolean("featured").notNull().default(false),
   popular: boolean("popular").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -122,6 +125,7 @@ export const supportServices = pgTable("support_services", {
   name: text("name").notNull(),
   description: text("description"),
   startingPrice: text("starting_price"),
+  featured: boolean("featured").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -152,13 +156,13 @@ export const galleryImages = pgTable("gallery_images", {
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
-export const insertBusinessSchema = createInsertSchema(businesses).omit({ id: true, createdAt: true, status: true });
-export const insertSparePartSchema = createInsertSchema(spareParts).omit({ id: true, createdAt: true });
+export const insertBusinessSchema = createInsertSchema(businesses).omit({ id: true, createdAt: true, status: true, featured: true });
+export const insertSparePartSchema = createInsertSchema(spareParts).omit({ id: true, createdAt: true, featured: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true });
-export const insertCarSchema = createInsertSchema(cars).omit({ id: true, createdAt: true });
-export const insertGarageServiceSchema = createInsertSchema(garageServices).omit({ id: true, createdAt: true });
-export const insertSupportServiceSchema = createInsertSchema(supportServices).omit({ id: true, createdAt: true });
+export const insertCarSchema = createInsertSchema(cars).omit({ id: true, createdAt: true, featured: true });
+export const insertGarageServiceSchema = createInsertSchema(garageServices).omit({ id: true, createdAt: true, featured: true });
+export const insertSupportServiceSchema = createInsertSchema(supportServices).omit({ id: true, createdAt: true, featured: true });
 export const insertGalleryImageSchema = createInsertSchema(galleryImages).omit({ id: true, createdAt: true });
 export const insertBusinessReportSchema = createInsertSchema(businessReports).omit({ id: true, createdAt: true });
 

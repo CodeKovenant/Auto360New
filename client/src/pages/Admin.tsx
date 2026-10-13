@@ -36,6 +36,17 @@ interface AdminData {
   users: UserType[];
 }
 
+type FeaturedItemType = "business" | "car" | "part" | "garage_service" | "support_service";
+type FeaturedItem = { id: string; type: FeaturedItemType; name: string; subtitle: string; featured: boolean };
+
+const FEATURED_ITEM_GROUPS: { type: FeaturedItemType; title: string }[] = [
+  { type: "business", title: "Businesses" },
+  { type: "car", title: "Cars" },
+  { type: "part", title: "Spare parts" },
+  { type: "garage_service", title: "Garage services" },
+  { type: "support_service", title: "Automotive support services" },
+];
+
 function getCategoryLabel(cat: string) {
   return BUSINESS_CATEGORIES.find(c => c.value === cat)?.label || cat;
 }
@@ -226,6 +237,10 @@ export default function Admin() {
     queryKey: ["/api/admin/reports"],
   });
 
+  const { data: featuredItems, isLoading: featuredItemsLoading } = useQuery<FeaturedItem[]>({
+    queryKey: ["/api/admin/featured"],
+  });
+
   const { data: revenue } = useQuery<{
     stats: {
       totalRevenue: number;
@@ -310,6 +325,28 @@ export default function Admin() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleFeaturedMutation = useMutation({
+    mutationFn: async ({ item, featured }: { item: FeaturedItem; featured: boolean }) => {
+      await apiRequest("PUT", `/api/admin/featured/${item.type}/${item.id}`, { featured });
+    },
+    onSuccess: (_, { featured }) => {
+      toast({ title: featured ? "Featured status enabled." : "Featured status removed." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cars"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cars/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/parts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/home/featured-offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/services/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/services/popular"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/support-services"] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -488,6 +525,9 @@ export default function Admin() {
             <TabsTrigger value="approved" data-testid="admin-tab-approved">
               Approved ({stats.approved})
             </TabsTrigger>
+            <TabsTrigger value="featured" data-testid="admin-tab-featured">
+              Featured
+            </TabsTrigger>
             <TabsTrigger value="rejected" data-testid="admin-tab-rejected">
               Rejected ({stats.rejected})
             </TabsTrigger>
@@ -596,6 +636,60 @@ export default function Admin() {
                     }
                   />
                 ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Featured catalog management — independent of paid Premium status */}
+          <TabsContent value="featured">
+            {featuredItemsLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-20 rounded-xl" />)}
+              </div>
+            ) : (
+              <div className="space-y-7">
+                <p className="text-sm text-muted-foreground">
+                  Choose which approved businesses and listings appear as Featured. This does not change paid Premium status.
+                </p>
+                {FEATURED_ITEM_GROUPS.map(({ type, title }) => {
+                  const groupItems = (featuredItems || []).filter((item) => item.type === type);
+                  return (
+                    <section key={type} className="space-y-3" data-testid={`admin-featured-group-${type}`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <h2 className="font-semibold text-gray-900 dark:text-white">{title}</h2>
+                        <Badge variant="secondary">{groupItems.length}</Badge>
+                      </div>
+                      {groupItems.length === 0 ? (
+                        <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No approved items in this group.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {groupItems.map((item) => (
+                            <Card key={`${item.type}-${item.id}`}>
+                              <CardContent className="flex items-center justify-between gap-3 py-3">
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{item.name}</p>
+                                  <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant={item.featured ? "default" : "outline"}
+                                  className={item.featured ? "shrink-0 bg-amber-500 text-white hover:bg-amber-600" : "shrink-0"}
+                                  onClick={() => toggleFeaturedMutation.mutate({ item, featured: !item.featured })}
+                                  disabled={toggleFeaturedMutation.isPending}
+                                  aria-pressed={item.featured}
+                                  data-testid={`button-toggle-featured-${item.type}-${item.id}`}
+                                >
+                                  <Star className={`mr-1 h-4 w-4 ${item.featured ? "fill-current" : ""}`} />
+                                  {item.featured ? "Featured" : "Set featured"}
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
