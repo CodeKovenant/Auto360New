@@ -343,10 +343,18 @@ export default function Admin() {
     mutationFn: async ({ item, featured }: { item: FeaturedItem; featured: boolean }) => {
       await apiRequest("PUT", `/api/admin/featured/${item.type}/${item.id}`, { featured });
     },
-    onSuccess: (_, { featured }) => {
+    onSuccess: (_, { item, featured }) => {
       toast({ title: featured ? "Featured status enabled." : "Featured status removed." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
+      if (item.type === "business") {
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = query.queryKey[0];
+            return typeof key === "string" && key.startsWith("/api/businesses?");
+          },
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/featured"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cars"] });
