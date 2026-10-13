@@ -36,6 +36,13 @@ interface AdminData {
   users: UserType[];
 }
 
+interface AdminImportBusiness {
+  id: string;
+  name: string;
+  category: string;
+  city: string;
+}
+
 type FeaturedItemType = "business" | "car" | "part" | "garage_service" | "support_service";
 type FeaturedItem = {
   id: string;
@@ -52,6 +59,56 @@ const FEATURED_ITEM_GROUPS: { type: FeaturedItemType; title: string }[] = [
   { type: "part", title: "Spare parts" },
   { type: "garage_service", title: "Garage services" },
   { type: "support_service", title: "Automotive support services" },
+];
+
+type AdminImportType = "businesses" | "cars" | "parts" | "services" | "support-services";
+
+const ADMIN_IMPORT_CONFIG: Record<AdminImportType, { label: string; requiredColumns: string[]; optionalColumns: string[]; description: string }> = {
+  businesses: {
+    label: "Businesses",
+    requiredColumns: ["name", "category", "phone", "whatsapp", "address", "city"],
+    optionalColumns: ["description", "subcategory", "carBrands"],
+    description: "Business rows are auto-approved and published immediately.",
+  },
+  cars: {
+    label: "Cars",
+    requiredColumns: ["title", "brand", "model", "year", "price", "location"],
+    optionalColumns: ["mileage", "fuelType", "transmission", "condition", "description"],
+    description: "Car listings will be attached to the selected approved car dealer.",
+  },
+  parts: {
+    label: "Spare Parts",
+    requiredColumns: ["partName", "carBrand", "carModel"],
+    optionalColumns: ["year", "condition", "price", "description"],
+    description: "Spare parts will be attached to the selected approved spare-parts business.",
+  },
+  services: {
+    label: "Garage Services",
+    requiredColumns: ["name"],
+    optionalColumns: ["description", "price"],
+    description: "Services will be attached to the selected approved garage.",
+  },
+  "support-services": {
+    label: "Support Services",
+    requiredColumns: ["name"],
+    optionalColumns: ["description", "startingPrice"],
+    description: "Support services will be attached to the selected approved support business.",
+  },
+};
+
+const ADMIN_IMPORT_BUSINESS_CATEGORIES: Partial<Record<AdminImportType, string[]>> = {
+  cars: ["car_dealer"],
+  parts: ["spare_parts"],
+  services: ["garage"],
+  "support-services": ["insurance", "car_wash", "other"],
+};
+
+const ADMIN_IMPORT_OPTIONS: { value: AdminImportType; label: string }[] = [
+  { value: "businesses", label: "Businesses" },
+  { value: "cars", label: "Cars" },
+  { value: "parts", label: "Spare Parts" },
+  { value: "services", label: "Garage Services" },
+  { value: "support-services", label: "Support Services" },
 ];
 
 function getCategoryLabel(cat: string) {
@@ -244,6 +301,10 @@ export default function Admin() {
     queryKey: ["/api/admin/reports"],
   });
 
+  const { data: importBusinesses = [] } = useQuery<AdminImportBusiness[]>({
+    queryKey: ["/api/admin/import/businesses"],
+  });
+
   const { data: featuredItems, isLoading: featuredItemsLoading } = useQuery<FeaturedItem[]>({
     queryKey: ["/api/admin/featured"],
   });
@@ -374,6 +435,9 @@ export default function Admin() {
   const [importDragging, setImportDragging] = useState(false);
   const [importResult, setImportResult] = useState<{ imported: number; failed: number; skipped: number; errors: string[] } | null>(null);
   const [importLoading, setImportLoading] = useState(false);
+  const [importType, setImportType] = useState<AdminImportType>("businesses");
+  const [importBusinessId, setImportBusinessId] = useState("");
+  const [importFile, setImportFile] = useState<File | null>(null);
 
   async function downloadExport(path: string, filename: string) {
     try {
@@ -392,20 +456,46 @@ export default function Admin() {
     }
   }
 
-  function downloadTemplate() {
-    const csv = "name,category,phone,whatsapp,address,city,description,subcategory,carBrands\nExample Motors,car_dealer,+254700000000,+254700000000,123 Example Road,Nairobi,A great dealership,,Toyota|Honda\n";
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "businesses-import-template.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  async function downloadTemplate() {
+    try {
+      let csv: Blob;
+      if (importType === "businesses") {
+        csv = new Blob(["name,category,phone,whatsapp,address,city,description,subcategory,carBrands\nExample Motors,car_dealer,+254700000000,+254700000000,123 Example Road,Nairobi,A great dealership,,Toyota|Honda\n"], { type: "text/csv" });
+      } else {
+        const token = getAuthToken();
+        const res = await fetch("/api/import/template/" + importType, {
+          headers: token ? { Authorization: "Bearer " + token } : {},
+        });
+        if (!res.ok) throw new Error("Template download failed");
+        csv = await res.blob();
+      }
+      const url = URL.createObjectURL(csv);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = importType + "-import-template.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast({ title: "Template download failed", description: e.message, variant: "destructive" });
+    }
+  }
+
+  function stageImportFile(file: File) {
+    if (!/\.csv$/i.test(file.name)) {
+      toast({ title: "Invalid file", description: "Please upload a CSV file", variant: "destructive" });
+      return;
+    }
+    setImportFile(file);
+    setImportResult(null);
   }
 
   async function handleImportFile(file: File) {
-    if (!file.name.endsWith(".csv")) {
+    if (!/\.csv$/i.test(file.name)) {
       toast({ title: "Invalid file", description: "Please upload a CSV file", variant: "destructive" });
+      return;
+    }
+    if (importType !== "businesses" && !importBusinessId) {
+      toast({ title: "Choose a business", description: "Select an approved business before importing listings.", variant: "destructive" });
       return;
     }
     setImportLoading(true);
@@ -419,9 +509,11 @@ export default function Admin() {
       }
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/admin/import/businesses", {
+      if (importType !== "businesses") formData.append("businessId", importBusinessId);
+      const importPath = importType === "businesses" ? "/api/admin/import/businesses" : "/api/import/" + importType;
+      const res = await fetch(importPath, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: "Bearer " + token },
         body: formData,
       });
       if (res.status === 401) {
@@ -433,10 +525,22 @@ export default function Admin() {
       if (!res.ok) throw new Error(data.message || "Import failed");
       setImportResult(data);
       if (data.imported > 0 || data.skipped > 0 || data.failed > 0) {
-        queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
+        const prefixesByType: Record<AdminImportType, string[]> = {
+          businesses: ["/api/admin", "/api/businesses"],
+          cars: ["/api/cars", "/api/businesses"],
+          parts: ["/api/parts", "/api/spare-parts", "/api/businesses", "/api/home/featured-offers"],
+          services: ["/api/services", "/api/businesses", "/api/home/featured-offers"],
+          "support-services": ["/api/support-services", "/api/support-service", "/api/businesses", "/api/home/featured-offers"],
+        };
+        const prefixes = prefixesByType[importType];
+        queryClient.invalidateQueries({
+          predicate: query => {
+            const key = query.queryKey[0];
+            return typeof key === "string" && prefixes.some(prefix =>
+              key === prefix || key.startsWith(prefix + "/") || key.startsWith(prefix + "?")
+            );
+          },
+        });
       }
     } catch (e: any) {
       toast({ title: "Import failed", description: e.message, variant: "destructive" });
@@ -469,6 +573,12 @@ export default function Admin() {
     reviews: [],
     users: [],
   };
+
+  const importConfig = ADMIN_IMPORT_CONFIG[importType];
+  const importBusinessCategories = ADMIN_IMPORT_BUSINESS_CATEGORIES[importType];
+  const importBusinessOptions = importBusinessCategories
+    ? importBusinesses.filter(biz => importBusinessCategories.includes(biz.category))
+    : [];
 
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen pb-10">
@@ -1136,52 +1246,97 @@ export default function Admin() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Upload className="w-4 h-4 text-blue-600" />
-                  Import Businesses
+                  Import Data
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <p className="text-sm text-muted-foreground">
-                    Bulk-import business listings from a CSV file. Imported businesses are auto-approved and published immediately.
-                  </p>
-                  <Button size="sm" variant="outline" className="h-8 flex-shrink-0" onClick={downloadTemplate}>
-                    <FileText className="w-3.5 h-3.5 mr-1.5" />
-                    Download Template
+                <p className="text-sm text-muted-foreground">
+                  Choose the data type first. The matching template and import handler will be used; listing imports must be assigned to an approved business.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="admin-import-type" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">What type of data are you importing?</label>
+                    <select
+                      id="admin-import-type"
+                      value={importType}
+                      disabled={importLoading}
+                      onChange={e => {
+                        const nextType = e.target.value as AdminImportType;
+                        setImportType(nextType);
+                        setImportBusinessId("");
+                        setImportFile(null);
+                        setImportResult(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                      className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm"
+                      data-testid="admin-import-type"
+                    >
+                      {ADMIN_IMPORT_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </div>
+
+                  {importType !== "businesses" && (
+                    <div>
+                      <label htmlFor="admin-import-business" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Assign listings to an approved business</label>
+                      <select
+                        id="admin-import-business"
+                        value={importBusinessId}
+                        disabled={importLoading}
+                        onChange={e => { setImportBusinessId(e.target.value); setImportResult(null); }}
+                        className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm"
+                        data-testid="admin-import-business"
+                      >
+                        <option value="">Select a business…</option>
+                        {importBusinessOptions.map(biz => <option key={biz.id} value={biz.id}>{biz.name} — {biz.city}</option>)}
+                      </select>
+                      {importBusinessOptions.length === 0 && <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">No approved business matches this data type.</p>}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-start justify-between gap-3 flex-wrap rounded-md border border-dashed border-gray-200 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+                  <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <FileText className="w-4 h-4 mt-0.5" />
+                    <span>{importConfig.description}</span>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-8 flex-shrink-0" onClick={downloadTemplate} disabled={importLoading}>
+                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                    Download {importConfig.label} Template
                   </Button>
                 </div>
 
-                {/* Required columns info */}
                 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                   <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1">Required CSV columns:</p>
-                  <p className="text-xs text-blue-700 dark:text-blue-400 font-mono">name, category, phone, whatsapp, address, city</p>
-                  <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-                    Optional: description, subcategory, carBrands (pipe-separated, e.g. <span className="font-mono">Toyota|Honda</span>)
-                  </p>
-                  <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-                    Categories: car_dealer, garage, spare_parts, car_wash, insurance, other
-                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-400 font-mono">{importConfig.requiredColumns.join(", ")}</p>
+                  {importConfig.optionalColumns.length > 0 && (
+                    <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">Optional: <span className="font-mono">{importConfig.optionalColumns.join(", ")}</span></p>
+                  )}
+                  {importType === "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">Business categories: car_dealer, garage, spare_parts, car_wash, insurance, other. Imported businesses are auto-approved.</p>}
+                  {importType !== "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">The selected business determines where these listings appear. Check the type and business before importing.</p>}
                 </div>
 
-                {/* Drop zone */}
+                {/* Drop zone — stage the file first, then confirm the selected import type below. */}
                 <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-                    importDragging
-                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
-                      : "border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-900"
-                  }`}
-                  onClick={() => fileInputRef.current?.click()}
+                  className={"border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer " + (importDragging ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-900")}
+                  onClick={() => !importLoading && fileInputRef.current?.click()}
                   onDragOver={e => { e.preventDefault(); setImportDragging(true); }}
                   onDragLeave={() => setImportDragging(false)}
                   onDrop={e => {
                     e.preventDefault();
                     setImportDragging(false);
                     const file = e.dataTransfer.files[0];
-                    if (file) handleImportFile(file);
+                    if (file) stageImportFile(file);
                   }}
                 >
                   <FileUp className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                   {importLoading ? (
                     <p className="text-sm text-muted-foreground">Importing…</p>
+                  ) : importFile ? (
+                    <>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{importFile.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{(importFile.size / 1024).toFixed(1)} KB · click to change file</p>
+                    </>
                   ) : (
                     <>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Drop CSV file here or click to browse</p>
@@ -1191,27 +1346,39 @@ export default function Admin() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".csv"
+                    accept=".csv,text/csv"
                     className="hidden"
+                    disabled={importLoading}
                     onChange={e => {
                       const file = e.target.files?.[0];
-                      if (file) handleImportFile(file);
+                      if (file) stageImportFile(file);
                       e.target.value = "";
                     }}
                   />
                 </div>
 
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => { if (importFile) handleImportFile(importFile); }}
+                    disabled={!importFile || importLoading || (importType !== "businesses" && (!importBusinessId || importBusinessOptions.length === 0))}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    data-testid="admin-import-submit"
+                  >
+                    {importLoading ? "Importing…" : "Import " + importConfig.label}
+                  </Button>
+                </div>
+
                 {/* Result */}
                 {importResult && (
-                  <div className={`rounded-lg border p-4 ${importResult.failed === 0 ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20" : "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20"}`}>
+                  <div className={"rounded-lg border p-4 " + (importResult.failed === 0 ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20" : "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20")}>
                     <div className="flex items-center gap-2 mb-2">
                       {importResult.failed === 0
                         ? <CheckCircle className="w-4 h-4 text-green-600" />
                         : <AlertCircle className="w-4 h-4 text-orange-500" />}
                       <p className="text-sm font-semibold">
                         {importResult.imported} imported
-                        {(importResult.skipped ?? 0) > 0 && `, ${importResult.skipped} skipped (duplicates)`}
-                        {importResult.failed > 0 && `, ${importResult.failed} failed`}
+                        {(importResult.skipped ?? 0) > 0 && ", " + importResult.skipped + " skipped (duplicates)"}
+                        {importResult.failed > 0 && ", " + importResult.failed + " failed"}
                       </p>
                     </div>
                     {importResult.errors.length > 0 && (
@@ -1219,10 +1386,13 @@ export default function Admin() {
                         {importResult.errors.slice(0, 10).map((err, i) => (
                           <li key={i} className="text-xs text-orange-700 dark:text-orange-300">{err}</li>
                         ))}
-                        {importResult.errors.length > 10 && (
-                          <li className="text-xs text-muted-foreground">…and {importResult.errors.length - 10} more errors</li>
-                        )}
+                        {importResult.errors.length > 10 && <li className="text-xs text-muted-foreground">…and {importResult.errors.length - 10} more errors</li>}
                       </ul>
+                    )}
+                    {importResult.imported > 0 && (
+                      <div className="flex justify-end mt-3">
+                        <Button variant="outline" size="sm" onClick={() => { setImportFile(null); setImportResult(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>Import Another</Button>
+                      </div>
                     )}
                   </div>
                 )}

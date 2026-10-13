@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import express from "express";
+import { eq } from "drizzle-orm";
 import { createServer, type Server } from "http";
 import {
   storage, db, ensurePersistentUploadsTable, savePersistentUpload, getPersistentUpload,
@@ -1078,6 +1079,44 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     "support-services": "name,description,startingPrice\nComprehensive Cover,Full vehicle comprehensive insurance with third-party liability,KSh 15000/year",
   };
 
+  async function getAdminImportBusiness(req: any, res: any, allowedCategories: string[]) {
+    const businessId = typeof req.body?.businessId === "string" ? req.body.businessId.trim() : "";
+    if (!businessId) {
+      res.status(400).json({ message: "Select an approved business before importing listings" });
+      return null;
+    }
+    const [biz] = await db.select({
+      id: businesses.id,
+      category: businesses.category,
+      status: businesses.status,
+      city: businesses.city,
+    }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+    if (!biz) {
+      res.status(404).json({ message: "Selected business was not found" });
+      return null;
+    }
+    if (!allowedCategories.includes(biz.category)) {
+      res.status(400).json({ message: "Selected business does not match the chosen data type" });
+      return null;
+    }
+    if (biz.status !== "approved") {
+      res.status(400).json({ message: "Listings can only be imported to an approved business" });
+      return null;
+    }
+    return biz;
+  }
+
+  function validateAdminImportHeaders(req: any, res: any, rows: Record<string, string>[], requiredHeaders: string[]) {
+    if (req.user?.role !== "admin") return true;
+    const headers = new Set(Object.keys(rows[0] || {}));
+    const missing = requiredHeaders.filter(header => !headers.has(header));
+    if (missing.length > 0) {
+      res.status(400).json({ message: "CSV does not match the selected data type. Missing columns: " + missing.join(", ") });
+      return false;
+    }
+    return true;
+  }
+
   app.get("/api/import/template/:type", authMiddleware, (req, res) => {
     const type = req.params.type;
     if (!TEMPLATES[type]) return res.status(404).json({ message: "Unknown template type" });
@@ -1088,12 +1127,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/import/cars", ownerMiddleware, csvUpload.single("file"), async (req: any, res) => {
     try {
-      const biz = await storage.getBusinessByOwnerId(req.user.id);
+      const biz = req.user?.role === "admin"
+        ? await getAdminImportBusiness(req, res, ["car_dealer"])
+        : await storage.getBusinessByOwnerId(req.user.id);
+      if (req.user?.role === "admin" && !biz) return;
       if (!biz || biz.category !== "car_dealer") return res.status(403).json({ message: "Only car dealers can import car listings" });
       if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
+      if (!validateAdminImportHeaders(req, res, rows, ["title", "brand", "model", "year", "price", "location"])) return;
       const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -1134,11 +1177,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/import/parts", ownerMiddleware, csvUpload.single("file"), async (req: any, res) => {
     try {
-      const biz = await storage.getBusinessByOwnerId(req.user.id);
+      const biz = req.user?.role === "admin"
+        ? await getAdminImportBusiness(req, res, ["spare_parts"])
+        : await storage.getBusinessByOwnerId(req.user.id);
+      if (req.user?.role === "admin" && !biz) return;
       if (!biz) return res.status(403).json({ message: "No business found" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
+      if (!validateAdminImportHeaders(req, res, rows, ["partName", "carBrand", "carModel"])) return;
       const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -1174,12 +1221,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/import/services", ownerMiddleware, csvUpload.single("file"), async (req: any, res) => {
     try {
-      const biz = await storage.getBusinessByOwnerId(req.user.id);
+      const biz = req.user?.role === "admin"
+        ? await getAdminImportBusiness(req, res, ["garage"])
+        : await storage.getBusinessByOwnerId(req.user.id);
+      if (req.user?.role === "admin" && !biz) return;
       if (!biz || biz.category !== "garage") return res.status(403).json({ message: "Only garages can import services" });
       if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
+      if (!validateAdminImportHeaders(req, res, rows, ["name"])) return;
       // Build set of existing service names for duplicate detection
       const existingServices = await storage.getGarageServicesByGarageId(biz.id);
       const knownServiceNames = new Set(existingServices.map(s => s.name.trim().toLowerCase()));
@@ -1228,12 +1279,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/import/support-services", ownerMiddleware, csvUpload.single("file"), async (req: any, res) => {
     try {
-      const biz = await storage.getBusinessByOwnerId(req.user.id);
       const supportCategories = ["insurance", "car_wash", "other"];
+      const biz = req.user?.role === "admin"
+        ? await getAdminImportBusiness(req, res, supportCategories)
+        : await storage.getBusinessByOwnerId(req.user.id);
+      if (req.user?.role === "admin" && !biz) return;
       if (!biz || !supportCategories.includes(biz.category)) return res.status(403).json({ message: "Only automotive support businesses can import services" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
+      if (!validateAdminImportHeaders(req, res, rows, ["name"])) return;
       // Build set of existing service names for duplicate detection
       const existingServices = await storage.getSupportServicesByBusinessId(biz.id);
       const knownServiceNames = new Set(existingServices.map(s => s.name.trim().toLowerCase()));
@@ -1342,6 +1397,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!d.startsWith("254") && d.length === 9) d = `254${d}`;
     return d;
   }
+
+  app.get("/api/admin/import/businesses", adminMiddleware, async (_req, res) => {
+    try {
+      const targets = await db.select({
+        id: businesses.id,
+        name: businesses.name,
+        category: businesses.category,
+        city: businesses.city,
+      }).from(businesses).where(eq(businesses.status, "approved")).orderBy(businesses.name);
+      res.json(targets);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
 
   app.post("/api/admin/import/businesses", adminMiddleware, csvUpload.single("file"), async (req: any, res) => {
     try {
