@@ -48,7 +48,7 @@ function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" |
   );
 }
 
-// ââ Share Buttons âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Share Buttons Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function ShareButtons({ businessName }: { businessName: string }) {
   const profileUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareText = `Check out ${businessName} on AutoDirectory Kenya: ${profileUrl}`;
@@ -107,11 +107,11 @@ function ShareButtons({ businessName }: { businessName: string }) {
   );
 }
 
-// ââ Safety Tips âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Safety Tips Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const SAFETY_TIPS = [
   "Verify the business registration before making any payment.",
   "For high-value transactions, meet in a safe, public location.",
-  "Use official channels â WhatsApp, phone, or the contact form on this page.",
+  "Use official channels Ã¢ÂÂ WhatsApp, phone, or the contact form on this page.",
   "Do not share sensitive personal or financial information upfront.",
   "Request a receipt or written agreement for any service rendered.",
 ];
@@ -137,7 +137,7 @@ function SafetyTips() {
   );
 }
 
-// ââ Report Business Form âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Report Business Form Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 function ReportBusinessForm({ businessId }: { businessId: string }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -238,7 +238,7 @@ function ReportBusinessForm({ businessId }: { businessId: string }) {
   );
 }
 
-// ââ Main Page âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂ Main Page Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 export default function BusinessProfile() {
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -331,6 +331,7 @@ export default function BusinessProfile() {
   const websiteHref = business.website
     ? (/^https?:\/\//i.test(business.website) ? business.website : `https://${business.website}`)
     : "";
+  const locationLabel = [business.address, business.city].filter(value => value?.trim()).join(", ") || "Location not provided";
 
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen pb-12">
@@ -353,12 +354,12 @@ export default function BusinessProfile() {
             <div className="flex-1 min-w-0">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Badge className="bg-white/10 text-white border-white/20">{categoryLabel}</Badge>
-                {business.featured && <Badge className="border-amber-300/40 bg-amber-400/20 text-amber-100">â Featured</Badge>}
+                {business.featured && <Badge className="border-amber-300/40 bg-amber-400/20 text-amber-100">Ã¢ÂÂ Featured</Badge>}
               </div>
               <h1 className="text-2xl md:text-3xl font-bold mb-1 truncate" data-testid="business-name">{business.name}</h1>
               <div className="flex items-center gap-1 text-red-200 mb-2">
                 <MapPin className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm">{business.address}, {business.city}</span>
+                <span className="text-sm">{locationLabel}</span>
               </div>
               {avgRating > 0 ? (
                 <div className="flex items-center gap-2">
@@ -376,6 +377,7 @@ export default function BusinessProfile() {
                 <Phone className="w-4 h-4" />
                 <span className="hidden sm:block">Call</span>
               </a>
+{business.whatsapp?.trim() && (
               <a
                 href={`https://wa.me/${business.whatsapp.replace(/\D/g, "")}`}
                 target="_blank"
@@ -386,6 +388,7 @@ export default function BusinessProfile() {
                 <MessageCircle className="w-4 h-4" />
                 <span>WhatsApp</span>
               </a>
+              )}
               {websiteHref && (
                 <a
                   href={websiteHref}
@@ -397,6 +400,11 @@ export default function BusinessProfile() {
                   <Globe className="w-4 h-4" />
                   <span>Website</span>
                 </a>
+              )}
+              {canManage && (
+                <Link href={user?.role === "admin" ? "/admin" : "/dashboard"} className="flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-md px-3 py-2 text-sm hover:bg-white/20 transition-colors">
+                  Manage profile
+                </Link>
               )}
             </div>
           </div>
@@ -411,7 +419,7 @@ export default function BusinessProfile() {
         <Card>
           <CardHeader><CardTitle className="text-base">About</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground leading-relaxed" data-testid="business-description">{business.description}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed" data-testid="business-description">{business.description?.trim() || "No description has been added yet."}</p>
             {business.carBrands && business.carBrands.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
@@ -443,7 +451,7 @@ export default function BusinessProfile() {
           </CardContent>
         </Card>
 
-        {/* Automotive Support â Support services */}
+        {/* Automotive Support Ã¢ÂÂ Support services */}
         {isSupport && (
           <div>
             <div className="flex items-center gap-2 mb-4">
@@ -473,7 +481,7 @@ export default function BusinessProfile() {
           </div>
         )}
 
-        {/* Car Dealer â Car listings */}
+        {/* Car Dealer Ã¢ÂÂ Car listings */}
         {isDealer && (
           <div>
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -500,7 +508,7 @@ export default function BusinessProfile() {
           </div>
         )}
 
-        {/* Garage â Services */}
+        {/* Garage Ã¢ÂÂ Services */}
         {isGarage && (
           <div>
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -550,11 +558,11 @@ export default function BusinessProfile() {
                       <div className="flex-1 min-w-0">
                         <Link href={"/parts/" + part.id} className="font-medium text-sm text-gray-900 hover:text-orange-600 dark:text-white">{part.partName}</Link>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {part.carBrand} {part.carModel} {part.year && `â¢ ${part.year}`}
+                          {part.carBrand} {part.carModel} {part.year && `Ã¢ÂÂ¢ ${part.year}`}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-1">
-                        {part.featured && <Badge className="bg-amber-100 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">â Featured</Badge>}
+                        {part.featured && <Badge className="bg-amber-100 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Ã¢ÂÂ Featured</Badge>}
                         <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">
                           {part.condition === "new" ? "New" : "Used"}
                         </Badge>
@@ -568,6 +576,7 @@ export default function BusinessProfile() {
                           <Phone className="w-3 h-3 mr-1" />Call
                         </Button>
                       </a>
+{business.whatsapp?.trim() && (
                       <a
                         href={`https://wa.me/${business.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm looking for: ${part.partName} for ${part.carBrand} ${part.carModel}`)}`}
                         target="_blank" rel="noopener noreferrer" className="flex-1"
@@ -576,6 +585,7 @@ export default function BusinessProfile() {
                           <MessageCircle className="w-3 h-3 mr-1" />WhatsApp
                         </Button>
                       </a>
+                      )}
                     </div>
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                       <BusinessGallery
@@ -693,6 +703,7 @@ export default function BusinessProfile() {
                   </div>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{business.phone}</span>
                 </a>
+                {business.whatsapp?.trim() && (
                 <a
                   href={`https://wa.me/${business.whatsapp.replace(/\D/g, "")}`}
                   target="_blank" rel="noopener noreferrer"
@@ -704,6 +715,7 @@ export default function BusinessProfile() {
                   </div>
                   <span className="text-sm font-medium text-green-700 dark:text-green-400">Chat on WhatsApp</span>
                 </a>
+                )}
                 <div className="flex items-center gap-3 p-3 rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   <div className="w-8 h-8 rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                     <MapPin className="w-4 h-4 text-gray-600 dark:text-gray-400" />

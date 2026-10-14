@@ -493,7 +493,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: biz.id,
           type: "business",
           name: biz.name,
-          subtitle: `${biz.category.replace(/_/g, " ")} · ${biz.city}`,
+          subtitle: `${biz.category.replace(/_/g, " ")} Â· ${biz.city}`,
           featured: !!biz.featured,
           status: biz.status,
         })),
@@ -501,28 +501,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: car.id,
           type: "car",
           name: car.title,
-          subtitle: `${car.brand} ${car.model} · ${car.dealerName}`,
+          subtitle: `${car.brand} ${car.model} Â· ${car.dealerName}`,
           featured: !!car.featured,
         })),
         ...garageServices.map((service) => ({
           id: service.id,
           type: "garage_service",
           name: service.name,
-          subtitle: `Garage service · ${service.garageName}`,
+          subtitle: `Garage service Â· ${service.garageName}`,
           featured: !!service.featured,
         })),
         ...sparePartGroups.flat().map((part) => ({
           id: part.id,
           type: "part",
           name: part.partName,
-          subtitle: `Spare part · ${businessNames.get(part.businessId) || "Business"}`,
+          subtitle: `Spare part Â· ${businessNames.get(part.businessId) || "Business"}`,
           featured: !!part.featured,
         })),
         ...supportServiceGroups.flat().map((service) => ({
           id: service.id,
           type: "support_service",
           name: service.name,
-          subtitle: `Automotive support · ${businessNames.get(service.businessId) || "Business"}`,
+          subtitle: `Automotive support Â· ${businessNames.get(service.businessId) || "Business"}`,
           featured: !!service.featured,
         })),
       ].sort((a, b) => Number(b.featured) - Number(a.featured) || a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
@@ -613,6 +613,32 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/admin/businesses/:id", adminMiddleware, async (req, res) => {
+    try {
+      const business = await storage.getBusinessById(req.params.id);
+      if (!business) return res.status(404).json({ message: "Business not found" });
+      const body = req.body || {};
+      const editableFields = new Set(["name", "description", "phone", "whatsapp", "address", "city", "subcategory", "website", "logo", "banner", "latitude", "longitude", "carBrands"]);
+      const submittedFields = Object.fromEntries(Object.entries(body).filter(([key]) => editableFields.has(key)));
+      if (typeof submittedFields.name === "string" && !submittedFields.name.trim()) return res.status(400).json({ message: "Business name cannot be empty" });
+      if (typeof submittedFields.phone === "string" && !submittedFields.phone.trim()) return res.status(400).json({ message: "Business phone cannot be empty" });
+      const parsed = insertBusinessSchema.partial().parse(submittedFields);
+      let ownerId: string | undefined;
+      if (typeof body.ownerId === "string" && body.ownerId.trim()) {
+        const owner = await storage.getUserById(body.ownerId.trim());
+        if (!owner || owner.role !== "owner") return res.status(400).json({ message: "Choose an existing business-owner account" });
+        const existingBusiness = await storage.getBusinessByOwnerId(owner.id);
+        if (existingBusiness && existingBusiness.id !== business.id) return res.status(409).json({ message: "This account already manages another business" });
+        ownerId = owner.id;
+      }
+      if (Object.keys(parsed).length === 0 && !ownerId) return res.json(business);
+      const updated = await storage.updateBusiness(business.id, { ...parsed, ...(ownerId ? { ownerId } : {}) } as any);
+      res.json(updated);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
     }
   });
 
@@ -1334,7 +1360,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // ─── Admin Export ─────────────────────────────────────────────────────────
+  // âââ Admin Export âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
   function toCSV(headers: string[], rows: (string | number | boolean | null | undefined)[][]): string {
     const escape = (v: any) => {
@@ -1389,7 +1415,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // ─── Admin Import ─────────────────────────────────────────────────────────
+  // âââ Admin Import âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
   function normalizeKeBusinessPhone(raw: string): string {
     let d = raw.replace(/\D/g, "");
@@ -1430,7 +1456,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const knownNormalizedNames = new Set(
         existingBizRecords.map((r) => (r.name || "").trim().replace(/\s+/g, " ").toLowerCase()).filter(Boolean)
       );
-      const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
+      const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[], created: [] as { id: string; name: string; city: string }[] };
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
@@ -1456,18 +1482,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             name: businessName,
             category,
             phone: row.phone || "",
-            whatsapp: row.whatsapp || row.phone || "",
-            address: row.address || "",
-            city: row.city || "",
-            description: (row.description ?? "").trim() || "Imported listing",
-            subcategory: row.subcategory || null,
-            carBrands: row.carBrands ? row.carBrands.split("|") : null,
+            whatsapp: (row.whatsapp ?? "").trim(),
+            address: (row.address ?? "").trim(),
+            city: (row.city ?? "").trim(),
+            description: (row.description ?? "").trim(),
+            subcategory: (row.subcategory ?? "").trim() || null,
+            carBrands: row.carBrands ? row.carBrands.split("|").map((brand: string) => brand.trim()).filter(Boolean) : null,
+            website: (row.website ?? "").trim() || null,
+            logo: (row.logo ?? "").trim() || null,
+            banner: (row.banner ?? "").trim() || null,
+            latitude: (row.latitude ?? "").trim() || null,
+            longitude: (row.longitude ?? "").trim() || null,
             premium: false,
           });
           const created = await storage.createBusiness(body);
           await storage.updateBusiness(created.id, { status: "approved" });
           knownNormalizedNames.add(normalizedName);
           results.imported++;
+          results.created.push({ id: created.id, name: created.name, city: created.city });
         } catch (e: any) {
           results.failed++;
           results.errors.push(`Row ${i + 2}: ${e.message}`);

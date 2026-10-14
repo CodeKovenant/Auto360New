@@ -8,6 +8,9 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,6 +46,20 @@ interface AdminImportBusiness {
   city: string;
 }
 
+interface AdminImportResult {
+  imported: number;
+  failed: number;
+  skipped: number;
+  errors: string[];
+  created?: { id: string; name: string; city: string }[];
+}
+
+interface AdminBusinessEditForm {
+  name: string; description: string; phone: string; whatsapp: string; address: string; city: string;
+  subcategory: string; website: string; logo: string; banner: string; latitude: string; longitude: string;
+  carBrands: string; ownerId: string;
+}
+
 type FeaturedItemType = "business" | "car" | "part" | "garage_service" | "support_service";
 type FeaturedItem = {
   id: string;
@@ -74,9 +91,9 @@ type AdminImportType = "businesses" | "cars" | "parts" | "services" | "support-s
 const ADMIN_IMPORT_CONFIG: Record<AdminImportType, { label: string; requiredColumns: string[]; optionalColumns: string[]; description: string }> = {
   businesses: {
     label: "Businesses",
-    requiredColumns: ["name", "phone", "whatsapp", "address", "city"],
-    optionalColumns: ["description", "subcategory", "carBrands"],
-    description: "Select a category for this batch; imported businesses are auto-approved and published immediately.",
+    requiredColumns: ["name", "phone"],
+    optionalColumns: ["whatsapp", "address", "city", "description", "subcategory", "carBrands", "website", "logo", "banner", "latitude", "longitude"],
+    description: "Each imported business gets a public profile. Complete missing details or assign an existing owner account in the Admin dashboard.",
   },
   cars: {
     label: "Cars",
@@ -132,7 +149,7 @@ function getCategoryLabel(cat: string) {
 }
 
 function formatDate(d: any) {
-  if (!d) return "—";
+  if (!d) return "â";
   return new Date(d).toLocaleDateString("en-KE", { year: "numeric", month: "short", day: "numeric" });
 }
 
@@ -140,10 +157,12 @@ function BusinessCard({
   biz,
   actions,
   defaultExpanded = false,
+  onEdit,
 }: {
   biz: EnrichedBusiness;
   actions: React.ReactNode;
   defaultExpanded?: boolean;
+  onEdit?: (biz: EnrichedBusiness) => void;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -183,6 +202,9 @@ function BusinessCard({
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            {onEdit && (
+              <Button size="sm" variant="outline" onClick={() => onEdit(biz)} data-testid={`button-edit-biz-${biz.id}`}>Edit profile</Button>
+            )}
             {actions}
             <Button
               size="sm"
@@ -214,12 +236,6 @@ function BusinessCard({
                   <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                     <MessageCircle className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
                     <span data-testid={`text-whatsapp-${biz.id}`}>{biz.whatsapp}</span>
-                  </div>
-                )}
-                {biz.email && (
-                  <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                    <Mail className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                    <span data-testid={`text-email-${biz.id}`}>{biz.email}</span>
                   </div>
                 )}
                 {biz.address && (
@@ -277,16 +293,6 @@ function BusinessCard({
                   {biz.website && (
                     <a href={biz.website} target="_blank" rel="noopener noreferrer" className="text-xs text-red-600 underline" data-testid={`link-website-${biz.id}`}>
                       Website
-                    </a>
-                  )}
-                  {biz.facebook && (
-                    <a href={biz.facebook} target="_blank" rel="noopener noreferrer" className="text-xs text-red-600 underline" data-testid={`link-facebook-${biz.id}`}>
-                      Facebook
-                    </a>
-                  )}
-                  {biz.instagram && (
-                    <a href={biz.instagram} target="_blank" rel="noopener noreferrer" className="text-xs text-red-600 underline" data-testid={`link-instagram-${biz.id}`}>
-                      Instagram
                     </a>
                   )}
                 </div>
@@ -446,15 +452,42 @@ export default function Admin() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  // ── Import / Export ──────────────────────────────────────────────────────
+  // ââ Import / Export ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importDragging, setImportDragging] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; failed: number; skipped: number; errors: string[] } | null>(null);
+  const [importResult, setImportResult] = useState<AdminImportResult | null>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [importType, setImportType] = useState<AdminImportType>("businesses");
   const [importBusinessCategory, setImportBusinessCategory] = useState<AdminBusinessImportCategory | "">("");
   const [importBusinessId, setImportBusinessId] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [editingBusiness, setEditingBusiness] = useState<EnrichedBusiness | null>(null);
+  const [businessEditForm, setBusinessEditForm] = useState<AdminBusinessEditForm | null>(null);
+
+  const saveBusinessProfileMutation = useMutation({
+    mutationFn: async ({ businessId, form }: { businessId: string; form: AdminBusinessEditForm }) => {
+      const payload: Record<string, unknown> = {
+        name: form.name.trim(), description: form.description.trim(), phone: form.phone.trim(), whatsapp: form.whatsapp.trim(),
+        address: form.address.trim(), city: form.city.trim(), subcategory: form.subcategory.trim() || null,
+        website: form.website.trim() || null, logo: form.logo.trim() || null, banner: form.banner.trim() || null,
+        latitude: form.latitude.trim() || null, longitude: form.longitude.trim() || null,
+        carBrands: form.carBrands.split(/[|,]/).map(brand => brand.trim()).filter(Boolean),
+      };
+      if ((payload.carBrands as string[]).length === 0) payload.carBrands = null;
+      if (form.ownerId) payload.ownerId = form.ownerId;
+      const response = await apiRequest("PUT", `/api/admin/businesses/${businessId}`, payload);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Business profile updated." });
+      setEditingBusiness(null);
+      setBusinessEditForm(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
 
   async function downloadExport(path: string, filename: string) {
     try {
@@ -477,7 +510,7 @@ export default function Admin() {
     try {
       let csv: Blob;
       if (importType === "businesses") {
-        csv = new Blob(["name,phone,whatsapp,address,city,description,subcategory,carBrands\nExample Motors,+254700000000,+254700000000,123 Example Road,Nairobi,A great dealership,,Toyota|Honda\n"], { type: "text/csv" });
+        csv = new Blob(["name,phone,whatsapp,address,city,description,subcategory,carBrands,website,logo,banner,latitude,longitude\nExample Motors,+254700000000,+254700000000,123 Example Road,Nairobi,A great dealership,,Toyota|Honda,,,,,\n"], { type: "text/csv" });
       } else {
         const token = getAuthToken();
         const res = await fetch("/api/import/template/" + importType, {
@@ -601,6 +634,18 @@ export default function Admin() {
   const importBusinessOptions = importBusinessCategories
     ? importBusinesses.filter(biz => importBusinessCategories.includes(biz.category))
     : [];
+  const linkedOwnerIds = new Set([...pending, ...approved, ...rejected].filter(biz => biz.id !== editingBusiness?.id).map(biz => biz.ownerId));
+  const availableOwnerAccounts = users.filter(account => account.role === "owner" && !linkedOwnerIds.has(account.id));
+
+  function startBusinessEdit(biz: EnrichedBusiness) {
+    setEditingBusiness(biz);
+    setBusinessEditForm({
+      name: biz.name || "", description: biz.description || "", phone: biz.phone || "", whatsapp: biz.whatsapp || "",
+      address: biz.address || "", city: biz.city || "", subcategory: biz.subcategory || "", website: biz.website || "",
+      logo: biz.logo || "", banner: biz.banner || "", latitude: String(biz.latitude ?? ""), longitude: String(biz.longitude ?? ""),
+      carBrands: (biz.carBrands || []).join(" | "), ownerId: "",
+    });
+  }
 
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen pb-10">
@@ -723,6 +768,7 @@ export default function Admin() {
                   <BusinessCard
                     key={biz.id}
                     biz={biz}
+                    onEdit={startBusinessEdit}
                     defaultExpanded={true}
                     actions={
                       <>
@@ -768,6 +814,7 @@ export default function Admin() {
                   <BusinessCard
                     key={biz.id}
                     biz={biz}
+                    onEdit={startBusinessEdit}
                     actions={
                       <>
                         <Button
@@ -800,7 +847,7 @@ export default function Admin() {
             )}
           </TabsContent>
 
-          {/* Featured catalog management — independent of paid Premium status */}
+          {/* Featured catalog management â independent of paid Premium status */}
           <TabsContent value="featured">
             {featuredItemsLoading ? (
               <div className="space-y-3">
@@ -883,6 +930,7 @@ export default function Admin() {
                   <BusinessCard
                     key={biz.id}
                     biz={biz}
+                    onEdit={startBusinessEdit}
                     actions={
                       <>
                         <Button
@@ -1099,7 +1147,7 @@ export default function Admin() {
                     <CardContent className="pt-4 pb-4 flex items-center gap-3">
                       <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
                       <p className="text-sm text-orange-800 dark:text-orange-300">
-                        <span className="font-semibold">{revenue.stats.expiringSoon} subscription{revenue.stats.expiringSoon > 1 ? "s" : ""}</span> expiring within 7 days — consider reaching out for renewal.
+                        <span className="font-semibold">{revenue.stats.expiringSoon} subscription{revenue.stats.expiringSoon > 1 ? "s" : ""}</span> expiring within 7 days â consider reaching out for renewal.
                       </p>
                     </CardContent>
                   </Card>
@@ -1130,7 +1178,7 @@ export default function Admin() {
                                 <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{sub.name}</p>
                                 <BadgeCheck className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />
                               </div>
-                              <p className="text-xs text-muted-foreground">{getCategoryLabel(sub.category)} · {sub.city}</p>
+                              <p className="text-xs text-muted-foreground">{getCategoryLabel(sub.category)} Â· {sub.city}</p>
                             </div>
                             <div className="text-right flex-shrink-0">
                               <p className="text-sm font-semibold text-green-600 dark:text-green-400">KSh {sub.amount.toLocaleString()}</p>
@@ -1171,7 +1219,7 @@ export default function Admin() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm text-gray-900 dark:text-white truncate">{sub.name}</p>
-                              <p className="text-xs text-muted-foreground">{getCategoryLabel(sub.category)} · {sub.city}</p>
+                              <p className="text-xs text-muted-foreground">{getCategoryLabel(sub.category)} Â· {sub.city}</p>
                             </div>
                             <div className="text-right flex-shrink-0">
                               <p className="text-sm font-medium text-gray-500 line-through">KSh {sub.amount.toLocaleString()}</p>
@@ -1317,7 +1365,7 @@ export default function Admin() {
                         className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm"
                         data-testid="admin-import-business-category"
                       >
-                        <option value="">Select a category…</option>
+                        <option value="">Select a categoryâ¦</option>
                         {ADMIN_BUSINESS_IMPORT_CATEGORIES.map(category => <option key={category.value} value={category.value}>{category.label}</option>)}
                       </select>
                       <p className="text-xs text-muted-foreground mt-1">The selected category will be applied to every business in the CSV.</p>
@@ -1333,8 +1381,8 @@ export default function Admin() {
                         className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm"
                         data-testid="admin-import-business"
                       >
-                        <option value="">Select a business…</option>
-                        {importBusinessOptions.map(biz => <option key={biz.id} value={biz.id}>{biz.name} — {biz.city}</option>)}
+                        <option value="">Select a businessâ¦</option>
+                        {importBusinessOptions.map(biz => <option key={biz.id} value={biz.id}>{biz.name} â {biz.city}</option>)}
                       </select>
                       {importBusinessOptions.length === 0 && <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">No approved business matches this data type.</p>}
                     </div>
@@ -1358,11 +1406,11 @@ export default function Admin() {
                   {importConfig.optionalColumns.length > 0 && (
                     <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">Optional: <span className="font-mono">{importConfig.optionalColumns.join(", ")}</span></p>
                   )}
-                  {importType === "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">The selected category applies to every row; any category column in the CSV is ignored. Imported businesses are auto-approved.</p>}
+                  {importType === "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">The selected category applies to every row; any category column in the CSV is ignored. Missing optional values stay blank; use Edit profile to add them or assign an existing owner account.</p>}
                   {importType !== "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">The selected business determines where these listings appear. Check the type and business before importing.</p>}
                 </div>
 
-                {/* Drop zone — stage the file first, then confirm the selected import type below. */}
+                {/* Drop zone â stage the file first, then confirm the selected import type below. */}
                 <div
                   className={"border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer " + (importDragging ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-900")}
                   onClick={() => !importLoading && fileInputRef.current?.click()}
@@ -1377,16 +1425,16 @@ export default function Admin() {
                 >
                   <FileUp className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                   {importLoading ? (
-                    <p className="text-sm text-muted-foreground">Importing…</p>
+                    <p className="text-sm text-muted-foreground">Importingâ¦</p>
                   ) : importFile ? (
                     <>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{importFile.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{(importFile.size / 1024).toFixed(1)} KB · click to change file</p>
+                      <p className="text-xs text-muted-foreground mt-1">{(importFile.size / 1024).toFixed(1)} KB Â· click to change file</p>
                     </>
                   ) : (
                     <>
                       <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Drop CSV file here or click to browse</p>
-                      <p className="text-xs text-muted-foreground mt-1">CSV files only · Max 5 MB</p>
+                      <p className="text-xs text-muted-foreground mt-1">CSV files only Â· Max 5 MB</p>
                     </>
                   )}
                   <input
@@ -1410,7 +1458,7 @@ export default function Admin() {
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                     data-testid="admin-import-submit"
                   >
-                    {importLoading ? "Importing…" : "Import " + importConfig.label}
+                    {importLoading ? "Importingâ¦" : "Import " + importConfig.label}
                   </Button>
                 </div>
 
@@ -1436,13 +1484,26 @@ export default function Admin() {
                         )}
                       </p>
                     </div>
-                    {importType !== "businesses" && importResult.errors.length > 0 && (
+                    {importResult.errors.length > 0 && (
                       <ul className="space-y-1 mt-2">
                         {importResult.errors.slice(0, 10).map((err, i) => (
                           <li key={i} className="text-xs text-orange-700 dark:text-orange-300">{err}</li>
                         ))}
-                        {importResult.errors.length > 10 && <li className="text-xs text-muted-foreground">…and {importResult.errors.length - 10} more errors</li>}
+                        {importResult.errors.length > 10 && <li className="text-xs text-muted-foreground">â¦and {importResult.errors.length - 10} more errors</li>}
                       </ul>
+                    )}
+                    {importType === "businesses" && (importResult.created?.length ?? 0) > 0 && (
+                      <div className="mt-3 space-y-1">
+                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Open the new business profiles:</p>
+                        {importResult.created!.slice(0, 20).map(profile => (
+                          <div key={profile.id}>
+                            <Link href={`/business/${profile.id}`} className="text-xs text-blue-700 dark:text-blue-300 underline">
+                              {profile.name}{profile.city ? ` — ${profile.city}` : ""} <ExternalLink className="inline w-3 h-3" />
+                            </Link>
+                          </div>
+                        ))}
+                        {importResult.created!.length > 20 && <p className="text-xs text-muted-foreground">And {importResult.created!.length - 20} more profiles are available in the Businesses dashboard.</p>}
+                      </div>
                     )}
                     {importResult.imported > 0 && (
                       <div className="flex justify-end mt-3">
@@ -1455,6 +1516,50 @@ export default function Admin() {
             </Card>
           </TabsContent>
         </Tabs>
+        <Dialog open={!!editingBusiness} onOpenChange={open => { if (!open) { setEditingBusiness(null); setBusinessEditForm(null); } }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Complete business profile</DialogTitle></DialogHeader>
+            {businessEditForm && editingBusiness && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {([
+                    { label: "Business name", field: "name" }, { label: "Phone", field: "phone" },
+                    { label: "WhatsApp", field: "whatsapp" }, { label: "Address", field: "address" },
+                    { label: "City", field: "city" }, { label: "Subcategory", field: "subcategory" },
+                    { label: "Website", field: "website" }, { label: "Logo URL", field: "logo" },
+                    { label: "Banner URL", field: "banner" }, { label: "Latitude", field: "latitude" },
+                    { label: "Longitude", field: "longitude" },
+                  ] as const).map(({ label, field }) => (
+                    <label key={field} className="space-y-1">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</span>
+                      <Input type={field === "latitude" || field === "longitude" ? "number" : "text"} step={field === "latitude" || field === "longitude" ? "any" : undefined} value={businessEditForm[field]} onChange={event => setBusinessEditForm(form => form ? { ...form, [field]: event.target.value } : form)} />
+                    </label>
+                  ))}
+                  <label className="space-y-1 sm:col-span-2">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Description</span>
+                    <Textarea rows={3} value={businessEditForm.description} onChange={event => setBusinessEditForm(form => form ? { ...form, description: event.target.value } : form)} />
+                  </label>
+                  <label className="space-y-1 sm:col-span-2">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Car brands (separate with |)</span>
+                    <Input value={businessEditForm.carBrands} onChange={event => setBusinessEditForm(form => form ? { ...form, carBrands: event.target.value } : form)} />
+                  </label>
+                  <label className="space-y-1 sm:col-span-2">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Assign to an existing business-owner account</span>
+                    <select value={businessEditForm.ownerId} onChange={event => setBusinessEditForm(form => form ? { ...form, ownerId: event.target.value } : form)} className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm">
+                      <option value="">Keep current account ({editingBusiness.ownerName || "admin-managed"})</option>
+                      {availableOwnerAccounts.map(account => <option key={account.id} value={account.id}>{account.name} ({account.email})</option>)}
+                    </select>
+                    <p className="text-xs text-muted-foreground">Only owner accounts that do not already manage another business are available.</p>
+                  </label>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => { setEditingBusiness(null); setBusinessEditForm(null); }}>Cancel</Button>
+                  <Button onClick={() => businessEditForm && editingBusiness && saveBusinessProfileMutation.mutate({ businessId: editingBusiness.id, form: businessEditForm })} disabled={saveBusinessProfileMutation.isPending || !businessEditForm.name.trim() || !businessEditForm.phone.trim()} className="bg-red-600 text-white">{saveBusinessProfileMutation.isPending ? "Saving..." : "Save profile"}</Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

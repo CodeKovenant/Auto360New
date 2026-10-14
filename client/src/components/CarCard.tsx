@@ -48,19 +48,19 @@ export default function CarCard({ car }: CarCardProps) {
           {/* Bottom gradient */}
           <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
 
-          {/* Year — top left */}
+          {/* Year â top left */}
           <span className="absolute top-3 left-3 inline-flex items-center bg-orange-500 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow">
             {car.year}
           </span>
 
-          {/* Featured — top right */}
+          {/* Featured â top right */}
           {car.featured && (
             <span className="absolute top-3 right-3 inline-flex items-center bg-yellow-400 text-yellow-900 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow">
-              ★ Featured
+              â Featured
             </span>
           )}
 
-          {/* Condition + transmission — over gradient */}
+          {/* Condition + transmission â over gradient */}
           <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
             {car.condition && (
               <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full shadow ${
@@ -138,6 +138,7 @@ export default function CarCard({ car }: CarCardProps) {
           >
             View Details
           </Link>
+{car.dealerWhatsapp?.trim() && (
           <a
             href={`https://wa.me/${car.dealerWhatsapp?.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm interested in the ${car.title} listed on Auto360.`)}`}
             target="_blank"
@@ -148,6 +149,7 @@ export default function CarCard({ car }: CarCardProps) {
               <MessageCircle className="w-4 h-4" />
             </button>
           </a>
+          )}
         </div>
       </div>
     </div>
