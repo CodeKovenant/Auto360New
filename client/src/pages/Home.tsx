@@ -186,7 +186,7 @@ export default function Home() {
     for (const block of HOME_SPOTLIGHT_SECTIONS) {
       const cat = block.category;
       const fromSections = homeSections?.[cat] ?? [];
-      const premiumInCat = premiumBusinesses?.filter((b) => b.category === cat) ?? [];
+      const premiumInCat = premiumBusinesses?.filter((b) => b.category === cat && b.featured) ?? [];
       const seen = new Set<string>();
       const merged: BusinessRated[] = [];
       const featuredInCat = fromSections.filter((b) => b.featured);
@@ -204,13 +204,6 @@ export default function Home() {
           merged.push(b);
         }
       }
-      for (const b of fromSections) {
-        if (merged.length >= SPOTLIGHT_LIMIT) break;
-        if (!seen.has(b.id)) {
-          seen.add(b.id);
-          merged.push(b);
-        }
-      }
       out[cat] = merged;
     }
     return out;
@@ -220,6 +213,7 @@ export default function Home() {
     const map = new Map<string, BusinessRated[]>();
     if (!premiumBusinesses) return map;
     for (const b of premiumBusinesses) {
+      if (!b.featured) continue;
       const cur = map.get(b.category) ?? [];
       cur.push(b);
       map.set(b.category, cur);
@@ -441,7 +435,7 @@ export default function Home() {
       </section>
 
       {/* ── 2. PREMIUM BUSINESSES ── */}
-      {premiumBusinesses && premiumBusinesses.length > 0 && (
+      {premiumBusinesses?.some((business) => business.featured) && (
         <section className="py-14 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-950/30 dark:to-yellow-950/30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">

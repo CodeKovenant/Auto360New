@@ -19,14 +19,14 @@ import BusinessGallery from "@/components/BusinessGallery";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Business, Message, Review, SparePart, Car as CarType, GarageService, SupportService } from "@shared/schema";
+import type { Business, Message, Review, SparePart, Car as CarType, GarageService, SupportService, FeatureRequest } from "@shared/schema";
 import { BUSINESS_CATEGORIES, FUEL_TYPES, TRANSMISSIONS, CAR_CONDITIONS, PART_CONDITIONS, CAR_BRANDS } from "@shared/schema";
 
-type OwnerDashboardBusiness = Omit<Business, "featured">;
-type OwnerDashboardPart = Omit<SparePart, "featured">;
-type OwnerDashboardCar = Omit<CarType, "featured">;
-type OwnerDashboardGarageService = Omit<GarageService, "featured">;
-type OwnerDashboardSupportService = Omit<SupportService, "featured">;
+type OwnerDashboardBusiness = Business;
+type OwnerDashboardPart = SparePart;
+type OwnerDashboardCar = CarType;
+type OwnerDashboardGarageService = GarageService;
+type OwnerDashboardSupportService = SupportService;
 
 interface DashboardData {
   business: OwnerDashboardBusiness;
@@ -36,6 +36,7 @@ interface DashboardData {
   cars: OwnerDashboardCar[];
   garageServices: OwnerDashboardGarageService[];
   supportServices: OwnerDashboardSupportService[];
+  featureRequests: FeatureRequest[];
 }
 
 function statusBadge(status: string) {
@@ -53,6 +54,17 @@ export default function Dashboard() {
   if (!user || user.role !== "owner") { navigate("/login"); return null; }
 
   const { data, isLoading, isError, error, isFetching, refetch } = useQuery<DashboardData>({ queryKey: ["/api/dashboard"] });
+  const featureRequestMutation = useMutation({
+    mutationFn: async ({ itemType, itemId }: { itemType: FeatureRequest["itemType"]; itemId: string }) => {
+      const response = await apiRequest("POST", "/api/feature-requests", { itemType, itemId });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Feature request sent", description: "An admin will review your request." });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    },
+    onError: (e: Error) => toast({ title: "Couldn't request featuring", description: e.message, variant: "destructive" }),
+  });
 
   const { data: emailStatus } = useQuery<{ verified: boolean; email: string }>({
     queryKey: ["/api/me/email-verified"],
@@ -231,6 +243,28 @@ export default function Dashboard() {
   );
 
   const { business, messages, reviews, spareParts, cars, garageServices, supportServices } = data;
+  const featureRequests = data.featureRequests || [];
+  const featureRequestControl = (itemType: FeatureRequest["itemType"], itemId: string, featured: boolean, suspended: boolean) => {
+    const latestRequest = featureRequests.find(request => request.itemType === itemType && request.itemId === itemId);
+    const pending = latestRequest?.status === "pending";
+    if (featured) return <Badge className="bg-amber-100 text-amber-800">Featured by admin</Badge>;
+    if (pending) return <Badge variant="secondary">Feature request pending</Badge>;
+    if (business.status !== "approved" || suspended || business.suspended) return null;
+    return (
+      <div className="flex items-center gap-2">
+        {latestRequest?.status === "rejected" && <Badge variant="destructive">Request rejected</Badge>}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => featureRequestMutation.mutate({ itemType, itemId })}
+          disabled={featureRequestMutation.isPending}
+          data-testid={`button-request-feature-${itemType}-${itemId}`}
+        >
+          <Star className="w-3.5 h-3.5 mr-1" />{latestRequest?.status === "rejected" ? "Request again" : "Request featuring"}
+        </Button>
+      </div>
+    );
+  };
   const isDealer = business.category === "car_dealer";
   const isGarage = business.category === "garage";
   const isSupportBiz = ["insurance", "car_wash", "other"].includes(business.category);
@@ -243,7 +277,9 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold text-gray-900 dark:text-white" data-testid="dashboard-business-name">{business.name}</h1>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               {statusBadge(business.status)}
+              {business.suspended && <Badge variant="destructive">Suspended</Badge>}
               <span className="text-sm text-muted-foreground">{BUSINESS_CATEGORIES.find(c => c.value === business.category)?.label}</span>
+              {featureRequestControl("business", business.id, business.featured, business.suspended)}
             </div>
           </div>
           <Button variant="outline" onClick={startEdit} data-testid="button-edit-business">
@@ -572,6 +608,7 @@ export default function Dashboard() {
                                 <p className="text-base font-bold text-red-600 dark:text-red-400 mt-0.5">KSh {Number(car.price).toLocaleString()}</p>
                               </div>
                               <div className="flex gap-2">
+                                {featureRequestControl("car", car.id, !!car.featured, car.suspended)}
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -680,6 +717,7 @@ export default function Dashboard() {
                               {svc.price && <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-0.5">From {svc.price}</p>}
                             </div>
                             <div className="flex gap-2">
+                              {featureRequestControl("garage_service", svc.id, svc.featured, svc.suspended)}
                               <Button size="sm" variant="outline" onClick={() => setEditingService(svc)} data-testid={`button-edit-service-${svc.id}`}><Edit className="w-3.5 h-3.5" /></Button>
                               <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deleteServiceMutation.mutate(svc.id)} data-testid={`button-delete-service-${svc.id}`}>Remove</Button>
                             </div>
@@ -824,6 +862,7 @@ export default function Dashboard() {
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">{part.condition === "new" ? "New" : "Used"}</Badge>
                                   {part.price && <span className="text-sm font-semibold text-orange-600">{part.price}</span>}
+                                  {featureRequestControl("part", part.id, part.featured, part.suspended)}
                                   <Button size="sm" variant="outline" onClick={() => setEditingPart(part)} data-testid={`button-edit-part-${part.id}`}><Edit className="w-3.5 h-3.5" /></Button>
                                   <Button size="sm" variant="ghost" className="text-red-500 text-xs h-7" onClick={() => deletePartMutation.mutate(part.id)} data-testid={`button-delete-part-${part.id}`}>Remove</Button>
                                 </div>
@@ -910,9 +949,10 @@ export default function Dashboard() {
                             <div>
                               <p className="font-semibold text-gray-900 dark:text-white">{svc.name}</p>
                               {svc.description && <p className="text-sm text-muted-foreground mt-0.5">{svc.description}</p>}
-                              {svc.price && <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-0.5">From {svc.price}</p>}
+                              {svc.startingPrice && <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-0.5">From {svc.startingPrice}</p>}
                             </div>
                             <div className="flex gap-2">
+                              {featureRequestControl("support_service", svc.id, svc.featured, svc.suspended)}
                               <Button size="sm" variant="outline" onClick={() => setEditingSupportService(svc)} data-testid={`button-edit-support-service-${svc.id}`}><Edit className="w-3.5 h-3.5" /></Button>
                               <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deleteSupportServiceMutation.mutate(svc.id)} data-testid={`button-delete-support-service-${svc.id}`}>Remove</Button>
                             </div>

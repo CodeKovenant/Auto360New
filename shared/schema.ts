@@ -208,6 +208,7 @@ export type BusinessReport = typeof businessReports.$inferSelect;
 export type InsertBusinessReport = z.infer<typeof insertBusinessReportSchema>;
 export type FeatureRequest = typeof featureRequests.$inferSelect;
 export type InsertFeatureRequest = z.infer<typeof insertFeatureRequestSchema>;
+export type FeatureRequestItemType = typeof featureRequestItemTypeEnum.enumValues[number];
 export type GalleryImage = typeof galleryImages.$inferSelect;
 export type InsertGalleryImage = z.infer<typeof insertGalleryImageSchema>;
 

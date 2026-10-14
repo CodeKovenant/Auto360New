@@ -3,7 +3,7 @@ import { useLocation, Link } from "wouter";
 import {
   Shield, Building2, CheckCircle, XCircle, Trash2, Users, Star,
   Clock, Flag, Phone, MessageCircle, MapPin, Mail, User, ExternalLink,
-  Calendar, ChevronDown, ChevronUp, BadgeCheck, TrendingUp, DollarSign, AlertCircle,
+  Calendar, ChevronDown, ChevronUp, BadgeCheck, TrendingUp, DollarSign, AlertCircle, Pause, Play, Pencil,
   Download, Upload, FileText, FileUp
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +68,20 @@ type FeaturedItem = {
   subtitle: string;
   featured: boolean;
   status?: "pending" | "approved";
+  suspended: boolean;
+  description?: string | null;
+  price?: string | null;
+};
+
+type AdminFeatureRequest = {
+  id: string;
+  ownerId: string;
+  ownerName: string | null;
+  ownerEmail: string | null;
+  itemType: FeaturedItemType;
+  itemId: string;
+  itemName: string;
+  createdAt: string;
 };
 
 const FEATURED_ITEM_GROUPS: { type: FeaturedItemType; title: string }[] = [
@@ -330,6 +344,9 @@ export default function Admin() {
   const { data: featuredItems, isLoading: featuredItemsLoading } = useQuery<FeaturedItem[]>({
     queryKey: ["/api/admin/featured"],
   });
+  const { data: featureRequests = [] } = useQuery<AdminFeatureRequest[]>({
+    queryKey: ["/api/admin/feature-requests"],
+  });
 
   const { data: revenue } = useQuery<{
     stats: {
@@ -429,6 +446,7 @@ export default function Admin() {
     onSuccess: (_, { item, featured }) => {
       toast({ title: featured ? "Featured status enabled." : "Featured status removed." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
       if (item.type === "business") {
         queryClient.invalidateQueries({
@@ -451,6 +469,78 @@ export default function Admin() {
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
+
+  const reviewFeatureRequestMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
+      await apiRequest("PUT", `/api/admin/feature-requests/${id}`, { status });
+    },
+    onSuccess: (_, { status }) => {
+      toast({ title: status === "approved" ? "Feature request approved." : "Feature request rejected." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/feature-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => typeof query.queryKey[0] === "string" && query.queryKey[0].startsWith("/api/businesses"),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cars/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/home/featured-offers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/services/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/support-services"] });
+    },
+    onError: (e: Error) => toast({ title: "Feature request update failed", description: e.message, variant: "destructive" }),
+  });
+
+  const manageCatalogMutation = useMutation({
+    mutationFn: async ({ item, action, fields }: { item: FeaturedItem; action: "delete" | "suspension" | "edit"; fields?: Record<string, unknown> }) => {
+      if (action === "delete") await apiRequest("DELETE", `/api/admin/catalog/${item.type}/${item.id}`);
+      else if (action === "suspension") await apiRequest("PUT", `/api/admin/catalog/${item.type}/${item.id}/suspension`, fields);
+      else await apiRequest("PUT", `/api/admin/catalog/${item.type}/${item.id}`, fields);
+    },
+    onSuccess: () => {
+      toast({ title: "Catalog item updated." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cars"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/parts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/services"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/support-services"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/home/featured-offers"] });
+    },
+    onError: (e: Error) => toast({ title: "Catalog update failed", description: e.message, variant: "destructive" }),
+  });
+
+  const suspendBusinessMutation = useMutation({
+    mutationFn: async ({ id, suspended }: { id: string; suspended: boolean }) => {
+      await apiRequest("PUT", `/api/admin/businesses/${id}/suspension`, { suspended });
+    },
+    onSuccess: () => {
+      toast({ title: "Business status updated." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
+      queryClient.invalidateQueries({
+        predicate: (query) => typeof query.queryKey[0] === "string" && query.queryKey[0].startsWith("/api/businesses"),
+      });
+    },
+    onError: (e: Error) => toast({ title: "Business update failed", description: e.message, variant: "destructive" }),
+  });
+
+  const editCatalogItem = (item: FeaturedItem) => {
+    const nameKey = item.type === "car" ? "title" : item.type === "part" ? "partName" : "name";
+    const name = window.prompt("Item name", item.name);
+    if (name === null) return;
+    const description = window.prompt("Description", item.description || "");
+    if (description === null) return;
+    const priceKey = item.type === "support_service" ? "startingPrice" : "price";
+    const price = window.prompt("Price (leave blank if not applicable)", item.price || "");
+    if (price === null) return;
+    manageCatalogMutation.mutate({ item, action: "edit", fields: { [nameKey]: name, description, [priceKey]: price } });
+  };
 
   // ââ Import / Export ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -731,7 +821,7 @@ export default function Admin() {
               Approved ({stats.approved})
             </TabsTrigger>
             <TabsTrigger value="featured" data-testid="admin-tab-featured">
-              Featured
+              Featured {featureRequests.length > 0 && <Badge className="ml-1 bg-red-600 text-white">{featureRequests.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="rejected" data-testid="admin-tab-rejected">
               Rejected ({stats.rejected})
@@ -831,6 +921,16 @@ export default function Admin() {
                         </Button>
                         <Button
                           size="sm"
+                          variant="outline"
+                          onClick={() => suspendBusinessMutation.mutate({ id: biz.id, suspended: !biz.suspended })}
+                          disabled={suspendBusinessMutation.isPending}
+                          title={biz.suspended ? "Restore business" : "Suspend business"}
+                        >
+                          {biz.suspended ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                          <span className="ml-1">{biz.suspended ? "Resume" : "Suspend"}</span>
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="ghost"
                           className="text-red-500 hover:text-red-600 hover:bg-red-50"
                           onClick={() => deleteBizMutation.mutate(biz.id)}
@@ -855,6 +955,48 @@ export default function Admin() {
               </div>
             ) : (
               <div className="space-y-7">
+                <section className="space-y-3" data-testid="admin-feature-requests">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="font-semibold text-gray-900 dark:text-white">Feature requests</h2>
+                    <Badge variant="secondary">{featureRequests.length} pending</Badge>
+                  </div>
+                  {featureRequests.length === 0 ? (
+                    <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No feature requests awaiting review.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {featureRequests.map(request => (
+                        <Card key={request.id}>
+                          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{request.itemName}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {request.ownerName || request.ownerEmail || "Business owner"} · {request.itemType.replace(/_/g, " ")} · {new Date(request.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => reviewFeatureRequestMutation.mutate({ id: request.id, status: "rejected" })}
+                                disabled={reviewFeatureRequestMutation.isPending}
+                              >
+                                <XCircle className="mr-1 h-4 w-4" />Reject
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="bg-green-600 text-white hover:bg-green-700"
+                                onClick={() => reviewFeatureRequestMutation.mutate({ id: request.id, status: "approved" })}
+                                disabled={reviewFeatureRequestMutation.isPending}
+                              >
+                                <CheckCircle className="mr-1 h-4 w-4" />Approve
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </section>
                 <p className="text-sm text-muted-foreground">
                   Only approved businesses with a ready public profile can be featured. Featured status does not change paid Premium status.
                 </p>
@@ -878,6 +1020,7 @@ export default function Admin() {
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
                                     <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{item.name}</p>
+                                    {item.suspended && <Badge variant="destructive">Suspended</Badge>}
                                   </div>
                                   <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
                                 </div>
@@ -892,13 +1035,41 @@ export default function Admin() {
                                     variant={item.featured ? "default" : "outline"}
                                     className={item.featured ? "bg-amber-500 text-white hover:bg-amber-600" : ""}
                                     onClick={() => toggleFeaturedMutation.mutate({ item, featured: !item.featured })}
-                                    disabled={toggleFeaturedMutation.isPending}
+                                    disabled={toggleFeaturedMutation.isPending || (item.suspended && !item.featured)}
                                     aria-pressed={item.featured}
                                     data-testid={`button-toggle-featured-${item.type}-${item.id}`}
                                   >
                                     <Star className={`mr-1 h-4 w-4 ${item.featured ? "fill-current" : ""}`} />
                                     {item.featured ? "Featured" : "Set featured"}
                                   </Button>
+                                  {item.type !== "business" && (
+                                    <>
+                                      <Button size="sm" variant="outline" onClick={() => editCatalogItem(item)} disabled={manageCatalogMutation.isPending} title="Edit item">
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => manageCatalogMutation.mutate({ item, action: "suspension", fields: { suspended: !item.suspended } })}
+                                        disabled={manageCatalogMutation.isPending}
+                                      >
+                                        {item.suspended ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-red-600"
+                                        onClick={() => {
+                                          if (window.confirm(`Delete ${item.name}? This cannot be undone.`)) {
+                                            manageCatalogMutation.mutate({ item, action: "delete" });
+                                          }
+                                        }}
+                                        disabled={manageCatalogMutation.isPending}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  )}
                                 </div>
                               </CardContent>
                             </Card>

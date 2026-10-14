@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, ilike, and, or, sql, gte, lte, desc, inArray, isNull, getTableColumns } from "drizzle-orm";
+import { eq, ilike, and, or, sql, gte, lte, desc, inArray, isNull } from "drizzle-orm";
 import {
   users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports, galleryImages,
   type User, type InsertUser,
@@ -20,12 +20,6 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL,
     ? { rejectUnauthorized: false }
     : false, });
 export const db = drizzle(pool);
-
-function ownerColumnsWithoutFeatured<T extends { featured: unknown }>(columns: T): Omit<T, "featured"> {
-  const { featured, ...ownerColumns } = columns;
-  void featured;
-  return ownerColumns;
-}
 
 let persistentUploadsTableReady: Promise<void> | null = null;
 
@@ -212,7 +206,7 @@ export interface IStorage {
   deleteCar(id: string): Promise<void>;
 
   // Garage Services
-  getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
+  getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string; includeSuspended?: boolean }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
   getFeaturedGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
   getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
   getGarageServiceById(id: string): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null }) | undefined>;
@@ -448,13 +442,22 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(businesses).where(eq(businesses.status, "rejected")).orderBy(businesses.createdAt);
   }
 
-  async getSparePartsByBusinessId(businessId: string) {
-    return db.select().from(spareParts).where(eq(spareParts.businessId, businessId)).orderBy(desc(spareParts.featured), desc(spareParts.createdAt));
+  async getSparePartsByBusinessId(businessId: string, includeSuspended = false) {
+    const [business] = await db.select({ id: businesses.id }).from(businesses).where(and(
+      eq(businesses.id, businessId),
+      eq(businesses.status, "approved"),
+      eq(businesses.category, "spare_parts"),
+      ...(includeSuspended ? [] : [eq(businesses.suspended, false)]),
+    ));
+    if (!business) return [];
+    const conditions = [eq(spareParts.businessId, businessId)];
+    if (!includeSuspended) conditions.push(eq(spareParts.suspended, false));
+    return db.select().from(spareParts).where(and(...conditions)).orderBy(desc(spareParts.featured), desc(spareParts.createdAt));
   }
 
   async getOwnerDashboardSparePartsByBusinessId(businessId: string) {
     return db
-      .select(ownerColumnsWithoutFeatured(getTableColumns(spareParts)))
+      .select()
       .from(spareParts)
       .where(eq(spareParts.businessId, businessId))
       .orderBy(desc(spareParts.createdAt));
@@ -474,6 +477,7 @@ export class DatabaseStorage implements IStorage {
         description: spareParts.description,
         image: spareParts.image,
         featured: spareParts.featured,
+        suspended: spareParts.suspended,
         createdAt: spareParts.createdAt,
         businessName: businesses.name,
         businessCity: businesses.city,
@@ -485,7 +489,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(spareParts)
       .innerJoin(businesses, eq(spareParts.businessId, businesses.id))
-      .where(and(eq(spareParts.id, id), eq(businesses.status, "approved"), eq(businesses.category, "spare_parts")));
+      .where(and(eq(spareParts.id, id), eq(spareParts.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "spare_parts")));
     return part;
   }
 
@@ -503,6 +507,7 @@ export class DatabaseStorage implements IStorage {
         description: spareParts.description,
         image: spareParts.image,
         featured: spareParts.featured,
+        suspended: spareParts.suspended,
         createdAt: spareParts.createdAt,
         businessName: businesses.name,
         businessCity: businesses.city,
@@ -510,7 +515,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(spareParts)
       .innerJoin(businesses, eq(spareParts.businessId, businesses.id))
-      .where(and(eq(businesses.status, "approved"), eq(businesses.category, "spare_parts"), eq(spareParts.featured, true)))
+      .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "spare_parts"), eq(spareParts.suspended, false), eq(spareParts.featured, true)))
       .orderBy(desc(spareParts.createdAt))
       .limit(12);
   }
@@ -566,7 +571,7 @@ export class DatabaseStorage implements IStorage {
     return { ...car, dealerName: dealer?.name || "Unknown", dealerWhatsapp: dealer?.whatsapp || "", dealerLogo: dealer?.logo || null };
   }
 
-  async getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string }) {
+  async getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string; includeSuspended?: boolean }) {
     const conditions: any[] = [];
     if (filters?.brand) conditions.push(ilike(cars.brand, `%${filters.brand}%`));
     if (filters?.location) conditions.push(ilike(cars.location, `%${filters.location}%`));
@@ -576,6 +581,7 @@ export class DatabaseStorage implements IStorage {
     if (filters?.minYear) conditions.push(gte(cars.year, filters.minYear));
     if (filters?.maxYear) conditions.push(lte(cars.year, filters.maxYear));
     if (filters?.condition) conditions.push(eq(cars.condition, filters.condition as any));
+    if (!filters?.includeSuspended) conditions.push(eq(cars.suspended, false));
     if (filters?.q) {
       conditions.push(
         or(
@@ -588,7 +594,9 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Only show cars from approved dealers
-    const approvedDealers = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.category, "car_dealer")));
+    const dealerConditions = [eq(businesses.status, "approved"), eq(businesses.category, "car_dealer")];
+    if (!filters?.includeSuspended) dealerConditions.push(eq(businesses.suspended, false));
+    const approvedDealers = await db.select({ id: businesses.id }).from(businesses).where(and(...dealerConditions));
     const dealerIds = approvedDealers.map(d => d.id);
     if (dealerIds.length === 0) return [];
 
@@ -601,29 +609,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFeaturedCars() {
-    const approvedDealers = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.category, "car_dealer")));
+    const approvedDealers = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "car_dealer")));
     const dealerIds = approvedDealers.map(d => d.id);
     if (dealerIds.length === 0) return [];
-    const carList = await db.select().from(cars).where(eq(cars.featured, true)).orderBy(desc(cars.createdAt)).limit(6);
+    const carList = await db.select().from(cars).where(and(eq(cars.featured, true), eq(cars.suspended, false))).orderBy(desc(cars.createdAt)).limit(6);
     const filtered = carList.filter(c => dealerIds.includes(c.dealerId));
     return Promise.all(filtered.map(c => this.enrichCar(c)));
   }
 
   async getCarById(id: string) {
-    const [car] = await db.select().from(cars).where(eq(cars.id, id));
+    const [car] = await db.select().from(cars).where(and(eq(cars.id, id), eq(cars.suspended, false)));
     if (!car) return undefined;
+    const [dealer] = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.id, car.dealerId), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+    if (!dealer) return undefined;
     return this.enrichCar(car);
   }
 
   async getCarsByDealerId(dealerId: string) {
     return db.select().from(cars)
-      .where(eq(cars.dealerId, dealerId))
+      .where(and(eq(cars.dealerId, dealerId), eq(cars.suspended, false)))
       .orderBy(desc(sql`CASE WHEN ${cars.featured} IS TRUE THEN 1 ELSE 0 END`), desc(cars.createdAt));
   }
 
   async getOwnerDashboardCarsByDealerId(dealerId: string) {
     return db
-      .select(ownerColumnsWithoutFeatured(getTableColumns(cars)))
+      .select()
       .from(cars)
       .where(eq(cars.dealerId, dealerId))
       .orderBy(desc(cars.createdAt));
@@ -649,19 +659,22 @@ export class DatabaseStorage implements IStorage {
     return { ...svc, garageName: garage?.name || "Unknown", garageWhatsapp: garage?.whatsapp || "", garageCity: garage?.city || "", garageLogo: garage?.logo || null };
   }
 
-  async getGarageServices(filters?: { q?: string; location?: string; garageId?: string }) {
+  async getGarageServices(filters?: { q?: string; location?: string; garageId?: string; includeSuspended?: boolean }) {
     const conditions: any[] = [];
     if (filters?.garageId) conditions.push(eq(garageServices.garageId, filters.garageId));
     if (filters?.q) {
       conditions.push(or(ilike(garageServices.name, `%${filters.q}%`), ilike(garageServices.description, `%${filters.q}%`))!);
     }
 
-    const approvedGarages = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.category, "garage")));
+    const garageConditions = [eq(businesses.status, "approved"), eq(businesses.category, "garage")];
+    if (!filters?.includeSuspended) garageConditions.push(eq(businesses.suspended, false));
+    const approvedGarages = await db.select({ id: businesses.id }).from(businesses).where(and(...garageConditions));
     const garageIds = approvedGarages.map(g => g.id);
     if (garageIds.length === 0) return [];
 
+    if (!filters?.includeSuspended) conditions.push(eq(garageServices.suspended, false));
     const svcList = await db.select().from(garageServices)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .where(and(...conditions))
       .orderBy(desc(garageServices.featured), desc(garageServices.createdAt));
 
     let filtered = svcList.filter(s => garageIds.includes(s.garageId));
@@ -674,33 +687,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPopularGarageServices() {
-    const approvedGarages = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.category, "garage")));
+    const approvedGarages = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "garage")));
     const garageIds = approvedGarages.map(g => g.id);
     if (garageIds.length === 0) return [];
 
-    const svcList = await db.select().from(garageServices).where(eq(garageServices.popular, true)).orderBy(desc(garageServices.createdAt)).limit(6);
+    const svcList = await db.select().from(garageServices).where(and(eq(garageServices.popular, true), eq(garageServices.suspended, false))).orderBy(desc(garageServices.createdAt)).limit(6);
     let filtered = svcList.filter(s => garageIds.includes(s.garageId));
     if (filtered.length < 3) {
-      const all = await db.select().from(garageServices).orderBy(desc(garageServices.createdAt)).limit(6);
+      const all = await db.select().from(garageServices).where(eq(garageServices.suspended, false)).orderBy(desc(garageServices.createdAt)).limit(6);
       filtered = all.filter(s => garageIds.includes(s.garageId)).slice(0, 6);
     }
     return Promise.all(filtered.map(s => this.enrichService(s)));
   }
 
   async getFeaturedGarageServices() {
-    const approvedGarages = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.category, "garage")));
+    const approvedGarages = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "garage")));
     const garageIds = approvedGarages.map(g => g.id);
     if (garageIds.length === 0) return [];
 
     const featuredServices = await db.select().from(garageServices)
-      .where(and(inArray(garageServices.garageId, garageIds), eq(garageServices.featured, true)))
+      .where(and(inArray(garageServices.garageId, garageIds), eq(garageServices.suspended, false), eq(garageServices.featured, true)))
       .orderBy(desc(garageServices.createdAt))
       .limit(6);
     return Promise.all(featuredServices.map(service => this.enrichService(service)));
   }
 
   async getGarageServiceById(id: string) {
-    const [service] = await db.select().from(garageServices).where(eq(garageServices.id, id));
+    const [service] = await db.select().from(garageServices).where(and(eq(garageServices.id, id), eq(garageServices.suspended, false)));
     if (!service) return undefined;
 
     const [garage] = await db
@@ -709,6 +722,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(businesses.id, service.garageId),
         eq(businesses.status, "approved"),
+        eq(businesses.suspended, false),
         eq(businesses.category, "garage"),
       ));
     if (!garage) return undefined;
@@ -722,7 +736,7 @@ export class DatabaseStorage implements IStorage {
 
   async getOwnerDashboardGarageServicesByGarageId(garageId: string) {
     return db
-      .select(ownerColumnsWithoutFeatured(getTableColumns(garageServices)))
+      .select()
       .from(garageServices)
       .where(eq(garageServices.garageId, garageId))
       .orderBy(desc(garageServices.createdAt));
@@ -743,13 +757,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Support Services
-  async getSupportServicesByBusinessId(businessId: string) {
-    return db.select().from(supportServices).where(eq(supportServices.businessId, businessId)).orderBy(desc(supportServices.featured), desc(supportServices.createdAt));
+  async getSupportServicesByBusinessId(businessId: string, includeSuspended = false) {
+    const [business] = await db.select({ id: businesses.id }).from(businesses).where(and(
+      eq(businesses.id, businessId),
+      eq(businesses.status, "approved"),
+      inArray(businesses.category, ["insurance", "car_wash", "other"]),
+      ...(includeSuspended ? [] : [eq(businesses.suspended, false)]),
+    ));
+    if (!business) return [];
+    const conditions = [eq(supportServices.businessId, businessId)];
+    if (!includeSuspended) conditions.push(eq(supportServices.suspended, false));
+    return db.select().from(supportServices).where(and(...conditions)).orderBy(desc(supportServices.featured), desc(supportServices.createdAt));
   }
 
   async getOwnerDashboardSupportServicesByBusinessId(businessId: string) {
     return db
-      .select(ownerColumnsWithoutFeatured(getTableColumns(supportServices)))
+      .select()
       .from(supportServices)
       .where(eq(supportServices.businessId, businessId))
       .orderBy(desc(supportServices.createdAt));
@@ -764,6 +787,7 @@ export class DatabaseStorage implements IStorage {
         description: supportServices.description,
         startingPrice: supportServices.startingPrice,
         featured: supportServices.featured,
+        suspended: supportServices.suspended,
         createdAt: supportServices.createdAt,
         businessName: businesses.name,
         businessCity: businesses.city,
@@ -775,7 +799,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(supportServices)
       .innerJoin(businesses, eq(supportServices.businessId, businesses.id))
-      .where(and(eq(supportServices.id, id), eq(businesses.status, "approved")));
+      .where(and(eq(supportServices.id, id), eq(supportServices.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
     return service;
   }
 
@@ -788,6 +812,7 @@ export class DatabaseStorage implements IStorage {
         description: supportServices.description,
         startingPrice: supportServices.startingPrice,
         featured: supportServices.featured,
+        suspended: supportServices.suspended,
         createdAt: supportServices.createdAt,
         businessName: businesses.name,
         businessCity: businesses.city,
@@ -796,7 +821,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(supportServices)
       .innerJoin(businesses, eq(supportServices.businessId, businesses.id))
-      .where(and(eq(businesses.status, "approved"), inArray(businesses.category, ["insurance", "car_wash", "other"]), eq(supportServices.featured, true)))
+      .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), inArray(businesses.category, ["insurance", "car_wash", "other"]), eq(supportServices.suspended, false), eq(supportServices.featured, true)))
       .orderBy(
         desc(sql`CASE WHEN ${businesses.subcategory} = 'vehicle_finance' OR ${supportServices.name} ILIKE '%loan%' OR ${supportServices.name} ILIKE '%financ%' OR COALESCE(${supportServices.description}, '') ILIKE '%loan%' OR COALESCE(${supportServices.description}, '') ILIKE '%financ%' THEN 1 ELSE 0 END`),
         desc(supportServices.createdAt),
@@ -855,12 +880,12 @@ export class DatabaseStorage implements IStorage {
     // Car dealers: have car listings with this brand
     const dealerCars = await db.select({ dealerId: cars.dealerId })
       .from(cars)
-      .where(ilike(cars.brand, `%${brand}%`));
+      .where(and(ilike(cars.brand, `%${brand}%`), eq(cars.suspended, false)));
     const dealerIds = [...new Set(dealerCars.map(c => c.dealerId))];
 
     const dealerList = dealerIds.length > 0
       ? await db.select().from(businesses).where(
-          and(eq(businesses.status, "approved"), inArray(businesses.id, dealerIds))
+          and(eq(businesses.status, "approved"), eq(businesses.suspended, false), inArray(businesses.id, dealerIds))
         )
       : [];
 
@@ -868,6 +893,7 @@ export class DatabaseStorage implements IStorage {
     const sparePartsList = await db.select().from(businesses).where(
       and(
         eq(businesses.status, "approved"),
+        eq(businesses.suspended, false),
         eq(businesses.category, "spare_parts"),
         sql`${businesses.carBrands} @> ARRAY[${brand}]::text[]`
       )
@@ -877,6 +903,7 @@ export class DatabaseStorage implements IStorage {
     const garageList = await db.select().from(businesses).where(
       and(
         eq(businesses.status, "approved"),
+        eq(businesses.suspended, false),
         eq(businesses.category, "garage"),
         sql`${businesses.carBrands} @> ARRAY[${brand}]::text[]`
       )

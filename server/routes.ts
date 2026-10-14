@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import express from "express";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { createServer, type Server } from "http";
 import {
   storage, db, ensurePersistentUploadsTable, savePersistentUpload, getPersistentUpload,
@@ -12,7 +12,7 @@ import crypto from "crypto";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses } from "@shared/schema";
+import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses, cars, spareParts, garageServices, supportServices, featureRequests, featureRequestItemTypeEnum, users, type FeatureRequestItemType } from "@shared/schema";
 import { initiateSTKPush, PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
 import { sendVerificationEmail, sendAdminNotificationEmail, sendApprovalEmail, sendRejectionEmail, sendRegistrationConfirmationEmail, ADMIN_EMAIL, isMailConfigured } from "./mailer";
 
@@ -314,7 +314,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/businesses/:id", async (req, res) => {
     try {
       const business = await storage.getBusinessById(req.params.id);
-      if (!business || business.status !== "approved") {
+      if (!business || business.status !== "approved" || business.suspended) {
         return res.status(404).json({ message: "Business not found" });
       }
       const [revs, parts, { avgRating, reviewCount }, supportSvcs] = await Promise.all([
@@ -449,38 +449,258 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const user = (req as any).user;
       const business = await storage.getBusinessByOwnerId(user.id);
-      if (!business) return res.json({ business: null, messages: [], reviews: [], spareParts: [], cars: [], garageServices: [], supportServices: [] });
+      if (!business) return res.json({ business: null, messages: [], reviews: [], spareParts: [], cars: [], garageServices: [], supportServices: [], featureRequests: [] });
       const isSupport = ["insurance", "car_wash", "other"].includes(business.category);
-      const [msgs, revs, parts, carsData, servicesData, supportSvcs] = await Promise.all([
+      const [msgs, revs, parts, carsData, servicesData, supportSvcs, ownerFeatureRequests] = await Promise.all([
         storage.getMessagesByBusinessId(business.id),
         storage.getReviewsByBusinessId(business.id),
         storage.getOwnerDashboardSparePartsByBusinessId(business.id),
         business.category === "car_dealer" ? storage.getOwnerDashboardCarsByDealerId(business.id) : Promise.resolve([]),
         business.category === "garage" ? storage.getOwnerDashboardGarageServicesByGarageId(business.id) : Promise.resolve([]),
         isSupport ? storage.getOwnerDashboardSupportServicesByBusinessId(business.id) : Promise.resolve([]),
+        db.select().from(featureRequests).where(eq(featureRequests.ownerId, user.id)).orderBy(desc(featureRequests.createdAt)),
       ]);
-      res.json({ business, messages: msgs, reviews: revs, spareParts: parts, cars: carsData, garageServices: servicesData, supportServices: supportSvcs });
+      res.json({ business, messages: msgs, reviews: revs, spareParts: parts, cars: carsData, garageServices: servicesData, supportServices: supportSvcs, featureRequests: ownerFeatureRequests });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
   });
 
   // Admin routes
+  app.get("/api/feature-requests/me", ownerMiddleware, async (req: any, res) => {
+    try {
+      const requests = await db.select().from(featureRequests)
+        .where(eq(featureRequests.ownerId, req.user.id))
+        .orderBy(desc(featureRequests.createdAt));
+      const items = await Promise.all(requests.map(async request => {
+        let name = "Unavailable item";
+        switch (request.itemType) {
+          case "business": {
+            const [item] = await db.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, request.itemId));
+            name = item?.name ?? name;
+            break;
+          }
+          case "car": {
+            const [item] = await db.select({ name: cars.title }).from(cars).where(eq(cars.id, request.itemId));
+            name = item?.name ?? name;
+            break;
+          }
+          case "part": {
+            const [item] = await db.select({ name: spareParts.partName }).from(spareParts).where(eq(spareParts.id, request.itemId));
+            name = item?.name ?? name;
+            break;
+          }
+          case "garage_service": {
+            const [item] = await db.select({ name: garageServices.name }).from(garageServices).where(eq(garageServices.id, request.itemId));
+            name = item?.name ?? name;
+            break;
+          }
+          case "support_service": {
+            const [item] = await db.select({ name: supportServices.name }).from(supportServices).where(eq(supportServices.id, request.itemId));
+            name = item?.name ?? name;
+            break;
+          }
+        }
+        return { ...request, name };
+      }));
+      res.json(items);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/feature-requests", ownerMiddleware, async (req: any, res) => {
+    try {
+      if (req.user?.role !== "owner") return res.status(403).json({ message: "Only business owners can request featuring" });
+      const { itemType, itemId } = req.body || {};
+      if (!featureRequestItemTypeEnum.enumValues.includes(itemType) || typeof itemId !== "string" || !itemId.trim()) {
+        return res.status(400).json({ message: "A valid item type and id are required" });
+      }
+
+      const ownerId = req.user.id;
+      const id = itemId.trim();
+      let ownedAndAvailable = false;
+      let isFeatured = false;
+      switch (itemType) {
+        case "business": {
+          const [item] = await db.select({ ownerId: businesses.ownerId, status: businesses.status, featured: businesses.featured, suspended: businesses.suspended })
+            .from(businesses).where(eq(businesses.id, id));
+          ownedAndAvailable = !!item && item.ownerId === ownerId && item.status === "approved" && !item.suspended;
+          isFeatured = !!item?.featured;
+          break;
+        }
+        case "car": {
+          const [item] = await db.select({ ownerId: businesses.ownerId, status: businesses.status, itemFeatured: cars.featured, itemSuspended: cars.suspended, businessSuspended: businesses.suspended })
+            .from(cars).innerJoin(businesses, eq(cars.dealerId, businesses.id)).where(eq(cars.id, id));
+          ownedAndAvailable = !!item && item.ownerId === ownerId && item.status === "approved" && !item.itemSuspended && !item.businessSuspended;
+          isFeatured = !!item?.itemFeatured;
+          break;
+        }
+        case "part": {
+          const [item] = await db.select({ ownerId: businesses.ownerId, status: businesses.status, itemFeatured: spareParts.featured, itemSuspended: spareParts.suspended, businessSuspended: businesses.suspended })
+            .from(spareParts).innerJoin(businesses, eq(spareParts.businessId, businesses.id)).where(eq(spareParts.id, id));
+          ownedAndAvailable = !!item && item.ownerId === ownerId && item.status === "approved" && !item.itemSuspended && !item.businessSuspended;
+          isFeatured = !!item?.itemFeatured;
+          break;
+        }
+        case "garage_service": {
+          const [item] = await db.select({ ownerId: businesses.ownerId, status: businesses.status, itemFeatured: garageServices.featured, itemSuspended: garageServices.suspended, businessSuspended: businesses.suspended })
+            .from(garageServices).innerJoin(businesses, eq(garageServices.garageId, businesses.id)).where(eq(garageServices.id, id));
+          ownedAndAvailable = !!item && item.ownerId === ownerId && item.status === "approved" && !item.itemSuspended && !item.businessSuspended;
+          isFeatured = !!item?.itemFeatured;
+          break;
+        }
+        case "support_service": {
+          const [item] = await db.select({ ownerId: businesses.ownerId, status: businesses.status, itemFeatured: supportServices.featured, itemSuspended: supportServices.suspended, businessSuspended: businesses.suspended })
+            .from(supportServices).innerJoin(businesses, eq(supportServices.businessId, businesses.id)).where(eq(supportServices.id, id));
+          ownedAndAvailable = !!item && item.ownerId === ownerId && item.status === "approved" && !item.itemSuspended && !item.businessSuspended;
+          isFeatured = !!item?.itemFeatured;
+          break;
+        }
+      }
+      if (!ownedAndAvailable) return res.status(404).json({ message: "Item not found, not available, or not owned by your account" });
+      if (isFeatured) return res.status(409).json({ message: "This item is already featured" });
+
+      const [existing] = await db.select({ id: featureRequests.id }).from(featureRequests)
+        .where(and(eq(featureRequests.itemType, itemType), eq(featureRequests.itemId, id), eq(featureRequests.status, "pending")));
+      if (existing) return res.status(409).json({ message: "A feature request for this item is already pending" });
+      const [created] = await db.insert(featureRequests).values({ ownerId, itemType, itemId: id }).returning();
+      res.status(201).json(created);
+    } catch (e: any) {
+      if (e.code === "23505") return res.status(409).json({ message: "A feature request for this item is already pending" });
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/feature-requests", adminMiddleware, async (_req, res) => {
+    try {
+      const requests = await db.select({
+        id: featureRequests.id,
+        ownerId: featureRequests.ownerId,
+        itemType: featureRequests.itemType,
+        itemId: featureRequests.itemId,
+        status: featureRequests.status,
+        createdAt: featureRequests.createdAt,
+        ownerName: users.name,
+        ownerEmail: users.email,
+      }).from(featureRequests)
+        .innerJoin(users, eq(featureRequests.ownerId, users.id))
+        .where(eq(featureRequests.status, "pending"))
+        .orderBy(desc(featureRequests.createdAt));
+      const enriched = await Promise.all(requests.map(async request => {
+        let itemName = "Unavailable item";
+        switch (request.itemType) {
+          case "business": {
+            const [item] = await db.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, request.itemId));
+            itemName = item?.name ?? itemName;
+            break;
+          }
+          case "car": {
+            const [item] = await db.select({ name: cars.title }).from(cars).where(eq(cars.id, request.itemId));
+            itemName = item?.name ?? itemName;
+            break;
+          }
+          case "part": {
+            const [item] = await db.select({ name: spareParts.partName }).from(spareParts).where(eq(spareParts.id, request.itemId));
+            itemName = item?.name ?? itemName;
+            break;
+          }
+          case "garage_service": {
+            const [item] = await db.select({ name: garageServices.name }).from(garageServices).where(eq(garageServices.id, request.itemId));
+            itemName = item?.name ?? itemName;
+            break;
+          }
+          case "support_service": {
+            const [item] = await db.select({ name: supportServices.name }).from(supportServices).where(eq(supportServices.id, request.itemId));
+            itemName = item?.name ?? itemName;
+            break;
+          }
+        }
+        return { ...request, itemName };
+      }));
+      res.json(enriched);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/admin/feature-requests/:id", adminMiddleware, async (req, res) => {
+    try {
+      const status = req.body?.status;
+      if (status !== "approved" && status !== "rejected") {
+        return res.status(400).json({ message: "status must be approved or rejected" });
+      }
+      const result = await db.transaction(async tx => {
+        const [request] = await tx.select().from(featureRequests)
+          .where(and(eq(featureRequests.id, req.params.id), eq(featureRequests.status, "pending")));
+        if (!request) return { error: "Feature request not found or already reviewed" };
+
+        if (status === "approved") {
+          switch (request.itemType) {
+            case "business": {
+              const [item] = await tx.select().from(businesses).where(and(eq(businesses.id, request.itemId), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+              if (!item) return { error: "Business must be approved and active before featuring" };
+              await tx.update(businesses).set({ featured: true }).where(eq(businesses.id, request.itemId));
+              break;
+            }
+            case "car": {
+              const [item] = await tx.select({ id: cars.id }).from(cars).innerJoin(businesses, eq(cars.dealerId, businesses.id))
+                .where(and(eq(cars.id, request.itemId), eq(cars.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+              if (!item) return { error: "Car and its business must be active before featuring" };
+              await tx.update(cars).set({ featured: true }).where(eq(cars.id, request.itemId));
+              break;
+            }
+            case "part": {
+              const [item] = await tx.select({ id: spareParts.id }).from(spareParts).innerJoin(businesses, eq(spareParts.businessId, businesses.id))
+                .where(and(eq(spareParts.id, request.itemId), eq(spareParts.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+              if (!item) return { error: "Spare part and its business must be active before featuring" };
+              await tx.update(spareParts).set({ featured: true }).where(eq(spareParts.id, request.itemId));
+              break;
+            }
+            case "garage_service": {
+              const [item] = await tx.select({ id: garageServices.id }).from(garageServices).innerJoin(businesses, eq(garageServices.garageId, businesses.id))
+                .where(and(eq(garageServices.id, request.itemId), eq(garageServices.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+              if (!item) return { error: "Service and its business must be active before featuring" };
+              await tx.update(garageServices).set({ featured: true }).where(eq(garageServices.id, request.itemId));
+              break;
+            }
+            case "support_service": {
+              const [item] = await tx.select({ id: supportServices.id }).from(supportServices).innerJoin(businesses, eq(supportServices.businessId, businesses.id))
+                .where(and(eq(supportServices.id, request.itemId), eq(supportServices.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+              if (!item) return { error: "Service and its business must be active before featuring" };
+              await tx.update(supportServices).set({ featured: true }).where(eq(supportServices.id, request.itemId));
+              break;
+            }
+          }
+        }
+        const [reviewed] = await tx.update(featureRequests)
+          .set({ status, reviewedAt: new Date() })
+          .where(and(eq(featureRequests.id, request.id), eq(featureRequests.status, "pending")))
+          .returning();
+        return reviewed ? { request: reviewed } : { error: "Feature request was already reviewed" };
+      });
+      if ("error" in result) return res.status(409).json({ message: result.error });
+      res.json(result.request);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   app.get("/api/admin/featured", adminMiddleware, async (_req, res) => {
     try {
       const approvedBusinesses = await storage.getApprovedBusinesses();
       const [cars, garageServices, sparePartGroups, supportServiceGroups] = await Promise.all([
-        storage.getCars(),
-        storage.getGarageServices(),
+        storage.getCars({ includeSuspended: true }),
+        storage.getGarageServices({ includeSuspended: true }),
         Promise.all(
           approvedBusinesses
             .filter((biz) => biz.category === "spare_parts")
-            .map((biz) => storage.getSparePartsByBusinessId(biz.id))
+            .map((biz) => storage.getSparePartsByBusinessId(biz.id, true))
         ),
         Promise.all(
           approvedBusinesses
             .filter((biz) => ["insurance", "car_wash", "other"].includes(biz.category))
-            .map((biz) => storage.getSupportServicesByBusinessId(biz.id))
+            .map((biz) => storage.getSupportServicesByBusinessId(biz.id, true))
         ),
       ]);
       const businessNames = new Map(approvedBusinesses.map((biz) => [biz.id, biz.name]));
@@ -492,6 +712,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           subtitle: `${biz.category.replace(/_/g, " ")} Â· ${biz.city}`,
           featured: !!biz.featured,
           status: biz.status,
+          suspended: !!biz.suspended,
         })),
         ...cars.map((car) => ({
           id: car.id,
@@ -499,6 +720,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           name: car.title,
           subtitle: `${car.brand} ${car.model} Â· ${car.dealerName}`,
           featured: !!car.featured,
+          suspended: !!car.suspended,
+          description: car.description,
+          price: String(car.price),
         })),
         ...garageServices.map((service) => ({
           id: service.id,
@@ -506,6 +730,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           name: service.name,
           subtitle: `Garage service Â· ${service.garageName}`,
           featured: !!service.featured,
+          suspended: !!service.suspended,
+          description: service.description,
+          price: service.price,
         })),
         ...sparePartGroups.flat().map((part) => ({
           id: part.id,
@@ -513,6 +740,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           name: part.partName,
           subtitle: `Spare part Â· ${businessNames.get(part.businessId) || "Business"}`,
           featured: !!part.featured,
+          suspended: !!part.suspended,
+          description: part.description,
+          price: part.price,
         })),
         ...supportServiceGroups.flat().map((service) => ({
           id: service.id,
@@ -520,6 +750,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           name: service.name,
           subtitle: `Automotive support Â· ${businessNames.get(service.businessId) || "Business"}`,
           featured: !!service.featured,
+          suspended: !!service.suspended,
+          description: service.description,
+          price: service.startingPrice,
         })),
       ].sort((a, b) => Number(b.featured) - Number(a.featured) || a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
       res.json(items);
@@ -538,14 +771,48 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ message: "featured must be a boolean" });
       }
 
+      if (req.body.featured) {
+        let eligible = false;
+        switch (type) {
+          case "business": {
+            const [business] = await db.select({ id: businesses.id }).from(businesses)
+              .where(and(eq(businesses.id, id), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+            eligible = !!business;
+            break;
+          }
+          case "car": {
+            const [car] = await db.select({ id: cars.id }).from(cars).innerJoin(businesses, eq(cars.dealerId, businesses.id))
+              .where(and(eq(cars.id, id), eq(cars.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+            eligible = !!car;
+            break;
+          }
+          case "part": {
+            const [part] = await db.select({ id: spareParts.id }).from(spareParts).innerJoin(businesses, eq(spareParts.businessId, businesses.id))
+              .where(and(eq(spareParts.id, id), eq(spareParts.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+            eligible = !!part;
+            break;
+          }
+          case "garage_service": {
+            const [service] = await db.select({ id: garageServices.id }).from(garageServices).innerJoin(businesses, eq(garageServices.garageId, businesses.id))
+              .where(and(eq(garageServices.id, id), eq(garageServices.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+            eligible = !!service;
+            break;
+          }
+          case "support_service": {
+            const [service] = await db.select({ id: supportServices.id }).from(supportServices).innerJoin(businesses, eq(supportServices.businessId, businesses.id))
+              .where(and(eq(supportServices.id, id), eq(supportServices.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
+            eligible = !!service;
+            break;
+          }
+        }
+        if (!eligible) return res.status(409).json({ message: "Only active items from approved businesses can be featured." });
+      }
+
       let item: any;
       switch (type) {
         case "business": {
           const business = await storage.getBusinessById(id);
           if (!business) return res.status(404).json({ message: "Business not found" });
-          if (req.body.featured && business.status !== "approved") {
-            return res.status(409).json({ message: "Approve the business before featuring it." });
-          }
           item = await storage.updateBusiness(id, { featured: req.body.featured });
           break;
         }
@@ -679,7 +946,103 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/admin/businesses/:id", adminMiddleware, async (req, res) => {
     try {
+      const business = await storage.getBusinessById(req.params.id);
+      if (!business) return res.status(404).json({ message: "Business not found" });
+      await db.delete(featureRequests).where(eq(featureRequests.ownerId, business.ownerId));
       await storage.deleteBusiness(req.params.id);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/admin/businesses/:id/suspension", adminMiddleware, async (req, res) => {
+    try {
+      if (typeof req.body?.suspended !== "boolean") return res.status(400).json({ message: "suspended must be a boolean" });
+      const business = await storage.getBusinessById(req.params.id);
+      if (!business) return res.status(404).json({ message: "Business not found" });
+      const updated = await storage.updateBusiness(req.params.id, {
+        suspended: req.body.suspended,
+        ...(req.body.suspended ? { featured: false } : {}),
+      });
+      if (req.body.suspended) {
+        await db.delete(featureRequests).where(and(eq(featureRequests.ownerId, business.ownerId), eq(featureRequests.status, "pending")));
+      }
+      res.json(updated);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/admin/catalog/:type/:id/suspension", adminMiddleware, async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      if (typeof req.body?.suspended !== "boolean") return res.status(400).json({ message: "suspended must be a boolean" });
+      if (!["car", "part", "garage_service", "support_service"].includes(type)) {
+        return res.status(400).json({ message: "Unsupported catalog item type" });
+      }
+      const itemType = type as FeatureRequestItemType;
+      const updates = { suspended: req.body.suspended, ...(req.body.suspended ? { featured: false } : {}) };
+      const item = type === "car" ? await storage.updateCar(id, updates)
+        : type === "part" ? await storage.updateSparePart(id, updates)
+        : type === "garage_service" ? await storage.updateGarageService(id, updates)
+        : await storage.updateSupportService(id, updates);
+      if (!item) return res.status(404).json({ message: "Catalog item not found" });
+      if (req.body.suspended) {
+        await db.delete(featureRequests).where(and(eq(featureRequests.itemType, itemType), eq(featureRequests.itemId, id), eq(featureRequests.status, "pending")));
+      }
+      res.json(item);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/admin/catalog/:type/:id", adminMiddleware, async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      const body = req.body || {};
+      let item;
+      if (type === "car") {
+        const editable = new Set(["title", "brand", "model", "year", "price", "mileage", "fuelType", "transmission", "condition", "description", "images", "location"]);
+        const fields = insertCarSchema.partial().parse(Object.fromEntries(Object.entries(body).filter(([key]) => editable.has(key))));
+        if (Object.keys(fields).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
+        item = await storage.updateCar(id, fields);
+      } else if (type === "part") {
+        const editable = new Set(["partName", "carBrand", "carModel", "year", "condition", "price", "description", "image"]);
+        const fields = insertSparePartSchema.partial().parse(Object.fromEntries(Object.entries(body).filter(([key]) => editable.has(key))));
+        if (Object.keys(fields).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
+        item = await storage.updateSparePart(id, fields);
+      } else if (type === "garage_service") {
+        const editable = new Set(["name", "description", "price"]);
+        const fields = insertGarageServiceSchema.partial().parse(Object.fromEntries(Object.entries(body).filter(([key]) => editable.has(key))));
+        if (Object.keys(fields).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
+        item = await storage.updateGarageService(id, fields);
+      } else if (type === "support_service") {
+        const editable = new Set(["name", "description", "startingPrice"]);
+        const fields = insertSupportServiceSchema.partial().parse(Object.fromEntries(Object.entries(body).filter(([key]) => editable.has(key))));
+        if (Object.keys(fields).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
+        item = await storage.updateSupportService(id, fields);
+      } else {
+        return res.status(400).json({ message: "Unsupported catalog item type" });
+      }
+      if (!item) return res.status(404).json({ message: "Catalog item not found" });
+      res.json(item);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/admin/catalog/:type/:id", adminMiddleware, async (req, res) => {
+    try {
+      const { type, id } = req.params;
+      if (!["car", "part", "garage_service", "support_service"].includes(type)) {
+        return res.status(400).json({ message: "Unsupported catalog item type" });
+      }
+      await db.delete(featureRequests).where(and(eq(featureRequests.itemType, type as FeatureRequestItemType), eq(featureRequests.itemId, id)));
+      if (type === "car") await storage.deleteCar(id);
+      else if (type === "part") await storage.deleteSparePart(id);
+      else if (type === "garage_service") await storage.deleteGarageService(id);
+      else await storage.deleteSupportService(id);
       res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
