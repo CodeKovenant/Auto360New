@@ -468,11 +468,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Admin routes
   app.get("/api/admin/featured", adminMiddleware, async (_req, res) => {
     try {
-      const [approvedBusinesses, pendingBusinesses] = await Promise.all([
-        storage.getApprovedBusinesses(),
-        storage.getPendingBusinesses(),
-      ]);
-      const featureableBusinesses = [...approvedBusinesses, ...pendingBusinesses];
+      const approvedBusinesses = await storage.getApprovedBusinesses();
       const [cars, garageServices, sparePartGroups, supportServiceGroups] = await Promise.all([
         storage.getCars(),
         storage.getGarageServices(),
@@ -487,9 +483,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             .map((biz) => storage.getSupportServicesByBusinessId(biz.id))
         ),
       ]);
-      const businessNames = new Map(featureableBusinesses.map((biz) => [biz.id, biz.name]));
+      const businessNames = new Map(approvedBusinesses.map((biz) => [biz.id, biz.name]));
       const items = [
-        ...featureableBusinesses.map((biz) => ({
+        ...approvedBusinesses.map((biz) => ({
           id: biz.id,
           type: "business",
           name: biz.name,
@@ -544,9 +540,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       let item: any;
       switch (type) {
-        case "business":
+        case "business": {
+          const business = await storage.getBusinessById(id);
+          if (!business) return res.status(404).json({ message: "Business not found" });
+          if (req.body.featured && business.status !== "approved") {
+            return res.status(409).json({ message: "Approve the business before featuring it." });
+          }
           item = await storage.updateBusiness(id, { featured: req.body.featured });
           break;
+        }
         case "car":
           item = await storage.updateCar(id, { featured: req.body.featured });
           break;
@@ -644,7 +646,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/admin/businesses/:id/approve", adminMiddleware, async (req, res) => {
     try {
-      const biz = await storage.updateBusiness(req.params.id, { status: "approved" });
+      const currentBusiness = await storage.getBusinessById(req.params.id);
+      if (!currentBusiness) return res.status(404).json({ message: "Business not found" });
+      const biz = await storage.updateBusiness(req.params.id, {
+        status: "approved",
+        ...(currentBusiness.status === "approved" ? {} : { featured: false }),
+      });
       const owner = await storage.getUserById(biz.ownerId);
       if (owner) {
         sendApprovalEmail({ toEmail: owner.email, toName: owner.name, businessName: biz.name })

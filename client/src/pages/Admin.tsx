@@ -856,7 +856,7 @@ export default function Admin() {
             ) : (
               <div className="space-y-7">
                 <p className="text-sm text-muted-foreground">
-                  Admins can feature pending businesses, but they stay hidden publicly until approved. Featured status does not change paid Premium status.
+                  Only approved businesses with a ready public profile can be featured. Featured status does not change paid Premium status.
                 </p>
                 {FEATURED_ITEM_GROUPS.map(({ type, title }) => {
                   const groupItems = (featuredItems || []).filter((item) => item.type === type);
@@ -868,7 +868,7 @@ export default function Admin() {
                       </div>
                       {groupItems.length === 0 ? (
                         <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                          {type === "business" ? "No pending or approved businesses yet." : "No eligible items in this group."}
+                          {type === "business" ? "No approved businesses yet." : "No eligible items in this group."}
                         </p>
                       ) : (
                         <div className="space-y-2">
@@ -878,11 +878,6 @@ export default function Admin() {
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
                                     <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{item.name}</p>
-                                    {item.type === "business" && item.status === "pending" && (
-                                      <Badge className="shrink-0 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
-                                        Pending approval
-                                      </Badge>
-                                    )}
                                   </div>
                                   <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
                                 </div>
