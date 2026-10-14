@@ -169,7 +169,7 @@ export interface IStorage {
 
   // Businesses
   getBusinessById(id: string): Promise<Business | undefined>;
-  getBusinessByOwnerId(ownerId: string): Promise<Omit<Business, "featured"> | undefined>;
+  getBusinessByOwnerId(ownerId: string): Promise<Business | undefined>;
   getAllBusinesses(filters?: { category?: string; subcategory?: string; city?: string; q?: string; minRating?: number }): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   getFeaturedBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
   getPremiumBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
@@ -183,7 +183,7 @@ export interface IStorage {
 
   // Spare Parts
   getSparePartsByBusinessId(businessId: string): Promise<SparePart[]>;
-  getOwnerDashboardSparePartsByBusinessId(businessId: string): Promise<Omit<SparePart, "featured">[]>;
+  getOwnerDashboardSparePartsByBusinessId(businessId: string): Promise<SparePart[]>;
   getSparePartById(id: string): Promise<(SparePart & { businessName: string; businessCity: string; businessAddress: string; businessPhone: string; businessWhatsapp: string; businessLogo: string | null; businessOwnerId: string }) | undefined>;
   getFeaturedSpareParts(): Promise<(SparePart & { businessName: string; businessCity: string; businessLogo: string | null })[]>;
   createSparePart(part: InsertSparePart): Promise<SparePart>;
@@ -202,11 +202,11 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
 
   // Cars
-  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string }): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null })[]>;
+  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string; includeSuspended?: boolean }): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null })[]>;
   getFeaturedCars(): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null })[]>;
   getCarById(id: string): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null }) | undefined>;
   getCarsByDealerId(dealerId: string): Promise<Car[]>;
-  getOwnerDashboardCarsByDealerId(dealerId: string): Promise<Omit<Car, "featured">[]>;
+  getOwnerDashboardCarsByDealerId(dealerId: string): Promise<Car[]>;
   createCar(car: InsertCar): Promise<Car>;
   updateCar(id: string, data: Partial<Car>): Promise<Car>;
   deleteCar(id: string): Promise<void>;
@@ -217,14 +217,14 @@ export interface IStorage {
   getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
   getGarageServiceById(id: string): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null }) | undefined>;
   getGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
-  getOwnerDashboardGarageServicesByGarageId(garageId: string): Promise<Omit<GarageService, "featured">[]>;
+  getOwnerDashboardGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
   createGarageService(service: InsertGarageService): Promise<GarageService>;
   updateGarageService(id: string, data: Partial<GarageService>): Promise<GarageService>;
   deleteGarageService(id: string): Promise<void>;
 
   // Support Services
   getSupportServicesByBusinessId(businessId: string): Promise<SupportService[]>;
-  getOwnerDashboardSupportServicesByBusinessId(businessId: string): Promise<Omit<SupportService, "featured">[]>;
+  getOwnerDashboardSupportServicesByBusinessId(businessId: string): Promise<SupportService[]>;
   getSupportServiceById(id: string): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; businessPhone: string; businessWhatsapp: string; businessAddress: string }) | undefined>;
   getFeaturedSupportServices(): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null })[]>;
   createSupportService(service: InsertSupportService): Promise<SupportService>;
@@ -286,7 +286,7 @@ export class DatabaseStorage implements IStorage {
 
   async getBusinessByOwnerId(ownerId: string) {
     const [biz] = await db
-      .select(ownerColumnsWithoutFeatured(getTableColumns(businesses)))
+      .select()
       .from(businesses)
       .where(eq(businesses.ownerId, ownerId));
     return biz;
@@ -307,7 +307,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllBusinesses(filters?: { category?: string; subcategory?: string; city?: string; q?: string; minRating?: number }) {
-    const conditions = [eq(businesses.status, "approved")];
+    const conditions = [eq(businesses.status, "approved"), eq(businesses.suspended, false)];
     if (filters?.category) {
       if (filters.category === "automotive_support") {
         if (filters.subcategory === "car_wash_detailing") {
@@ -363,7 +363,7 @@ export class DatabaseStorage implements IStorage {
     const bizList = await db
       .select()
       .from(businesses)
-      .where(and(eq(businesses.status, "approved"), sql`${businesses.premium} IS TRUE`, premiumSubscriptionStillActive()))
+      .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), sql`${businesses.premium} IS TRUE`, premiumSubscriptionStillActive()))
       .orderBy(businesses.createdAt);
     return Promise.all(
       bizList.map(async (biz) => {
@@ -377,7 +377,7 @@ export class DatabaseStorage implements IStorage {
     const bizList = await db
       .select()
       .from(businesses)
-      .where(and(eq(businesses.status, "approved"), eq(businesses.featured, true)))
+      .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.featured, true)))
       .orderBy(desc(businesses.createdAt))
       .limit(6);
     return Promise.all(
@@ -398,7 +398,7 @@ export class DatabaseStorage implements IStorage {
       const categoryBusinesses = await db
         .select()
         .from(businesses)
-        .where(and(eq(businesses.status, "approved"), eq(businesses.category, category)))
+        .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.featured, true), eq(businesses.category, category)))
         .orderBy(
           desc(businesses.featured),
           desc(sql`CASE WHEN ${businesses.premium} IS TRUE THEN 1 ELSE 0 END`),

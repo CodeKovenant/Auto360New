@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, pgEnum, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, pgEnum, numeric, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const userRoleEnum = pgEnum("user_role", ["admin", "owner"]);
 export const businessStatusEnum = pgEnum("business_status", ["pending", "approved", "rejected"]);
+export const featureRequestItemTypeEnum = pgEnum("feature_request_item_type", ["business", "car", "part", "garage_service", "support_service"]);
+export const featureRequestStatusEnum = pgEnum("feature_request_status", ["pending", "approved", "rejected"]);
 export const partConditionEnum = pgEnum("part_condition", ["new", "used"]);
 export const fuelTypeEnum = pgEnum("fuel_type", ["petrol", "diesel", "hybrid", "electric", "other"]);
 export const transmissionEnum = pgEnum("transmission", ["automatic", "manual"]);
@@ -47,6 +49,7 @@ export const businesses = pgTable("businesses", {
   longitude: numeric("longitude"),
   status: businessStatusEnum("status").notNull().default("pending"),
   featured: boolean("featured").notNull().default(false),
+  suspended: boolean("suspended").notNull().default(false),
   premium: boolean("premium").default(false),
   premiumExpiresAt: timestamp("premium_expires_at"),
   carBrands: text("car_brands").array(),
@@ -65,6 +68,7 @@ export const spareParts = pgTable("spare_parts", {
   description: text("description"),
   image: text("image"),
   featured: boolean("featured").notNull().default(false),
+  suspended: boolean("suspended").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -105,6 +109,7 @@ export const cars = pgTable("cars", {
   location: text("location").notNull(),
   condition: carConditionEnum("condition").notNull().default("used"),
   featured: boolean("featured").default(false),
+  suspended: boolean("suspended").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -115,6 +120,7 @@ export const garageServices = pgTable("garage_services", {
   description: text("description"),
   price: text("price"),
   featured: boolean("featured").notNull().default(false),
+  suspended: boolean("suspended").notNull().default(false),
   popular: boolean("popular").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -126,6 +132,7 @@ export const supportServices = pgTable("support_services", {
   description: text("description"),
   startingPrice: text("starting_price"),
   featured: boolean("featured").notNull().default(false),
+  suspended: boolean("suspended").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -155,6 +162,20 @@ export const galleryImages = pgTable("gallery_images", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const featureRequests = pgTable("feature_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ownerId: varchar("owner_id").notNull().references(() => users.id),
+  itemType: featureRequestItemTypeEnum("item_type").notNull(),
+  itemId: varchar("item_id").notNull(),
+  status: featureRequestStatusEnum("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+}, table => [
+  uniqueIndex("feature_requests_pending_item_idx")
+    .on(table.itemType, table.itemId)
+    .where(sql`${table.status} = 'pending'`),
+]);
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertBusinessSchema = createInsertSchema(businesses).omit({ id: true, createdAt: true, status: true, featured: true });
 export const insertSparePartSchema = createInsertSchema(spareParts).omit({ id: true, createdAt: true, featured: true });
@@ -165,6 +186,7 @@ export const insertGarageServiceSchema = createInsertSchema(garageServices).omit
 export const insertSupportServiceSchema = createInsertSchema(supportServices).omit({ id: true, createdAt: true, featured: true });
 export const insertGalleryImageSchema = createInsertSchema(galleryImages).omit({ id: true, createdAt: true });
 export const insertBusinessReportSchema = createInsertSchema(businessReports).omit({ id: true, createdAt: true });
+export const insertFeatureRequestSchema = createInsertSchema(featureRequests).omit({ id: true, status: true, createdAt: true, reviewedAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -184,6 +206,8 @@ export type SupportService = typeof supportServices.$inferSelect;
 export type InsertSupportService = z.infer<typeof insertSupportServiceSchema>;
 export type BusinessReport = typeof businessReports.$inferSelect;
 export type InsertBusinessReport = z.infer<typeof insertBusinessReportSchema>;
+export type FeatureRequest = typeof featureRequests.$inferSelect;
+export type InsertFeatureRequest = z.infer<typeof insertFeatureRequestSchema>;
 export type GalleryImage = typeof galleryImages.$inferSelect;
 export type InsertGalleryImage = z.infer<typeof insertGalleryImageSchema>;
 
