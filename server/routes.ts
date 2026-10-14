@@ -1501,6 +1501,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             latitude: (row.latitude ?? "").trim() || null,
             longitude: (row.longitude ?? "").trim() || null,
             premium: false,
+            featured: false,
           });
           const created = await storage.createBusiness(body);
           await storage.updateBusiness(created.id, { status: "approved" });
