@@ -311,7 +311,15 @@ export class DatabaseStorage implements IStorage {
     if (filters?.category) {
       if (filters.category === "automotive_support") {
         if (filters.subcategory === "car_wash_detailing") {
-          conditions.push(eq(businesses.category, "car_wash"));
+          conditions.push(
+            or(
+              eq(businesses.category, "car_wash"),
+              and(
+                eq(businesses.category, "other"),
+                eq(businesses.subcategory, filters.subcategory)
+              )
+            )!
+          );
         } else if (filters.subcategory) {
           conditions.push(
             and(

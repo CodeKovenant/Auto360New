@@ -93,7 +93,7 @@ const ADMIN_IMPORT_CONFIG: Record<AdminImportType, { label: string; requiredColu
     label: "Businesses",
     requiredColumns: ["name", "phone"],
     optionalColumns: ["whatsapp", "address", "city", "description", "subcategory", "carBrands", "website", "logo", "banner", "latitude", "longitude"],
-    description: "Each imported business gets a public profile. Complete missing details or assign an existing owner account in the Admin dashboard.",
+    description: "Each imported business gets an approved public profile and is not featured by default. Assign an existing owner account so they can complete missing details; feature the business later to promote it on its category page.",
   },
   cars: {
     label: "Cars",
