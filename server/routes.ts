@@ -1484,27 +1484,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             results.errors.push(`Row ${i + 2}: phone missing or too short`);
             continue;
           }
-          const body = insertBusinessSchema.parse({
-            ownerId: req.user.id,
-            name: businessName,
-            category,
-            phone: row.phone || "",
-            whatsapp: (row.whatsapp ?? "").trim(),
-            address: (row.address ?? "").trim(),
-            city: (row.city ?? "").trim(),
-            description: (row.description ?? "").trim(),
-            subcategory: (row.subcategory ?? "").trim() || null,
-            carBrands: row.carBrands ? row.carBrands.split("|").map((brand: string) => brand.trim()).filter(Boolean) : null,
-            website: (row.website ?? "").trim() || null,
-            logo: (row.logo ?? "").trim() || null,
-            banner: (row.banner ?? "").trim() || null,
-            latitude: (row.latitude ?? "").trim() || null,
-            longitude: (row.longitude ?? "").trim() || null,
-            premium: false,
+          const body = {
+            ...insertBusinessSchema.parse({
+              ownerId: req.user.id,
+              name: businessName,
+              category,
+              phone: row.phone || "",
+              whatsapp: (row.whatsapp ?? "").trim(),
+              address: (row.address ?? "").trim(),
+              city: (row.city ?? "").trim(),
+              description: (row.description ?? "").trim(),
+              subcategory: (row.subcategory ?? "").trim() || null,
+              carBrands: row.carBrands ? row.carBrands.split("|").map((brand: string) => brand.trim()).filter(Boolean) : null,
+              website: (row.website ?? "").trim() || null,
+              logo: (row.logo ?? "").trim() || null,
+              banner: (row.banner ?? "").trim() || null,
+              latitude: (row.latitude ?? "").trim() || null,
+              longitude: (row.longitude ?? "").trim() || null,
+              premium: false,
+              featured: false,
+            }),
+            status: "approved" as const,
             featured: false,
-          });
+          };
           const created = await storage.createBusiness(body);
-          await storage.updateBusiness(created.id, { status: "approved" });
           knownNormalizedNames.add(normalizedName);
           results.imported++;
           results.created.push({ id: created.id, name: created.name, city: created.city });
