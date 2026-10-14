@@ -4,6 +4,10 @@ import { eq, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export async function seedDatabase() {
+  if (process.env.NODE_ENV === "production") {
+    console.log("[seed] demo data seeding is disabled in production");
+    return;
+  }
   try {
     const [{ cnt }] = await db.select({ cnt: count() }).from(users);
     if (Number(cnt) > 0) {

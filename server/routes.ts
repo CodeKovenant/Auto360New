@@ -12,7 +12,7 @@ import crypto from "crypto";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses, cars, spareParts, garageServices, supportServices, featureRequests, featureRequestItemTypeEnum, users, type FeatureRequestItemType } from "@shared/schema";
+import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses, cars, spareParts, garageServices, supportServices, reviews, businessReports, galleryImages, featureRequests, mpesaPayments, featureRequestItemTypeEnum, users, type FeatureRequestItemType, type GalleryImage } from "@shared/schema";
 import { initiateSTKPush, PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
 import { sendVerificationEmail, sendAdminNotificationEmail, sendApprovalEmail, sendRejectionEmail, sendRegistrationConfirmationEmail, ADMIN_EMAIL, isMailConfigured } from "./mailer";
 
@@ -78,7 +78,7 @@ const bannerUpload = makeUpload();
 const partImageUpload = makeUpload();
 const galleryUpload = makeUpload();
 
-const JWT_SECRET = process.env.SESSION_SECRET || "autodirectory-secret-key";
+const JWT_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "production" ? "" : "autodirectory-secret-key");
 
 function authMiddleware(req: any, res: any, next: any) {
   const auth = req.headers.authorization;
@@ -107,15 +107,62 @@ function ownerMiddleware(req: any, res: any, next: any) {
   });
 }
 
-function omitFields(body: unknown, fields: string[]) {
+async function getListingBusinessId(type: string, id: string): Promise<string | undefined> {
+  switch (type) {
+    case "car": {
+      const [item] = await db.select({ businessId: cars.dealerId }).from(cars).where(eq(cars.id, id));
+      return item?.businessId;
+    }
+    case "part":
+    case "spare_part": {
+      const [item] = await db.select({ businessId: spareParts.businessId }).from(spareParts).where(eq(spareParts.id, id));
+      return item?.businessId;
+    }
+    case "garage_service": {
+      const [item] = await db.select({ businessId: garageServices.garageId }).from(garageServices).where(eq(garageServices.id, id));
+      return item?.businessId;
+    }
+    case "support_service": {
+      const [item] = await db.select({ businessId: supportServices.businessId }).from(supportServices).where(eq(supportServices.id, id));
+      return item?.businessId;
+    }
+    case "business": {
+      const [business] = await db.select({ businessId: businesses.id }).from(businesses).where(eq(businesses.id, id));
+      return business?.businessId;
+    }
+    default:
+      return undefined;
+  }
+}
+
+async function actorCanManageBusiness(actor: any, businessId: string): Promise<boolean> {
+  if (actor?.role === "admin") return true;
+  if (actor?.role !== "owner") return false;
+  const business = await storage.getBusinessById(businessId);
+  return business?.ownerId === actor.id;
+}
+
+async function actorCanManageListing(actor: any, type: string, id: string): Promise<boolean> {
+  const businessId = await getListingBusinessId(type, id);
+  return !!businessId && actorCanManageBusiness(actor, businessId);
+}
+
+async function actorCanManageGalleryImage(actor: any, image: GalleryImage): Promise<boolean> {
+  return actorCanManageListing(actor, image.entityType, image.entityId);
+}
+
+function pickFields(body: unknown, fields: string[]) {
   const values = body && typeof body === "object" && !Array.isArray(body)
     ? body as Record<string, unknown>
     : {};
-  const blocked = new Set(fields);
-  return Object.fromEntries(Object.entries(values).filter(([key]) => !blocked.has(key))) as Record<string, any>;
+  const allowed = new Set(fields);
+  return Object.fromEntries(Object.entries(values).filter(([key]) => allowed.has(key)));
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+  if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET must be set in production");
+  }
   await ensurePersistentUploadsTable();
   const migratedUploads = await migrateLegacyUploads();
   if (migratedUploads > 0) console.log("[uploads] migrated " + migratedUploads + " legacy files to PostgreSQL");
@@ -174,7 +221,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const body = insertUserSchema.parse(req.body);
+      const body = insertUserSchema.parse({
+        ...pickFields(req.body, ["name", "email", "password"]),
+        role: "owner",
+      });
+      body.email = body.email.trim().toLowerCase();
       const existing = await storage.getUserByEmail(body.email);
       if (existing) return res.status(400).json({ message: "Email already registered" });
       const hashed = await bcrypt.hash(body.password, 10);
@@ -182,13 +233,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: "30d" });
       res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
     } catch (e: any) {
+      if (e.code === "23505") return res.status(409).json({ message: "Email already registered" });
       res.status(400).json({ message: e.message });
     }
   });
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+      const { password } = req.body || {};
       if (!email || !password) return res.status(400).json({ message: "Email and password required" });
       const user = await storage.getUserByEmail(email);
       if (!user) return res.status(401).json({ message: "Invalid email or password" });
@@ -232,6 +285,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/api/mpesa/config", ownerMiddleware, async (req, res) => {
+    if ((req as any).user?.role !== "owner") return res.status(403).json({ message: "Only business owners can access payment settings" });
     res.json({
       amount: PREMIUM_AMOUNT,
       days: PREMIUM_DAYS,
@@ -241,15 +295,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/mpesa/initiate", ownerMiddleware, async (req, res) => {
     try {
-      const { phone } = req.body;
-      if (!phone) return res.status(400).json({ message: "Phone number required" });
-
       const user = (req as any).user;
+      if (user.role !== "owner") return res.status(403).json({ message: "Only business owners can make premium payments" });
+      const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
+      if (!phone) return res.status(400).json({ message: "Phone number required" });
       const biz = await storage.getBusinessByOwnerId(user.id);
       if (!biz) return res.status(404).json({ message: "No business found" });
       if (biz.status !== "approved") return res.status(403).json({ message: "Business must be approved first" });
+      if (biz.suspended) return res.status(403).json({ message: "Suspended businesses cannot activate premium" });
 
       const result = await initiateSTKPush(phone, biz.id, biz.name);
+      if (!result.CheckoutRequestID) throw new Error("M-Pesa did not return a checkout request id");
+      await db.insert(mpesaPayments).values({
+        businessId: biz.id,
+        checkoutRequestId: result.CheckoutRequestID,
+        amount: PREMIUM_AMOUNT,
+      });
       res.json({ success: true, message: "Payment request sent to your phone. Enter your M-Pesa PIN to confirm.", checkoutRequestId: result.CheckoutRequestID });
     } catch (e: any) {
       res.status(500).json({ message: e.message || "Failed to initiate payment" });
@@ -259,21 +320,53 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/mpesa/callback", async (req, res) => {
     try {
       const body = req.body?.Body?.stkCallback;
-      if (!body) return res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
+      if (!body || typeof body.CheckoutRequestID !== "string") {
+        return res.status(400).json({ message: "Invalid M-Pesa callback payload" });
+      }
+      const checkoutRequestId = body.CheckoutRequestID;
+      const resultCode = Number(body.ResultCode);
+      const callbackItems = Array.isArray(body.CallbackMetadata?.Item) ? body.CallbackMetadata.Item : [];
+      const paidAmount = Number(callbackItems.find((item: any) => item.Name === "Amount")?.Value);
+      const receiptNumber = callbackItems.find((item: any) => item.Name === "MpesaReceiptNumber")?.Value;
+      const result = await db.transaction(async tx => {
+        const [payment] = await tx.select().from(mpesaPayments)
+          .where(eq(mpesaPayments.checkoutRequestId, checkoutRequestId))
+          .limit(1);
+        if (!payment) return "unknown";
+        if (payment.status !== "pending") return "duplicate";
+        if (resultCode !== 0) {
+          await tx.update(mpesaPayments)
+            .set({ status: "failed" })
+            .where(and(eq(mpesaPayments.id, payment.id), eq(mpesaPayments.status, "pending")));
+          return "failed";
+        }
+        if (!Number.isFinite(paidAmount) || paidAmount !== payment.amount) return "amount_mismatch";
 
-      const resultCode = body.ResultCode;
-      const accountReference = body.CallbackMetadata?.Item?.find((i: any) => i.Name === "AccountReference")?.Value || "";
+        const [completed] = await tx.update(mpesaPayments)
+          .set({ status: "completed", receiptNumber: typeof receiptNumber === "string" ? receiptNumber : null, completedAt: new Date() })
+          .where(and(eq(mpesaPayments.id, payment.id), eq(mpesaPayments.status, "pending")))
+          .returning({ id: mpesaPayments.id });
+        if (!completed) return "duplicate";
 
-      if (resultCode === 0 && accountReference) {
-        const businessId = accountReference;
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + PREMIUM_DAYS);
-        await storage.updateBusiness(businessId, { premium: true, premiumExpiresAt: expiresAt });
+        await tx.update(businesses)
+          .set({ premium: true, premiumExpiresAt: expiresAt })
+          .where(eq(businesses.id, payment.businessId));
+        return "completed";
+      });
+      if (result === "unknown") {
+        console.error("[mpesa] callback has unknown checkout request:", checkoutRequestId);
+        return res.status(404).json({ message: "Unknown checkout request" });
       }
-
+      if (result === "amount_mismatch") {
+        console.error("[mpesa] callback amount did not match the stored payment:", checkoutRequestId);
+        return res.status(200).json({ ResultCode: 0, ResultDesc: "Callback accepted; payment requires reconciliation" });
+      }
       res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
     } catch (e: any) {
-      res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
+      console.error("[mpesa] callback processing failed:", e.message);
+      res.status(500).json({ message: "M-Pesa callback could not be processed" });
     }
   });
 
@@ -281,9 +374,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const { businessId, days } = req.body;
       if (!businessId) return res.status(400).json({ message: "businessId required" });
+      const duration = days === undefined ? PREMIUM_DAYS : Number(days);
+      if (!Number.isInteger(duration) || duration < 1 || duration > 365) return res.status(400).json({ message: "days must be an integer between 1 and 365" });
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + (days || PREMIUM_DAYS));
+      expiresAt.setDate(expiresAt.getDate() + duration);
       const biz = await storage.updateBusiness(businessId, { premium: true, premiumExpiresAt: expiresAt });
+      if (!biz) return res.status(404).json({ message: "Business not found" });
       res.json(biz);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -295,6 +391,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { businessId } = req.body;
       if (!businessId) return res.status(400).json({ message: "businessId required" });
       const biz = await storage.updateBusiness(businessId, { premium: false, premiumExpiresAt: null as any });
+      if (!biz) return res.status(404).json({ message: "Business not found" });
       res.json(biz);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -332,7 +429,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/businesses", authMiddleware, async (req, res) => {
     try {
       const user = (req as any).user;
-      const body = insertBusinessSchema.parse({ ...req.body, ownerId: user.id });
+      if (user.role !== "owner") return res.status(403).json({ message: "Only business-owner accounts can register a business" });
+      if (await storage.getBusinessByOwnerId(user.id)) return res.status(409).json({ message: "Your account already has a business profile" });
+      const body = insertBusinessSchema.parse({
+        ...pickFields(req.body, ["name", "category", "subcategory", "description", "phone", "whatsapp", "address", "city", "logo", "banner", "website", "latitude", "longitude", "carBrands"]),
+        ownerId: user.id,
+        premium: false,
+        premiumExpiresAt: null,
+        suspended: false,
+      });
       const biz = await storage.createBusiness(body);
 
       // Generate email verification token and send emails (non-blocking)
@@ -430,6 +535,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         "premium",
         "premiumExpiresAt",
         "featured",
+        "suspended",
       ]);
       const allowedFields = Object.fromEntries(
         Object.entries(req.body || {}).filter(([k]) => !ownerCannotSet.has(k))
@@ -437,7 +543,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (Object.keys(allowedFields).length === 0) {
         return res.json(biz);
       }
-      const updated = await storage.updateBusiness(biz.id, allowedFields);
+      const parsed = insertBusinessSchema.partial().parse(allowedFields);
+      const updated = await storage.updateBusiness(biz.id, parsed);
       res.json(updated);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -932,7 +1039,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/admin/businesses/:id/reject", adminMiddleware, async (req, res) => {
     try {
+      const currentBusiness = await storage.getBusinessById(req.params.id);
+      if (!currentBusiness) return res.status(404).json({ message: "Business not found" });
       const biz = await storage.updateBusiness(req.params.id, { status: "rejected" });
+      if (!biz) return res.status(404).json({ message: "Business not found" });
       const owner = await storage.getUserById(biz.ownerId);
       if (owner) {
         sendRejectionEmail({ toEmail: owner.email, toName: owner.name, businessName: biz.name })
@@ -948,7 +1058,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const business = await storage.getBusinessById(req.params.id);
       if (!business) return res.status(404).json({ message: "Business not found" });
-      await db.delete(featureRequests).where(eq(featureRequests.ownerId, business.ownerId));
       await storage.deleteBusiness(req.params.id);
       res.json({ success: true });
     } catch (e: any) {
@@ -961,13 +1070,36 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (typeof req.body?.suspended !== "boolean") return res.status(400).json({ message: "suspended must be a boolean" });
       const business = await storage.getBusinessById(req.params.id);
       if (!business) return res.status(404).json({ message: "Business not found" });
-      const updated = await storage.updateBusiness(req.params.id, {
-        suspended: req.body.suspended,
-        ...(req.body.suspended ? { featured: false } : {}),
+      const updated = await db.transaction(async tx => {
+        const [updatedBusiness] = await tx.update(businesses).set({
+          suspended: req.body.suspended,
+          ...(req.body.suspended ? { featured: false } : {}),
+        }).where(eq(businesses.id, business.id)).returning();
+        if (!updatedBusiness || !req.body.suspended) return updatedBusiness;
+
+        const [carItems, partItems, garageServiceItems, supportServiceItems] = await Promise.all([
+          tx.select({ id: cars.id }).from(cars).where(eq(cars.dealerId, business.id)),
+          tx.select({ id: spareParts.id }).from(spareParts).where(eq(spareParts.businessId, business.id)),
+          tx.select({ id: garageServices.id }).from(garageServices).where(eq(garageServices.garageId, business.id)),
+          tx.select({ id: supportServices.id }).from(supportServices).where(eq(supportServices.businessId, business.id)),
+        ]);
+        const requestItems = [
+          { type: "business" as const, id: business.id },
+          ...carItems.map(item => ({ type: "car" as const, id: item.id })),
+          ...partItems.map(item => ({ type: "part" as const, id: item.id })),
+          ...garageServiceItems.map(item => ({ type: "garage_service" as const, id: item.id })),
+          ...supportServiceItems.map(item => ({ type: "support_service" as const, id: item.id })),
+        ];
+        for (const item of requestItems) {
+          await tx.delete(featureRequests).where(and(
+            eq(featureRequests.itemType, item.type),
+            eq(featureRequests.itemId, item.id),
+            eq(featureRequests.status, "pending"),
+          ));
+        }
+        return updatedBusiness;
       });
-      if (req.body.suspended) {
-        await db.delete(featureRequests).where(and(eq(featureRequests.ownerId, business.ownerId), eq(featureRequests.status, "pending")));
-      }
+      if (!updated) return res.status(404).json({ message: "Business not found" });
       res.json(updated);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -1039,6 +1171,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ message: "Unsupported catalog item type" });
       }
       await db.delete(featureRequests).where(and(eq(featureRequests.itemType, type as FeatureRequestItemType), eq(featureRequests.itemId, id)));
+      const galleryType = type === "part" ? "spare_part" : type;
+      if (galleryType !== "support_service") {
+        await db.delete(galleryImages).where(and(eq(galleryImages.entityType, galleryType), eq(galleryImages.entityId, id)));
+      }
       if (type === "car") await storage.deleteCar(id);
       else if (type === "part") await storage.deleteSparePart(id);
       else if (type === "garage_service") await storage.deleteGarageService(id);
@@ -1124,6 +1260,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/report", async (req, res) => {
     try {
       const body = insertBusinessReportSchema.parse(req.body);
+      const business = await storage.getBusinessById(body.businessId);
+      if (!business || business.status !== "approved" || business.suspended) return res.status(404).json({ message: "Business not found" });
       const report = await storage.createReport(body);
       res.json(report);
     } catch (e: any) {
@@ -1169,7 +1307,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/parts", ownerMiddleware, async (req, res) => {
     try {
-      const body = insertSparePartSchema.parse(req.body);
+      const user = (req as any).user;
+      if (user.role !== "owner") return res.status(403).json({ message: "Only business owners can add spare-part listings" });
+      const business = await storage.getBusinessByOwnerId(user.id);
+      if (!business || business.category !== "spare_parts") return res.status(403).json({ message: "Only spare-parts businesses can add listings" });
+      if (business.status !== "approved" || business.suspended) return res.status(403).json({ message: "Your business must be approved and active first" });
+      const body = insertSparePartSchema.parse({
+        ...pickFields(req.body, ["partName", "carBrand", "carModel", "year", "condition", "price", "description", "image"]),
+        businessId: business.id,
+        suspended: false,
+      });
       const result = await createSparePartIfNotDuplicate(body);
       if (result.duplicate) {
         return res.status(409).json({ message: "An identical spare-part listing already exists", duplicate: true, existingId: result.record.id });
@@ -1182,7 +1329,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/parts/:id", ownerMiddleware, async (req, res) => {
     try {
-      const part = await storage.updateSparePart(req.params.id, omitFields(req.body, ["id", "businessId", "createdAt", "featured"]));
+      const actor = (req as any).user;
+      if (!await actorCanManageListing(actor, "part", req.params.id)) return res.status(404).json({ message: "Spare part not found" });
+      const fields = insertSparePartSchema.partial().parse(pickFields(req.body, ["partName", "carBrand", "carModel", "year", "condition", "price", "description", "image"]));
+      if (Object.keys(fields).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
+      const part = await storage.updateSparePart(req.params.id, fields);
+      if (!part) return res.status(404).json({ message: "Spare part not found" });
       res.json(part);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -1191,6 +1343,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/parts/:id", ownerMiddleware, async (req, res) => {
     try {
+      const actor = (req as any).user;
+      if (!await actorCanManageListing(actor, "part", req.params.id)) return res.status(404).json({ message: "Spare part not found" });
+      await db.delete(featureRequests).where(and(eq(featureRequests.itemType, "part"), eq(featureRequests.itemId, req.params.id)));
+      await db.delete(galleryImages).where(and(eq(galleryImages.entityType, "spare_part"), eq(galleryImages.entityId, req.params.id)));
       await storage.deleteSparePart(req.params.id);
       res.json({ success: true });
     } catch (e: any) {
@@ -1201,9 +1357,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Reviews
   app.get("/api/reviews/recent", async (req, res) => {
     try {
-      const limit = parseInt((req.query.limit as string) || "6", 10);
-      const all = await storage.getAllReviews();
-      res.json(all.slice(0, limit));
+      const requested = Number.parseInt(String(req.query.limit ?? "6"), 10);
+      const limit = Number.isFinite(requested) ? Math.max(1, Math.min(requested, 50)) : 6;
+      const recentReviews = await db.select({
+        id: reviews.id,
+        businessId: reviews.businessId,
+        name: reviews.name,
+        rating: reviews.rating,
+        comment: reviews.comment,
+        createdAt: reviews.createdAt,
+        businessName: businesses.name,
+      }).from(reviews)
+        .innerJoin(businesses, eq(reviews.businessId, businesses.id))
+        .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false)))
+        .orderBy(desc(reviews.createdAt))
+        .limit(limit);
+      res.json(recentReviews);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -1211,6 +1380,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/reviews/:businessId", async (req, res) => {
     try {
+      const business = await storage.getBusinessById(req.params.businessId);
+      if (!business || business.status !== "approved" || business.suspended) return res.status(404).json({ message: "Business not found" });
       const revs = await storage.getReviewsByBusinessId(req.params.businessId);
       res.json(revs);
     } catch (e: any) {
@@ -1222,6 +1393,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const body = insertReviewSchema.parse(req.body);
       if (body.rating < 1 || body.rating > 5) return res.status(400).json({ message: "Rating must be 1-5" });
+      const business = await storage.getBusinessById(body.businessId);
+      if (!business || business.status !== "approved" || business.suspended) return res.status(404).json({ message: "Business not found" });
       const review = await storage.createReview(body);
       res.json(review);
     } catch (e: any) {
@@ -1233,6 +1406,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/messages", async (req, res) => {
     try {
       const body = insertMessageSchema.parse(req.body);
+      const business = await storage.getBusinessById(body.businessId);
+      if (!business || business.status !== "approved" || business.suspended) return res.status(404).json({ message: "Business not found" });
       const msg = await storage.createMessage(body);
       res.json(msg);
     } catch (e: any) {
@@ -1282,8 +1457,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const user = (req as any).user;
       const biz = await storage.getBusinessByOwnerId(user.id);
       if (!biz || biz.category !== "car_dealer") return res.status(403).json({ message: "Only car dealers can add car listings" });
-      if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
-      const body = insertCarSchema.parse({ ...req.body, dealerId: biz.id });
+      if (biz.status !== "approved" || biz.suspended) return res.status(403).json({ message: "Your business must be approved and active first" });
+      if (user.role !== "owner") return res.status(403).json({ message: "Only business owners can add car listings" });
+      const body = insertCarSchema.parse({
+        ...pickFields(req.body, ["title", "brand", "model", "year", "price", "mileage", "fuelType", "transmission", "condition", "description", "images", "location"]),
+        dealerId: biz.id,
+        suspended: false,
+      });
       const result = await createCarIfNotDuplicate(body);
       if (result.duplicate) {
         return res.status(409).json({ message: "An identical car listing already exists", duplicate: true, existingId: result.record.id });
@@ -1296,8 +1476,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/cars/:id", ownerMiddleware, async (req, res) => {
     try {
-      const data = omitFields(req.body, ["id", "dealerId", "createdAt", "featured"]);
+      const actor = (req as any).user;
+      if (!await actorCanManageListing(actor, "car", req.params.id)) return res.status(404).json({ message: "Car not found" });
+      const data = insertCarSchema.partial().parse(pickFields(req.body, ["title", "brand", "model", "year", "price", "mileage", "fuelType", "transmission", "condition", "description", "images", "location"]));
+      if (Object.keys(data).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
       const car = await storage.updateCar(req.params.id, data);
+      if (!car) return res.status(404).json({ message: "Car not found" });
       res.json(car);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -1306,6 +1490,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/cars/:id", ownerMiddleware, async (req, res) => {
     try {
+      const actor = (req as any).user;
+      if (!await actorCanManageListing(actor, "car", req.params.id)) return res.status(404).json({ message: "Car not found" });
+      await db.delete(featureRequests).where(and(eq(featureRequests.itemType, "car"), eq(featureRequests.itemId, req.params.id)));
+      await db.delete(galleryImages).where(and(eq(galleryImages.entityType, "car"), eq(galleryImages.entityId, req.params.id)));
       await storage.deleteCar(req.params.id);
       res.json({ success: true });
     } catch (e: any) {
@@ -1355,10 +1543,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/services", ownerMiddleware, async (req, res) => {
     try {
       const user = (req as any).user;
+      if (user.role !== "owner") return res.status(403).json({ message: "Only business owners can add garage services" });
       const biz = await storage.getBusinessByOwnerId(user.id);
       if (!biz || biz.category !== "garage") return res.status(403).json({ message: "Only garages can add service listings" });
-      if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
-      const body = insertGarageServiceSchema.parse({ ...req.body, garageId: biz.id });
+      if (biz.status !== "approved" || biz.suspended) return res.status(403).json({ message: "Your business must be approved and active first" });
+      const body = insertGarageServiceSchema.parse({
+        ...pickFields(req.body, ["name", "description", "price"]),
+        garageId: biz.id,
+        suspended: false,
+        popular: false,
+      });
       const svc = await storage.createGarageService(body);
       res.json(svc);
     } catch (e: any) {
@@ -1368,8 +1562,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/services/:id", ownerMiddleware, async (req, res) => {
     try {
-      const data = omitFields(req.body, ["id", "garageId", "createdAt", "featured"]);
+      const actor = (req as any).user;
+      if (!await actorCanManageListing(actor, "garage_service", req.params.id)) return res.status(404).json({ message: "Service not found" });
+      const data = insertGarageServiceSchema.partial().parse(pickFields(req.body, ["name", "description", "price"]));
+      if (Object.keys(data).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
       const svc = await storage.updateGarageService(req.params.id, data);
+      if (!svc) return res.status(404).json({ message: "Service not found" });
       res.json(svc);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -1378,6 +1576,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/services/:id", ownerMiddleware, async (req, res) => {
     try {
+      const actor = (req as any).user;
+      if (!await actorCanManageListing(actor, "garage_service", req.params.id)) return res.status(404).json({ message: "Service not found" });
+      await db.delete(featureRequests).where(and(eq(featureRequests.itemType, "garage_service"), eq(featureRequests.itemId, req.params.id)));
+      await db.delete(galleryImages).where(and(eq(galleryImages.entityType, "garage_service"), eq(galleryImages.entityId, req.params.id)));
       await storage.deleteGarageService(req.params.id);
       res.json({ success: true });
     } catch (e: any) {
@@ -1408,11 +1610,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/support-services", ownerMiddleware, async (req, res) => {
     try {
       const user = (req as any).user;
+      if (user.role !== "owner") return res.status(403).json({ message: "Only business owners can add support services" });
       const biz = await storage.getBusinessByOwnerId(user.id);
       const supportCategories = ["insurance", "car_wash", "other"];
       if (!biz || !supportCategories.includes(biz.category)) return res.status(403).json({ message: "Only automotive support businesses can add support services" });
-      if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
-      const body = insertSupportServiceSchema.parse({ ...req.body, businessId: biz.id });
+      if (biz.status !== "approved" || biz.suspended) return res.status(403).json({ message: "Your business must be approved and active first" });
+      const body = insertSupportServiceSchema.parse({
+        ...pickFields(req.body, ["name", "description", "startingPrice"]),
+        businessId: biz.id,
+        suspended: false,
+      });
       const svc = await storage.createSupportService(body);
       res.json(svc);
     } catch (e: any) {
@@ -1422,8 +1629,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/support-services/:id", ownerMiddleware, async (req, res) => {
     try {
-      const data = omitFields(req.body, ["id", "businessId", "createdAt", "featured"]);
+      const actor = (req as any).user;
+      if (!await actorCanManageListing(actor, "support_service", req.params.id)) return res.status(404).json({ message: "Support service not found" });
+      const data = insertSupportServiceSchema.partial().parse(pickFields(req.body, ["name", "description", "startingPrice"]));
+      if (Object.keys(data).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
       const svc = await storage.updateSupportService(req.params.id, data);
+      if (!svc) return res.status(404).json({ message: "Support service not found" });
       res.json(svc);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -1432,6 +1643,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/support-services/:id", ownerMiddleware, async (req, res) => {
     try {
+      const actor = (req as any).user;
+      if (!await actorCanManageListing(actor, "support_service", req.params.id)) return res.status(404).json({ message: "Support service not found" });
+      await db.delete(featureRequests).where(and(eq(featureRequests.itemType, "support_service"), eq(featureRequests.itemId, req.params.id)));
       await storage.deleteSupportService(req.params.id);
       res.json({ success: true });
     } catch (e: any) {
@@ -1485,6 +1699,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       id: businesses.id,
       category: businesses.category,
       status: businesses.status,
+      suspended: businesses.suspended,
       city: businesses.city,
     }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
     if (!biz) {
@@ -1497,6 +1712,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
     if (biz.status !== "approved") {
       res.status(400).json({ message: "Listings can only be imported to an approved business" });
+      return null;
+    }
+    if (biz.suspended) {
+      res.status(400).json({ message: "Listings cannot be imported to a suspended business" });
       return null;
     }
     return biz;
@@ -1528,7 +1747,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         : await storage.getBusinessByOwnerId(req.user.id);
       if (req.user?.role === "admin" && !biz) return;
       if (!biz || biz.category !== "car_dealer") return res.status(403).json({ message: "Only car dealers can import car listings" });
-      if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
+      if (biz.status !== "approved" || biz.suspended) return res.status(403).json({ message: "Your business must be approved and active first" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
@@ -1577,7 +1796,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         ? await getAdminImportBusiness(req, res, ["spare_parts"])
         : await storage.getBusinessByOwnerId(req.user.id);
       if (req.user?.role === "admin" && !biz) return;
-      if (!biz) return res.status(403).json({ message: "No business found" });
+      if (!biz || biz.category !== "spare_parts") return res.status(403).json({ message: "Only spare-parts businesses can import listings" });
+      if (biz.status !== "approved" || biz.suspended) return res.status(403).json({ message: "Your business must be approved and active first" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
@@ -1622,7 +1842,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         : await storage.getBusinessByOwnerId(req.user.id);
       if (req.user?.role === "admin" && !biz) return;
       if (!biz || biz.category !== "garage") return res.status(403).json({ message: "Only garages can import services" });
-      if (biz.status !== "approved") return res.status(403).json({ message: "Your business must be approved first" });
+      if (biz.status !== "approved" || biz.suspended) return res.status(403).json({ message: "Your business must be approved and active first" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
@@ -1681,6 +1901,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         : await storage.getBusinessByOwnerId(req.user.id);
       if (req.user?.role === "admin" && !biz) return;
       if (!biz || !supportCategories.includes(biz.category)) return res.status(403).json({ message: "Only automotive support businesses can import services" });
+      if (biz.status !== "approved" || biz.suspended) return res.status(403).json({ message: "Your business must be approved and active first" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
@@ -1747,7 +1968,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const allBiz = await storage.getAllBusinesses();
       const filtered = status === "all" ? allBiz : allBiz.filter(b => b.status === status);
       const headers = ["id","name","category","status","city","address","phone","whatsapp","description","premium","premiumExpiresAt","createdAt"];
-      const rows = filtered.map(b => [b.id, b.name, b.category, b.status, b.city, b.address, b.phone, b.whatsapp, b.description, b.premium, b.premiumExpiresAt, b.createdAt]);
+      const rows = filtered.map(b => [b.id, b.name, b.category, b.status, b.city, b.address, b.phone, b.whatsapp, b.description, b.premium, b.premiumExpiresAt?.toISOString(), b.createdAt?.toISOString()]);
       const csv = toCSV(headers, rows);
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", `attachment; filename="businesses-${status}-${Date.now()}.csv"`);
@@ -1761,7 +1982,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const allUsers = await storage.getAllUsers();
       const headers = ["id","name","email","role","createdAt"];
-      const rows = allUsers.map(u => [u.id, u.name, u.email, u.role, u.createdAt]);
+      const rows = allUsers.map(u => [u.id, u.name, u.email, u.role, u.createdAt?.toISOString()]);
       const csv = toCSV(headers, rows);
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", `attachment; filename="users-${Date.now()}.csv"`);
@@ -1911,6 +2132,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       if (!req.file) return res.status(400).json({ message: "No image file uploaded" });
       const { entityType, entityId } = req.params;
+      if (!["business", "car", "spare_part", "garage_service"].includes(entityType)) {
+        return res.status(400).json({ message: "Unsupported gallery item type" });
+      }
+      if (!await actorCanManageListing(req.user, entityType, entityId)) {
+        return res.status(404).json({ message: "Gallery item not found" });
+      }
       const url = await saveUploadedFile(req.file, "gallery", "gallery");
       const caption = req.body.caption || null;
       const image = await storage.addGalleryImage({ entityType, entityId, url, caption });
@@ -1924,6 +2151,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const image = await storage.getGalleryImageById(req.params.id);
       if (!image) return res.status(404).json({ message: "Image not found" });
+      if (!await actorCanManageGalleryImage(req.user, image)) return res.status(404).json({ message: "Image not found" });
       await storage.deleteGalleryImage(req.params.id);
       const storageKey = image.url.startsWith("/uploads/") ? image.url.slice("/uploads/".length) : null;
       if (storageKey) await deletePersistentUpload(storageKey);

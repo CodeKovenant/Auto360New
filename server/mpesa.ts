@@ -33,6 +33,9 @@ export async function initiateSTKPush(phone: string, businessId: string, busines
   const password = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString("base64");
 
   const normalizedPhone = phone.replace(/^0/, "254").replace(/^\+/, "").replace(/\D/g, "");
+  if (!/^254[17]\d{8}$/.test(normalizedPhone)) {
+    throw new Error("Enter a valid Kenyan mobile phone number");
+  }
 
   const token = await getAccessToken();
 
@@ -59,9 +62,14 @@ export async function initiateSTKPush(phone: string, businessId: string, busines
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`STK push failed: ${err}`);
+  const data = await res.json() as {
+    ResponseCode?: string;
+    ResponseDescription?: string;
+    CustomerMessage?: string;
+    CheckoutRequestID?: string;
+  };
+  if (!res.ok || data.ResponseCode !== "0" || !data.CheckoutRequestID) {
+    throw new Error(data.CustomerMessage || data.ResponseDescription || `STK push failed: ${res.status}`);
   }
-  return res.json();
+  return data;
 }

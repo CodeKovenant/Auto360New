@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { eq, ilike, and, or, sql, gte, lte, desc, inArray, isNull } from "drizzle-orm";
 import {
-  users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports, galleryImages,
+  users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports, galleryImages, featureRequests,
   type User, type InsertUser,
   type Business, type InsertBusiness,
   type SparePart, type InsertSparePart,
@@ -66,7 +66,7 @@ export async function hasPersistentUpload(storageKey: string): Promise<boolean> 
     "SELECT 1 FROM persistent_uploads WHERE storage_key = $1 LIMIT 1",
     [storageKey]
   );
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 }
 
 export async function deletePersistentUpload(storageKey: string): Promise<void> {
@@ -100,9 +100,9 @@ export async function createCarIfNotDuplicate(car: InsertCar): Promise<{ record:
       eq(cars.year, car.year),
       sql`${cars.price} = ${car.price}`,
       sql`${cars.mileage} IS NOT DISTINCT FROM ${car.mileage ?? null}`,
-      eq(cars.fuelType, car.fuelType),
-      eq(cars.transmission, car.transmission),
-      eq(cars.condition, car.condition),
+      eq(cars.fuelType, car.fuelType ?? "petrol"),
+      eq(cars.transmission, car.transmission ?? "automatic"),
+      eq(cars.condition, car.condition ?? "used"),
     )).limit(1);
     if (existing) return { record: existing, duplicate: true };
     const [record] = await tx.insert(cars).values(car).returning();
@@ -159,7 +159,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
-  getAllUsers(): Promise<User[]>;
+  getAllUsers(): Promise<Pick<User, "id" | "name" | "email" | "role" | "createdAt">[]>;
 
   // Businesses
   getBusinessById(id: string): Promise<Business | undefined>;
@@ -270,7 +270,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllUsers() {
-    return db.select().from(users).orderBy(users.createdAt);
+    return db.select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+      createdAt: users.createdAt,
+    }).from(users).orderBy(users.createdAt);
   }
 
   async getBusinessById(id: string) {
@@ -421,13 +427,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteBusiness(id: string) {
-    await db.delete(spareParts).where(eq(spareParts.businessId, id));
-    await db.delete(reviews).where(eq(reviews.businessId, id));
-    await db.delete(messages).where(eq(messages.businessId, id));
-    await db.delete(cars).where(eq(cars.dealerId, id));
-    await db.delete(garageServices).where(eq(garageServices.garageId, id));
-    await db.delete(supportServices).where(eq(supportServices.businessId, id));
-    await db.delete(businesses).where(eq(businesses.id, id));
+    await db.transaction(async tx => {
+      const carIds = await tx.select({ id: cars.id }).from(cars).where(eq(cars.dealerId, id));
+      const partIds = await tx.select({ id: spareParts.id }).from(spareParts).where(eq(spareParts.businessId, id));
+      const garageServiceIds = await tx.select({ id: garageServices.id }).from(garageServices).where(eq(garageServices.garageId, id));
+      const supportServiceIds = await tx.select({ id: supportServices.id }).from(supportServices).where(eq(supportServices.businessId, id));
+      const requestIds = [
+        { type: "business" as const, id },
+        ...carIds.map(item => ({ type: "car" as const, id: item.id })),
+        ...partIds.map(item => ({ type: "part" as const, id: item.id })),
+        ...garageServiceIds.map(item => ({ type: "garage_service" as const, id: item.id })),
+        ...supportServiceIds.map(item => ({ type: "support_service" as const, id: item.id })),
+      ];
+      for (const request of requestIds) {
+        await tx.delete(featureRequests).where(and(
+          eq(featureRequests.itemType, request.type),
+          eq(featureRequests.itemId, request.id),
+        ));
+      }
+      await tx.delete(galleryImages).where(and(
+        inArray(galleryImages.entityType, ["business", "car", "spare_part", "garage_service"]),
+        inArray(galleryImages.entityId, [id, ...carIds.map(item => item.id), ...partIds.map(item => item.id), ...garageServiceIds.map(item => item.id)]),
+      ));
+      await tx.delete(spareParts).where(eq(spareParts.businessId, id));
+      await tx.delete(reviews).where(eq(reviews.businessId, id));
+      await tx.delete(messages).where(eq(messages.businessId, id));
+      await tx.delete(businessReports).where(eq(businessReports.businessId, id));
+      await tx.delete(cars).where(eq(cars.dealerId, id));
+      await tx.delete(garageServices).where(eq(garageServices.garageId, id));
+      await tx.delete(supportServices).where(eq(supportServices.businessId, id));
+      await tx.delete(businesses).where(eq(businesses.id, id));
+    });
   }
 
   async getPendingBusinesses() {
@@ -540,7 +570,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAllReviews() {
     const allReviews = await db.select().from(reviews).orderBy(desc(reviews.createdAt));
-    const bizIds = [...new Set(allReviews.map(r => r.businessId))];
+    const bizIds = Array.from(new Set(allReviews.map(r => r.businessId)));
     if (bizIds.length === 0) return [];
     const bizList = await db.select({ id: businesses.id, name: businesses.name }).from(businesses).where(inArray(businesses.id, bizIds));
     const bizMap = Object.fromEntries(bizList.map(b => [b.id, b.name]));
@@ -849,7 +879,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAllReports() {
     const allReports = await db.select().from(businessReports).orderBy(desc(businessReports.createdAt));
-    const bizIds = [...new Set(allReports.map(r => r.businessId))];
+    const bizIds = Array.from(new Set(allReports.map(r => r.businessId)));
     if (bizIds.length === 0) return [];
     const bizList = await db.select({ id: businesses.id, name: businesses.name }).from(businesses).where(inArray(businesses.id, bizIds));
     const bizMap = Object.fromEntries(bizList.map(b => [b.id, b.name]));
@@ -881,7 +911,7 @@ export class DatabaseStorage implements IStorage {
     const dealerCars = await db.select({ dealerId: cars.dealerId })
       .from(cars)
       .where(and(ilike(cars.brand, `%${brand}%`), eq(cars.suspended, false)));
-    const dealerIds = [...new Set(dealerCars.map(c => c.dealerId))];
+    const dealerIds = Array.from(new Set(dealerCars.map(c => c.dealerId)));
 
     const dealerList = dealerIds.length > 0
       ? await db.select().from(businesses).where(

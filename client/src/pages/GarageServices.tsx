@@ -33,7 +33,7 @@ export default function GarageServices() {
     queryKey: [`/api/services?${queryString}`],
   });
 
-  const cities = [...new Set(services?.map(s => s.garageCity).filter(Boolean) || [])].sort();
+  const cities = Array.from(new Set(services?.map(s => s.garageCity).filter(Boolean) || [])).sort();
   const hasFilters = search || location !== "all";
 
   function clearFilters() {

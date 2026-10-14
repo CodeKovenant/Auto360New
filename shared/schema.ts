@@ -7,6 +7,7 @@ export const userRoleEnum = pgEnum("user_role", ["admin", "owner"]);
 export const businessStatusEnum = pgEnum("business_status", ["pending", "approved", "rejected"]);
 export const featureRequestItemTypeEnum = pgEnum("feature_request_item_type", ["business", "car", "part", "garage_service", "support_service"]);
 export const featureRequestStatusEnum = pgEnum("feature_request_status", ["pending", "approved", "rejected"]);
+export const mpesaPaymentStatusEnum = pgEnum("mpesa_payment_status", ["pending", "completed", "failed"]);
 export const partConditionEnum = pgEnum("part_condition", ["new", "used"]);
 export const fuelTypeEnum = pgEnum("fuel_type", ["petrol", "diesel", "hybrid", "electric", "other"]);
 export const transmissionEnum = pgEnum("transmission", ["automatic", "manual"]);
@@ -177,6 +178,17 @@ export const featureRequests = pgTable("feature_requests", {
 ]);
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+
+export const mpesaPayments = pgTable("mpesa_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessId: varchar("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+  checkoutRequestId: text("checkout_request_id").notNull().unique(),
+  amount: integer("amount").notNull(),
+  status: mpesaPaymentStatusEnum("status").notNull().default("pending"),
+  receiptNumber: text("receipt_number"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
 export const insertBusinessSchema = createInsertSchema(businesses).omit({ id: true, createdAt: true, status: true, featured: true });
 export const insertSparePartSchema = createInsertSchema(spareParts).omit({ id: true, createdAt: true, featured: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });

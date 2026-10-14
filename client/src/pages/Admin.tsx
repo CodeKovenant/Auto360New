@@ -36,7 +36,7 @@ interface AdminData {
   approved: EnrichedBusiness[];
   rejected: EnrichedBusiness[];
   reviews: (Review & { businessName: string })[];
-  users: UserType[];
+  users: Omit<UserType, "password" | "emailVerificationToken" | "emailVerifiedAt">[];
 }
 
 interface AdminImportBusiness {
@@ -300,7 +300,7 @@ function BusinessCard({
             )}
 
             {/* Website / Social */}
-            {(biz.website || biz.facebook || biz.instagram) && (
+            {biz.website && (
               <div className="space-y-1">
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Online Presence</p>
                 <div className="flex flex-wrap gap-2">
