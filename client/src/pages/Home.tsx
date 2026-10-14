@@ -8,13 +8,19 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import BusinessCard from "@/components/BusinessCard";
 import ReviewCard from "@/components/ReviewCard";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import type { Business, Car as CarType, GarageService, SparePart, SupportService } from "@shared/schema";
 
 type BusinessRated = Business & { avgRating: number; reviewCount: number };
 type HomeSections = Record<string, BusinessRated[]>;
 
 const PREMIUM_CATEGORY_ORDER = ["car_dealer", "garage", "spare_parts", "car_wash", "insurance", "other"] as const;
-const AUTOMOTIVE_SUPPORT_BUSINESS_CATEGORIES = new Set<string>(["car_wash", "insurance", "other"]);
 
 const PREMIUM_SECTION_TITLE: Record<(typeof PREMIUM_CATEGORY_ORDER)[number], string> = {
   car_dealer: "Premium Car Dealers",
@@ -26,7 +32,7 @@ const PREMIUM_SECTION_TITLE: Record<(typeof PREMIUM_CATEGORY_ORDER)[number], str
 };
 
 const HOME_SPOTLIGHT_SECTIONS: {
-  category: (typeof PREMIUM_CATEGORY_ORDER)[number] | "automotive_support";
+  category: "car_dealer" | "spare_parts" | "garage";
   title: string;
   subtitle: string;
   href: string;
@@ -35,10 +41,6 @@ const HOME_SPOTLIGHT_SECTIONS: {
   { category: "car_dealer", title: "Featured Car Dealers", subtitle: "Trusted dealers and showrooms near you", href: "/automobile-dealers", icon: Car },
   { category: "spare_parts", title: "Featured AutoSpares", subtitle: "Genuine and quality parts for all vehicle makes", href: "/autospares-dealers", icon: Package },
   { category: "garage", title: "Featured Garages", subtitle: "Trusted mechanics and auto repair shops near you", href: "/autogarage-repair", icon: Wrench },
-  { category: "automotive_support", title: "Featured Autosupport", subtitle: "Vehicle finance, tracking, towing and other driver support", href: "/automotive-support", icon: Shield },
-  { category: "car_wash", title: "Featured Car Wash", subtitle: "Wash and detailing services", href: "/businesses?category=car_wash", icon: Droplets },
-  { category: "insurance", title: "Featured Insurance", subtitle: "Coverage and automotive support", href: "/automotive-support", icon: Shield },
-  { category: "other", title: "Other Featured Services", subtitle: "More automotive businesses", href: "/businesses", icon: MoreHorizontal },
 ];
 
 const CATEGORIES = [
@@ -178,22 +180,13 @@ export default function Home() {
     staleTime: 0,
   });
 
-  const { data: automotiveSupportBusinesses, isLoading: automotiveSupportLoading } = useQuery<BusinessRated[]>({
-    queryKey: ["/api/businesses?category=automotive_support"],
-    staleTime: 0,
-  });
-
   /** Admin-featured listings come before paid Premium listings; Premium remains a separate status. */
   const spotlightByCategory = useMemo(() => {
     const out: Record<string, BusinessRated[]> = {};
     for (const block of HOME_SPOTLIGHT_SECTIONS) {
       const cat = block.category;
-      const fromSections = cat === "automotive_support" ? automotiveSupportBusinesses ?? [] : homeSections?.[cat] ?? [];
-      const premiumInCat = premiumBusinesses?.filter((b) =>
-        cat === "automotive_support"
-          ? AUTOMOTIVE_SUPPORT_BUSINESS_CATEGORIES.has(b.category)
-          : b.category === cat
-      ) ?? [];
+      const fromSections = homeSections?.[cat] ?? [];
+      const premiumInCat = premiumBusinesses?.filter((b) => b.category === cat) ?? [];
       const seen = new Set<string>();
       const merged: BusinessRated[] = [];
       const featuredInCat = fromSections.filter((b) => b.featured);
@@ -221,7 +214,7 @@ export default function Home() {
       out[cat] = merged;
     }
     return out;
-  }, [homeSections, premiumBusinesses, automotiveSupportBusinesses]);
+  }, [homeSections, premiumBusinesses]);
 
   const premiumByCategory = useMemo(() => {
     const map = new Map<string, BusinessRated[]>();
@@ -377,60 +370,72 @@ export default function Home() {
               {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-72 rounded-2xl" />)}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-              <FeaturedListingCard
-                label="Car for sale"
-                title={featuredCar?.title || "Explore cars for sale"}
-                details={featuredCar ? [featuredCar.year, featuredCar.condition === "new" ? "Brand new" : "Used"].join(" · ") : "Browse available vehicle listings"}
-                business={featuredCar ? featuredCar.dealerName + " · " + featuredCar.location : "From approved automobile dealers"}
-                image={featuredCar?.images?.[0] || featuredCar?.dealerLogo}
-                price={formatFeaturedPrice(featuredCar?.price)}
-                href={featuredCar ? "/cars/" + featuredCar.id : "/cars"}
-                icon={Car}
-                actionLabel={featuredCar ? "View listing" : "Browse cars"}
-                testId="featured-home-car"
-                isFeatured={!!featuredCar}
-              />
-              <FeaturedListingCard
-                label="Spare part"
-                title={featuredSparePart?.partName || "Explore spare parts"}
-                details={featuredSparePart ? [featuredSparePart.carBrand, featuredSparePart.carModel, featuredSparePart.condition === "new" ? "New" : "Used"].join(" · ") : "Browse parts listed by local dealers"}
-                business={featuredSparePart ? featuredSparePart.businessName + " · " + featuredSparePart.businessCity : "From approved spare-parts dealers"}
-                image={featuredSparePart?.image || featuredSparePart?.businessLogo}
-                price={formatFeaturedPrice(featuredSparePart?.price)}
-                href={featuredSparePart ? "/parts/" + featuredSparePart.id : "/autospares-dealers"}
-                icon={Package}
-                actionLabel={featuredSparePart ? "View listing" : "Browse parts"}
-                testId="featured-home-spare-part"
-                isFeatured={!!featuredSparePart}
-              />
-              <FeaturedListingCard
-                label="Garage service"
-                title={featuredGarageService?.name || "Explore garage services"}
-                details={featuredGarageService?.description || "Find repair and maintenance services"}
-                business={featuredGarageService ? featuredGarageService.garageName + " · " + featuredGarageService.garageCity : "From approved garages"}
-                image={featuredGarageService?.garageLogo}
-                price={formatFeaturedPrice(featuredGarageService?.price)}
-                href={featuredGarageService ? "/services/" + featuredGarageService.id : "/garages/services"}
-                icon={Wrench}
-                actionLabel={featuredGarageService ? "View listing" : "Browse services"}
-                testId="featured-home-garage-service"
-                isFeatured={!!featuredGarageService?.featured}
-              />
-              <FeaturedListingCard
-                label={isVehicleFinance ? "Vehicle finance" : "Automotive support"}
-                title={featuredSupportService?.name || "Explore automotive support"}
-                details={featuredSupportService?.description || (featuredSupportService ? "Support from an approved automotive provider" : "Explore vehicle loans, insurance, and other support")}
-                business={featuredSupportService ? featuredSupportService.businessName + " · " + featuredSupportService.businessCity : "From approved automotive-support providers"}
-                image={featuredSupportService?.businessLogo}
-                price={formatFeaturedPrice(featuredSupportService?.startingPrice)}
-                href={featuredSupportService ? "/support-services/" + featuredSupportService.id : "/automotive-support"}
-                icon={Shield}
-                actionLabel={featuredSupportService ? "View listing" : "Browse support"}
-                testId="featured-home-support-service"
-                isFeatured={!!featuredSupportService}
-              />
-            </div>
+            <Carousel opts={{ align: "start" }} className="px-1" data-testid="featured-products-carousel">
+              <CarouselContent>
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                  <FeaturedListingCard
+                    label="Car for sale"
+                    title={featuredCar?.title || "Explore cars for sale"}
+                    details={featuredCar ? [featuredCar.year, featuredCar.condition === "new" ? "Brand new" : "Used"].join(" · ") : "Browse available vehicle listings"}
+                    business={featuredCar ? featuredCar.dealerName + " · " + featuredCar.location : "From approved automobile dealers"}
+                    image={featuredCar?.images?.[0] || featuredCar?.dealerLogo}
+                    price={formatFeaturedPrice(featuredCar?.price)}
+                    href={featuredCar ? "/cars/" + featuredCar.id : "/cars"}
+                    icon={Car}
+                    actionLabel={featuredCar ? "View listing" : "Browse cars"}
+                    testId="featured-home-car"
+                    isFeatured={!!featuredCar}
+                  />
+                </CarouselItem>
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                  <FeaturedListingCard
+                    label="Spare part"
+                    title={featuredSparePart?.partName || "Explore spare parts"}
+                    details={featuredSparePart ? [featuredSparePart.carBrand, featuredSparePart.carModel, featuredSparePart.condition === "new" ? "New" : "Used"].join(" · ") : "Browse parts listed by local dealers"}
+                    business={featuredSparePart ? featuredSparePart.businessName + " · " + featuredSparePart.businessCity : "From approved spare-parts dealers"}
+                    image={featuredSparePart?.image || featuredSparePart?.businessLogo}
+                    price={formatFeaturedPrice(featuredSparePart?.price)}
+                    href={featuredSparePart ? "/parts/" + featuredSparePart.id : "/autospares-dealers"}
+                    icon={Package}
+                    actionLabel={featuredSparePart ? "View listing" : "Browse parts"}
+                    testId="featured-home-spare-part"
+                    isFeatured={!!featuredSparePart}
+                  />
+                </CarouselItem>
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                  <FeaturedListingCard
+                    label="Garage service"
+                    title={featuredGarageService?.name || "Explore garage services"}
+                    details={featuredGarageService?.description || "Find repair and maintenance services"}
+                    business={featuredGarageService ? featuredGarageService.garageName + " · " + featuredGarageService.garageCity : "From approved garages"}
+                    image={featuredGarageService?.garageLogo}
+                    price={formatFeaturedPrice(featuredGarageService?.price)}
+                    href={featuredGarageService ? "/services/" + featuredGarageService.id : "/garages/services"}
+                    icon={Wrench}
+                    actionLabel={featuredGarageService ? "View listing" : "Browse services"}
+                    testId="featured-home-garage-service"
+                    isFeatured={!!featuredGarageService?.featured}
+                  />
+                </CarouselItem>
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                  <FeaturedListingCard
+                    label={isVehicleFinance ? "Vehicle finance" : "Automotive support"}
+                    title={featuredSupportService?.name || "Explore automotive support"}
+                    details={featuredSupportService?.description || (featuredSupportService ? "Support from an approved automotive provider" : "Explore vehicle loans, insurance, and other support")}
+                    business={featuredSupportService ? featuredSupportService.businessName + " · " + featuredSupportService.businessCity : "From approved automotive-support providers"}
+                    image={featuredSupportService?.businessLogo}
+                    price={formatFeaturedPrice(featuredSupportService?.startingPrice)}
+                    href={featuredSupportService ? "/support-services/" + featuredSupportService.id : "/automotive-support"}
+                    icon={Shield}
+                    actionLabel={featuredSupportService ? "View listing" : "Browse support"}
+                    testId="featured-home-support-service"
+                    isFeatured={!!featuredSupportService}
+                  />
+                </CarouselItem>
+              </CarouselContent>
+              <CarouselPrevious className="left-2 z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
+              <CarouselNext className="right-2 z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
+            </Carousel>
           )}
         </div>
       </section>
@@ -474,41 +479,28 @@ export default function Home() {
       )}
 
       {/* ── 3. FEATURED BUSINESSES BY CATEGORY (admin-featured, then Premium) ── */}
-      {HOME_SPOTLIGHT_SECTIONS.map((block, idx) => {
+      {HOME_SPOTLIGHT_SECTIONS.map(block => {
         const list = spotlightByCategory[block.category] ?? [];
         const Icon = block.icon;
-        const striped = idx % 2 === 1;
-        const emptyMessage =
-          block.category === "automotive_support"
-            ? "No automotive support providers listed yet."
-            : block.category === "spare_parts"
-            ? "No spare parts shops listed yet."
-            : block.category === "garage"
-              ? "No garages listed yet."
-              : block.category === "car_dealer"
-                ? "No car dealers listed yet."
-                : block.category === "car_wash"
-                  ? "No car wash businesses listed yet."
-                  : block.category === "insurance"
-                    ? "No insurance listings yet."
-                    : "No businesses in this category yet.";
+        const emptyMessage = block.category === "spare_parts"
+          ? "No spare parts shops listed yet."
+          : block.category === "garage"
+            ? "No garages listed yet."
+            : "No car dealers listed yet.";
         const emptyCta =
           block.category === "garage"
             ? "Register Your Garage"
             : block.category === "spare_parts"
               ? "Register Your Shop"
               : "Register Your Business";
-        const testHeading =
-          block.category === "automotive_support"
-            ? "featured-autosupport-heading"
-            : block.category === "spare_parts"
-            ? "featured-products-heading"
-            : block.category === "garage"
-              ? "featured-garages-heading"
-              : undefined;
+        const testHeading = block.category === "spare_parts"
+          ? "featured-products-heading"
+          : block.category === "garage"
+            ? "featured-garages-heading"
+            : undefined;
 
         return (
-          <section key={block.category} className={striped ? "py-14 bg-gray-50 dark:bg-gray-900" : "py-14"}>
+          <section key={block.category} className="py-14">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
                 <div>
@@ -526,7 +518,7 @@ export default function Home() {
                   </Button>
                 </Link>
               </div>
-              {list.length === 0 && (homeSectionsLoading || premiumLoading || (block.category === "automotive_support" && automotiveSupportLoading)) ? (
+              {list.length === 0 && (homeSectionsLoading || premiumLoading) ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <Skeleton key={i} className="h-48 rounded-md" />
@@ -541,11 +533,21 @@ export default function Home() {
                   </Link>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {list.map(biz => (
-                    <BusinessCard key={biz.id} business={biz} />
-                  ))}
-                </div>
+                <Carousel opts={{ align: "start" }} className="px-1" data-testid={`featured-${block.category}-carousel`}>
+                  <CarouselContent>
+                    {list.map(biz => (
+                      <CarouselItem key={biz.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
+                        <BusinessCard business={biz} />
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  {list.length > 1 && (
+                    <>
+                      <CarouselPrevious className="left-2 z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
+                      <CarouselNext className="right-2 z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
+                    </>
+                  )}
+                </Carousel>
               )}
             </div>
           </section>
