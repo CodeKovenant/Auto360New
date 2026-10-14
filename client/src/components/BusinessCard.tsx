@@ -34,6 +34,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
       <div className={`h-1 w-full ${style.bar}`} />
 
       <div className="p-5 flex flex-col flex-1">
+        <Link href={`/business/${business.id}`} className="flex flex-col flex-1">
         {/* Header */}
         <div className="flex items-start gap-3.5 mb-3">
           <div className="w-14 h-14 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
@@ -81,6 +82,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
         <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed flex-1">
           {business.description}
         </p>
+        </Link>
 
         {/* Actions */}
         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">

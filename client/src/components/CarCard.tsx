@@ -81,14 +81,14 @@ export default function CarCard({ car }: CarCardProps) {
 
       {/* Content */}
       <div className="p-4 flex flex-col flex-1">
-        <Link href={`/cars/${car.id}`}>
+        <Link href={`/cars/${car.id}`} className="flex flex-col flex-1">
+        
           <h3
             className="font-bold text-gray-900 dark:text-white text-[15px] leading-snug line-clamp-1 hover:text-red-600 dark:hover:text-red-400 transition-colors mb-1"
             data-testid={`car-title-${car.id}`}
           >
             {car.title}
           </h3>
-        </Link>
 
         <p className="text-2xl font-extrabold text-red-600 dark:text-red-400 mb-3 tracking-tight" data-testid={`car-price-${car.id}`}>
           {formatPrice(car.price)}
@@ -128,6 +128,8 @@ export default function CarCard({ car }: CarCardProps) {
             by <span className="text-gray-600 dark:text-gray-300 font-medium">{car.dealerName}</span>
           </span>
         </div>
+
+        </Link>
 
         {/* Actions */}
         <div className="flex items-center gap-2 mt-auto">

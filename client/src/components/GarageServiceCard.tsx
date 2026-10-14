@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { MapPin, Wrench, Building2, MessageCircle, ChevronDown, ChevronUp, Images, Flame, Star } from "lucide-react";
+import { MapPin, Wrench, Building2, MessageCircle, Images, Flame, Star } from "lucide-react";
 import BusinessGallery from "@/components/BusinessGallery";
 import type { GarageService } from "@shared/schema";
 
@@ -23,12 +23,9 @@ export default function GarageServiceCard({ service, garageId, canManage = false
       data-testid={`card-service-${service.id}`}
     >
       <div className="p-5 flex flex-col flex-1">
+        <Link href={`/services/${service.id}`} className="block flex-1" data-testid={`link-service-${service.id}`}>
         {/* Header */}
-        <div
-          className="flex items-start gap-3 mb-3 cursor-pointer"
-          onClick={() => setExpanded(v => !v)}
-          data-testid={`toggle-service-${service.id}`}
-        >
+        <div className="flex items-start gap-3 mb-3">
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-orange-200 dark:shadow-none overflow-hidden">
             {service.garageLogo ? (
               <img src={service.garageLogo} alt="" className="w-full h-full object-cover" />
@@ -38,18 +35,12 @@ export default function GarageServiceCard({ service, garageId, canManage = false
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-2">
-              <Link
-                href={`/services/${service.id}`}
-                onClick={e => e.stopPropagation()}
-                className="flex-1 min-w-0"
-              >
-                <h3
+              <h3
                   className="font-bold text-gray-900 dark:text-white text-[15px] leading-snug hover:text-orange-600 dark:hover:text-orange-400 transition-colors line-clamp-1"
                   data-testid={`service-name-${service.id}`}
                 >
                   {service.name}
                 </h3>
-              </Link>
               {service.popular && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 flex-shrink-0">
                   <Flame className="w-2.5 h-2.5" /> Popular
@@ -62,12 +53,6 @@ export default function GarageServiceCard({ service, garageId, canManage = false
               )}
             </div>
           </div>
-          <button
-            className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-600 transition-colors"
-            aria-label={expanded ? "Collapse" : "Expand"}
-          >
-            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
         </div>
 
         {/* Description */}
@@ -97,6 +82,8 @@ export default function GarageServiceCard({ service, garageId, canManage = false
             </p>
           </div>
         )}
+
+        </Link>
 
         {/* Actions */}
         <div className="flex items-center gap-2 mt-auto pt-4 border-t border-gray-100 dark:border-gray-800">

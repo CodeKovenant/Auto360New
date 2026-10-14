@@ -549,14 +549,17 @@ export default function BusinessProfile() {
                 {spareParts.map(part => (
                   <div key={part.id} className="rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden" data-testid={`part-${part.id}`}>
                     {part.image && (
+                      <Link href={"/parts/" + part.id} className="block">
                       <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 overflow-hidden">
                         <img src={part.image} alt={part.partName} className="w-full h-full object-cover" data-testid={`img-part-${part.id}`} />
                       </div>
+                      </Link>
                     )}
                     <div className="p-3">
+                    <Link href={"/parts/" + part.id} className="block">
                     <div className="flex items-start justify-between gap-2 flex-wrap">
                       <div className="flex-1 min-w-0">
-                        <Link href={"/parts/" + part.id} className="font-medium text-sm text-gray-900 hover:text-orange-600 dark:text-white">{part.partName}</Link>
+                        <h3 className="font-medium text-sm text-gray-900 hover:text-orange-600 dark:text-white">{part.partName}</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {part.carBrand} {part.carModel} {part.year && `Ã¢ÂÂ¢ ${part.year}`}
                         </p>
@@ -570,6 +573,7 @@ export default function BusinessProfile() {
                     </div>
                     {part.price && <p className="text-sm font-semibold text-orange-600 dark:text-orange-400 mt-1.5">{part.price}</p>}
                     {part.description && <p className="text-xs text-muted-foreground mt-1">{part.description}</p>}
+                    </Link>
                     <div className="flex gap-2 mt-3">
                       <a href={`tel:${business.phone}`} className="flex-1">
                         <Button size="sm" variant="outline" className="w-full text-xs">

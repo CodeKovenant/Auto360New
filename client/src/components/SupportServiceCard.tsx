@@ -1,4 +1,5 @@
 import { Phone, MessageCircle, Shield, Droplets, Star } from "lucide-react";
+import { Link } from "wouter";
 import type { SupportService } from "@shared/schema";
 
 interface SupportServiceCardProps {
@@ -29,6 +30,7 @@ export default function SupportServiceCard({ service, businessName, businessPhon
       className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-4 flex flex-col"
       data-testid={`card-support-service-${service.id}`}
     >
+      <Link href={`/support-services/${service.id}`} className="block flex-1" aria-label={`View ${service.name} details`}>
       {/* Icon + name */}
       <div className="flex items-start gap-3 mb-3">
         <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}>
@@ -36,7 +38,7 @@ export default function SupportServiceCard({ service, businessName, businessPhon
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
-            <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-snug" data-testid={`text-service-name-${service.id}`}>
+            <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-snug hover:text-orange-600 dark:hover:text-orange-400 transition-colors" data-testid={`text-service-name-${service.id}`}>
               {service.name}
             </h3>
             {service.featured && (
@@ -62,6 +64,8 @@ export default function SupportServiceCard({ service, businessName, businessPhon
           </p>
         </div>
       )}
+
+      </Link>
 
       {/* Actions */}
       <div className="flex gap-2 mt-auto">
