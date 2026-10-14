@@ -43,8 +43,8 @@ export default function FeaturedBusinessCarousel({ businesses, title }: Featured
         </CarouselContent>
         {businesses.length > 1 && (
           <>
-            <CarouselPrevious className="left-2 top-1/2 z-10 -translate-y-1/2 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
-            <CarouselNext className="right-2 top-1/2 z-10 -translate-y-1/2 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
+            <CarouselPrevious className="z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
+            <CarouselNext className="z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
           </>
         )}
       </Carousel>
