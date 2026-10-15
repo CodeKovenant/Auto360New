@@ -32,7 +32,7 @@ export default function SupportServiceCard({ service, businessName, businessPhon
       data-testid={`card-support-service-${service.id}`}
     >
       {service.galleryImage && (
-        <Link href={`/support-services/${service.id}`} className="mb-4 block h-44 overflow-hidden bg-gray-100 dark:bg-gray-800">
+        <Link href={`/support-services/${service.id}`} className="mb-4 block h-44 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
           <img src={service.galleryImage} alt={service.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
         </Link>
       )}

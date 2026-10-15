@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/carousel";
 import type { Business, Car as CarType, GarageService, SparePart, SupportService } from "@shared/schema";
 
-type BusinessRated = Business & { avgRating: number; reviewCount: number };
+type BusinessRated = Business & { avgRating: number; reviewCount: number; galleryImage: string | null };
 type HomeSections = Record<string, BusinessRated[]>;
 
 const PREMIUM_CATEGORY_ORDER = ["car_dealer", "garage", "spare_parts", "car_wash", "insurance", "other"] as const;
@@ -80,11 +80,11 @@ const HERO_SERVICE_SLIDES = [
   { label: "Automotive Support", lead: "Automotive", accent: "Support" },
 ] as const;
 
-type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null };
+type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; galleryImage: string | null };
 type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null };
 type RecentReview = { id: string; name: string; rating: number; comment: string; businessId: string; businessName: string; createdAt: string | Date | null };
 
-type FeaturedSparePart = SparePart & { businessName: string; businessCity: string; businessLogo: string | null };
+type FeaturedSparePart = SparePart & { businessName: string; businessCity: string; businessLogo: string | null; galleryImage: string | null };
 type FeaturedSupportService = SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; galleryImage: string | null };
 type FeaturedHomeOffers = { sparePart: FeaturedSparePart | null; supportService: FeaturedSupportService | null };
 
@@ -116,7 +116,7 @@ function FeaturedListingCard({ label, title, details, business, image, price, hr
   return (
     <Link href={href} className="group block h-full">
       <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-800 dark:bg-gray-950" data-testid={testId}>
-        <div className="relative h-40 overflow-hidden bg-gray-100 dark:bg-gray-800">
+        <div className="relative h-40 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
           {image ? (
             <img src={image} alt={title} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
           ) : (
@@ -374,7 +374,7 @@ export default function Home() {
                     title={featuredCar?.title || "Explore cars for sale"}
                     details={featuredCar ? [featuredCar.year, featuredCar.condition === "new" ? "Brand new" : "Used"].join(" · ") : "Browse available vehicle listings"}
                     business={featuredCar ? featuredCar.dealerName + " · " + featuredCar.location : "From approved automobile dealers"}
-                    image={featuredCar?.images?.[0] || featuredCar?.dealerLogo}
+                    image={featuredCar?.images?.[0] || featuredCar?.galleryImage || featuredCar?.dealerLogo}
                     price={formatFeaturedPrice(featuredCar?.price)}
                     href={featuredCar ? "/cars/" + featuredCar.id : "/cars"}
                     icon={Car}
@@ -389,7 +389,7 @@ export default function Home() {
                     title={featuredSparePart?.partName || "Explore spare parts"}
                     details={featuredSparePart ? [featuredSparePart.carBrand, featuredSparePart.carModel, featuredSparePart.condition === "new" ? "New" : "Used"].join(" · ") : "Browse parts listed by local dealers"}
                     business={featuredSparePart ? featuredSparePart.businessName + " · " + featuredSparePart.businessCity : "From approved spare-parts dealers"}
-                    image={featuredSparePart?.image || featuredSparePart?.businessLogo}
+                    image={featuredSparePart?.image || featuredSparePart?.galleryImage || featuredSparePart?.businessLogo}
                     price={formatFeaturedPrice(featuredSparePart?.price)}
                     href={featuredSparePart ? "/parts/" + featuredSparePart.id : "/autospares-dealers"}
                     icon={Package}

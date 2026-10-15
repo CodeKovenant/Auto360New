@@ -3,7 +3,7 @@ import { MapPin, Fuel, Gauge, MessageCircle, Car as CarIcon, Building2, Zap, Rot
 import type { Car } from "@shared/schema";
 
 interface CarCardProps {
-  car: Car & { dealerName: string; dealerWhatsapp: string; dealerLogo?: string | null };
+  car: Car & { dealerName: string; dealerWhatsapp: string; dealerLogo?: string | null; galleryImage?: string | null };
 }
 
 function formatPrice(price: string | number) {
@@ -20,7 +20,7 @@ function formatMileage(km: number | null) {
 }
 
 export default function CarCard({ car }: CarCardProps) {
-  const image = car.images?.[0];
+  const image = car.images?.[0] || car.galleryImage;
   const isNew = car.condition === "new";
   const mileage = formatMileage(car.mileage);
 
@@ -31,7 +31,7 @@ export default function CarCard({ car }: CarCardProps) {
     >
       {/* Image area */}
       <Link href={`/cars/${car.id}`} className="block relative flex-shrink-0">
-        <div className="relative h-52 bg-gray-100 dark:bg-gray-800 overflow-hidden">
+        <div className="relative h-52 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden">
           {image ? (
             <img
               src={image}

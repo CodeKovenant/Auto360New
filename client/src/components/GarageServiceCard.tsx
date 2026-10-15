@@ -23,7 +23,7 @@ export default function GarageServiceCard({ service, garageId, canManage = false
       data-testid={`card-service-${service.id}`}
     >
       {service.galleryImage && (
-        <Link href={`/services/${service.id}`} className="block h-44 overflow-hidden bg-gray-100 dark:bg-gray-800">
+        <Link href={`/services/${service.id}`} className="block h-44 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
           <img src={service.galleryImage} alt={service.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
         </Link>
       )}

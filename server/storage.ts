@@ -164,10 +164,10 @@ export interface IStorage {
   // Businesses
   getBusinessById(id: string): Promise<Business | undefined>;
   getBusinessByOwnerId(ownerId: string): Promise<Business | undefined>;
-  getAllBusinesses(filters?: { category?: string; subcategory?: string; city?: string; q?: string; minRating?: number }): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
-  getFeaturedBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
-  getPremiumBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number })[]>;
-  getHomepageBusinessSections(limitPerCategory: number): Promise<Record<string, (Business & { avgRating: number; reviewCount: number })[]>>;
+  getAllBusinesses(filters?: { category?: string; subcategory?: string; city?: string; q?: string; minRating?: number }): Promise<(Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[]>;
+  getFeaturedBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[]>;
+  getPremiumBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[]>;
+  getHomepageBusinessSections(limitPerCategory: number): Promise<Record<string, (Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[]>>;
   createBusiness(biz: InsertBusiness & Partial<Pick<Business, "status" | "featured">>): Promise<Business>;
   updateBusiness(id: string, data: Partial<Business>): Promise<Business>;
   deleteBusiness(id: string): Promise<void>;
@@ -176,10 +176,10 @@ export interface IStorage {
   getRejectedBusinesses(): Promise<Business[]>;
 
   // Spare Parts
-  getSparePartsByBusinessId(businessId: string): Promise<SparePart[]>;
+  getSparePartsByBusinessId(businessId: string): Promise<(SparePart & { galleryImage: string | null })[]>;
   getOwnerDashboardSparePartsByBusinessId(businessId: string): Promise<SparePart[]>;
-  getSparePartById(id: string): Promise<(SparePart & { businessName: string; businessCity: string; businessAddress: string; businessPhone: string; businessWhatsapp: string; businessLogo: string | null; businessOwnerId: string }) | undefined>;
-  getFeaturedSpareParts(): Promise<(SparePart & { businessName: string; businessCity: string; businessLogo: string | null })[]>;
+  getSparePartById(id: string): Promise<(SparePart & { businessName: string; businessCity: string; businessAddress: string; businessPhone: string; businessWhatsapp: string; businessLogo: string | null; businessOwnerId: string; galleryImage: string | null }) | undefined>;
+  getFeaturedSpareParts(): Promise<(SparePart & { businessName: string; businessCity: string; businessLogo: string | null; galleryImage: string | null })[]>;
   createSparePart(part: InsertSparePart): Promise<SparePart>;
   updateSparePart(id: string, data: Partial<SparePart>): Promise<SparePart>;
   deleteSparePart(id: string): Promise<void>;
@@ -196,9 +196,9 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
 
   // Cars
-  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string; includeSuspended?: boolean }): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null })[]>;
-  getFeaturedCars(): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null })[]>;
-  getCarById(id: string): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null }) | undefined>;
+  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string; includeSuspended?: boolean }): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; galleryImage: string | null })[]>;
+  getFeaturedCars(): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; galleryImage: string | null })[]>;
+  getCarById(id: string): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; galleryImage: string | null }) | undefined>;
   getCarsByDealerId(dealerId: string): Promise<Car[]>;
   getOwnerDashboardCarsByDealerId(dealerId: string): Promise<Car[]>;
   createCar(car: InsertCar): Promise<Car>;
@@ -237,16 +237,16 @@ export interface IStorage {
 
   // Brand page
   getBusinessesByBrand(brand: string): Promise<{
-    dealers: (Business & { avgRating: number; reviewCount: number })[];
-    spareParts: (Business & { avgRating: number; reviewCount: number })[];
-    garages: (Business & { avgRating: number; reviewCount: number })[];
+    dealers: (Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[];
+    spareParts: (Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[];
+    garages: (Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[];
   }>;
 }
 
 export class DatabaseStorage implements IStorage {
   private async addFirstGalleryImages<T extends { id: string }>(
     items: T[],
-    entityType: "garage_service" | "support_service",
+    entityType: "business" | "car" | "spare_part" | "garage_service" | "support_service",
   ): Promise<(T & { galleryImage: string | null })[]> {
     if (items.length === 0) return [];
     const images = await db
@@ -372,10 +372,11 @@ export class DatabaseStorage implements IStorage {
         return { ...biz, avgRating, reviewCount };
       })
     );
+    const enrichedBusinesses = await this.addFirstGalleryImages(bizWithRatings, "business");
     if (filters?.minRating && filters.minRating > 0) {
-      return bizWithRatings.filter(b => b.avgRating >= filters.minRating!);
+      return enrichedBusinesses.filter(b => b.avgRating >= filters.minRating!);
     }
-    return bizWithRatings;
+    return enrichedBusinesses;
   }
 
   async getPremiumBusinesses() {
@@ -385,12 +386,13 @@ export class DatabaseStorage implements IStorage {
       .from(businesses)
       .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), sql`${businesses.premium} IS TRUE`, premiumSubscriptionStillActive()))
       .orderBy(businesses.createdAt);
-    return Promise.all(
+    const ratedBusinesses = await Promise.all(
       bizList.map(async (biz) => {
         const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
         return { ...biz, avgRating, reviewCount };
       })
     );
+    return this.addFirstGalleryImages(ratedBusinesses, "business");
   }
 
   async getFeaturedBusinesses() {
@@ -400,19 +402,20 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.featured, true)))
       .orderBy(desc(businesses.createdAt))
       .limit(6);
-    return Promise.all(
+    const ratedBusinesses = await Promise.all(
       bizList.map(async (biz) => {
         const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
         return { ...biz, avgRating, reviewCount };
       })
     );
+    return this.addFirstGalleryImages(ratedBusinesses, "business");
   }
 
   async getHomepageBusinessSections(limitPerCategory: number) {
     await clearPremiumFlagsPastExpiryInDb();
     const categories = ["car_dealer", "garage", "spare_parts", "car_wash", "insurance", "other"] as const;
     const cap = Math.max(1, Math.min(limitPerCategory, 24));
-    const result: Record<string, (Business & { avgRating: number; reviewCount: number })[]> = {};
+    const result: Record<string, (Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[]> = {};
 
     for (const category of categories) {
       const categoryBusinesses = await db
@@ -425,12 +428,13 @@ export class DatabaseStorage implements IStorage {
           desc(businesses.createdAt)
         )
         .limit(cap);
-      result[category] = await Promise.all(
+      const ratedBusinesses = await Promise.all(
         categoryBusinesses.map(async (biz) => {
           const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
           return { ...biz, avgRating, reviewCount };
         })
       );
+      result[category] = await this.addFirstGalleryImages(ratedBusinesses, "business");
     }
 
     return result;
@@ -508,7 +512,8 @@ export class DatabaseStorage implements IStorage {
     if (!business) return [];
     const conditions = [eq(spareParts.businessId, businessId)];
     if (!includeSuspended) conditions.push(eq(spareParts.suspended, false));
-    return db.select().from(spareParts).where(and(...conditions)).orderBy(desc(spareParts.featured), desc(spareParts.createdAt));
+    const parts = await db.select().from(spareParts).where(and(...conditions)).orderBy(desc(spareParts.featured), desc(spareParts.createdAt));
+    return this.addFirstGalleryImages(parts, "spare_part");
   }
 
   async getOwnerDashboardSparePartsByBusinessId(businessId: string) {
@@ -546,11 +551,13 @@ export class DatabaseStorage implements IStorage {
       .from(spareParts)
       .innerJoin(businesses, eq(spareParts.businessId, businesses.id))
       .where(and(eq(spareParts.id, id), eq(spareParts.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "spare_parts")));
-    return part;
+    if (!part) return undefined;
+    const [enriched] = await this.addFirstGalleryImages([part], "spare_part");
+    return enriched;
   }
 
   async getFeaturedSpareParts() {
-    return db
+    const parts = await db
       .select({
         id: spareParts.id,
         businessId: spareParts.businessId,
@@ -574,6 +581,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "spare_parts"), eq(spareParts.suspended, false), eq(spareParts.featured, true)))
       .orderBy(desc(spareParts.createdAt))
       .limit(12);
+    return this.addFirstGalleryImages(parts, "spare_part");
   }
   async createSparePart(part: InsertSparePart) {
     const [created] = await db.insert(spareParts).values(part).returning();
@@ -661,7 +669,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(sql`CASE WHEN ${cars.featured} IS TRUE THEN 1 ELSE 0 END`), desc(cars.createdAt));
 
     const filtered = carList.filter(c => dealerIds.includes(c.dealerId));
-    return Promise.all(filtered.map(c => this.enrichCar(c)));
+    return this.addFirstGalleryImages(await Promise.all(filtered.map(c => this.enrichCar(c))), "car");
   }
 
   async getFeaturedCars() {
@@ -670,7 +678,7 @@ export class DatabaseStorage implements IStorage {
     if (dealerIds.length === 0) return [];
     const carList = await db.select().from(cars).where(and(eq(cars.featured, true), eq(cars.suspended, false))).orderBy(desc(cars.createdAt)).limit(6);
     const filtered = carList.filter(c => dealerIds.includes(c.dealerId));
-    return Promise.all(filtered.map(c => this.enrichCar(c)));
+    return this.addFirstGalleryImages(await Promise.all(filtered.map(c => this.enrichCar(c))), "car");
   }
 
   async getCarById(id: string) {
@@ -678,7 +686,8 @@ export class DatabaseStorage implements IStorage {
     if (!car) return undefined;
     const [dealer] = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.id, car.dealerId), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
     if (!dealer) return undefined;
-    return this.enrichCar(car);
+    const [enriched] = await this.addFirstGalleryImages([await this.enrichCar(car)], "car");
+    return enriched;
   }
 
   async getCarsByDealerId(dealerId: string) {
@@ -969,11 +978,13 @@ export class DatabaseStorage implements IStorage {
       )
     );
 
-    const withRatings = async (list: Business[]) =>
-      Promise.all(list.map(async b => {
+    const withRatings = async (list: Business[]) => {
+      const rated = await Promise.all(list.map(async b => {
         const { avgRating, reviewCount } = await this.getAvgRating(b.id);
         return { ...b, avgRating, reviewCount };
       }));
+      return this.addFirstGalleryImages(rated, "business");
+    };
 
     return {
       dealers: await withRatings(dealerList),

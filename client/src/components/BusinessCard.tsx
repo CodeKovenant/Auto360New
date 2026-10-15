@@ -6,7 +6,7 @@ import type { Business } from "@shared/schema";
 import { BUSINESS_CATEGORIES } from "@shared/schema";
 
 interface BusinessCardProps {
-  business: Business & { avgRating?: number; reviewCount?: number };
+  business: Business & { avgRating?: number; reviewCount?: number; galleryImage?: string | null };
 }
 
 function getCategoryLabel(cat: string) {
@@ -32,6 +32,12 @@ export default function BusinessCard({ business }: BusinessCardProps) {
     >
       {/* Category accent bar */}
       <div className={`h-1 w-full ${style.bar}`} />
+
+      {business.galleryImage && (
+        <Link href={`/business/${business.id}`} className="block h-44 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+          <img src={business.galleryImage} alt={business.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        </Link>
+      )}
 
       <div className="p-5 flex flex-col flex-1">
         <Link href={`/business/${business.id}`} className="flex flex-col flex-1">
