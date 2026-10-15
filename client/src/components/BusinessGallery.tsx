@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { GalleryImage } from "@shared/schema";
 
 interface Props {
-  entityType: "business" | "spare_part" | "garage_service" | "car";
+  entityType: "business" | "spare_part" | "garage_service" | "support_service" | "car";
   entityId: string;
   canManage?: boolean;
   title?: string;

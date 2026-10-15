@@ -79,7 +79,10 @@ export default function Dashboard() {
 
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState<Partial<OwnerDashboardBusiness>>({});
-  const [galleryCarId, setGalleryCarId] = useState<string | null>(null);
+  const [galleryTarget, setGalleryTarget] = useState<{
+    entityType: "car" | "spare_part" | "garage_service" | "support_service";
+    entityId: string;
+  } | null>(null);
 
   // Spare parts state
   const [newPart, setNewPart] = useState({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "", image: "" });
@@ -243,6 +246,13 @@ export default function Dashboard() {
   );
 
   const { business, messages, reviews, spareParts, cars, garageServices, supportServices } = data;
+  const toggleGallery = (entityType: NonNullable<typeof galleryTarget>["entityType"], entityId: string) => {
+    setGalleryTarget(current =>
+      current?.entityType === entityType && current.entityId === entityId
+        ? null
+        : { entityType, entityId },
+    );
+  };
   const featureRequests = data.featureRequests || [];
   const featureRequestControl = (itemType: FeatureRequest["itemType"], itemId: string, featured: boolean, suspended: boolean) => {
     const latestRequest = featureRequests.find(request => request.itemType === itemType && request.itemId === itemId);
@@ -612,9 +622,9 @@ export default function Dashboard() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => setGalleryCarId(galleryCarId === car.id ? null : car.id)}
+                                  onClick={() => toggleGallery("car", car.id)}
                                   data-testid={`button-gallery-car-${car.id}`}
-                                  className={galleryCarId === car.id ? "border-red-400 text-red-600 bg-red-50 dark:bg-red-900/20" : ""}
+                                  className={galleryTarget?.entityType === "car" && galleryTarget.entityId === car.id ? "border-red-400 text-red-600 bg-red-50 dark:bg-red-900/20" : ""}
                                 >
                                   <Images className="w-3.5 h-3.5 mr-1" />
                                   Photos
@@ -623,7 +633,7 @@ export default function Dashboard() {
                                 <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deleteCarMutation.mutate(car.id)} data-testid={`button-delete-car-${car.id}`}>Remove</Button>
                               </div>
                             </div>
-                            {galleryCarId === car.id && (
+                            {galleryTarget?.entityType === "car" && galleryTarget.entityId === car.id && (
                               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                                 <BusinessGallery
                                   entityType="car"
@@ -718,9 +728,17 @@ export default function Dashboard() {
                             </div>
                             <div className="flex gap-2">
                               {featureRequestControl("garage_service", svc.id, svc.featured, svc.suspended)}
+                              <Button size="sm" variant="outline" onClick={() => toggleGallery("garage_service", svc.id)} data-testid={`button-gallery-service-${svc.id}`}>
+                                <Images className="w-3.5 h-3.5 mr-1" />Photos
+                              </Button>
                               <Button size="sm" variant="outline" onClick={() => setEditingService(svc)} data-testid={`button-edit-service-${svc.id}`}><Edit className="w-3.5 h-3.5" /></Button>
                               <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deleteServiceMutation.mutate(svc.id)} data-testid={`button-delete-service-${svc.id}`}>Remove</Button>
                             </div>
+                          </div>
+                        )}
+                        {galleryTarget?.entityType === "garage_service" && galleryTarget.entityId === svc.id && (
+                          <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
+                            <BusinessGallery entityType="garage_service" entityId={svc.id} canManage title="Service Photos" />
                           </div>
                         )}
                       </CardContent>
@@ -863,12 +881,20 @@ export default function Dashboard() {
                                   <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">{part.condition === "new" ? "New" : "Used"}</Badge>
                                   {part.price && <span className="text-sm font-semibold text-orange-600">{part.price}</span>}
                                   {featureRequestControl("part", part.id, part.featured, part.suspended)}
+                                  <Button size="sm" variant="outline" onClick={() => toggleGallery("spare_part", part.id)} data-testid={`button-gallery-part-${part.id}`}>
+                                    <Images className="w-3.5 h-3.5 mr-1" />Photos
+                                  </Button>
                                   <Button size="sm" variant="outline" onClick={() => setEditingPart(part)} data-testid={`button-edit-part-${part.id}`}><Edit className="w-3.5 h-3.5" /></Button>
                                   <Button size="sm" variant="ghost" className="text-red-500 text-xs h-7" onClick={() => deletePartMutation.mutate(part.id)} data-testid={`button-delete-part-${part.id}`}>Remove</Button>
                                 </div>
                               </div>
                               {part.description && <p className="text-xs text-muted-foreground mt-1">{part.description}</p>}
                             </div>
+                          </div>
+                        )}
+                        {galleryTarget?.entityType === "spare_part" && galleryTarget.entityId === part.id && (
+                          <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
+                            <BusinessGallery entityType="spare_part" entityId={part.id} canManage title="Product Photos" />
                           </div>
                         )}
                       </CardContent>
@@ -953,9 +979,17 @@ export default function Dashboard() {
                             </div>
                             <div className="flex gap-2">
                               {featureRequestControl("support_service", svc.id, svc.featured, svc.suspended)}
+                              <Button size="sm" variant="outline" onClick={() => toggleGallery("support_service", svc.id)} data-testid={`button-gallery-support-service-${svc.id}`}>
+                                <Images className="w-3.5 h-3.5 mr-1" />Photos
+                              </Button>
                               <Button size="sm" variant="outline" onClick={() => setEditingSupportService(svc)} data-testid={`button-edit-support-service-${svc.id}`}><Edit className="w-3.5 h-3.5" /></Button>
                               <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deleteSupportServiceMutation.mutate(svc.id)} data-testid={`button-delete-support-service-${svc.id}`}>Remove</Button>
                             </div>
+                          </div>
+                        )}
+                        {galleryTarget?.entityType === "support_service" && galleryTarget.entityId === svc.id && (
+                          <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
+                            <BusinessGallery entityType="support_service" entityId={svc.id} canManage title="Service Photos" />
                           </div>
                         )}
                       </CardContent>

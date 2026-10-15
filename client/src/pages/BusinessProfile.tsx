@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  MapPin, Phone, MessageCircle, Building2, Package, Star, Send,
+  MapPin, MessageCircle, Building2, Package, Star, Send,
   Car, Wrench, Shield, AlertTriangle, Share2, Flag, Settings, Globe,
 } from "lucide-react";
 import { SiFacebook, SiX, SiInstagram, SiWhatsapp } from "react-icons/si";
@@ -21,6 +21,7 @@ import GarageServiceCard from "@/components/GarageServiceCard";
 import SupportServiceCard from "@/components/SupportServiceCard";
 import BusinessMap from "@/components/BusinessMap";
 import BusinessGallery from "@/components/BusinessGallery";
+import RevealPhone from "@/components/RevealPhone";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -373,10 +374,14 @@ export default function BusinessProfile() {
               )}
             </div>
             <div className="flex gap-2 flex-wrap mt-1">
-              <a href={`tel:${business.phone}`} className="flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-md px-3 py-2 text-sm hover:bg-white/20 transition-colors" data-testid="link-phone-header">
-                <Phone className="w-4 h-4" />
-                <span className="hidden sm:block">Call</span>
-              </a>
+              <RevealPhone
+                phone={business.phone}
+                label="View phone"
+                buttonClassName="flex items-center gap-1.5 border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
+                linkClassName="flex items-center gap-1.5 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
+                iconClassName="h-4 w-4"
+                testId="link-phone-header"
+              />
 {business.whatsapp?.trim() && (
               <a
                 href={`https://wa.me/${business.whatsapp.replace(/\D/g, "")}`}
@@ -575,11 +580,13 @@ export default function BusinessProfile() {
                     {part.description && <p className="text-xs text-muted-foreground mt-1">{part.description}</p>}
                     </Link>
                     <div className="flex gap-2 mt-3">
-                      <a href={`tel:${business.phone}`} className="flex-1">
-                        <Button size="sm" variant="outline" className="w-full text-xs">
-                          <Phone className="w-3 h-3 mr-1" />Call
-                        </Button>
-                      </a>
+                      <RevealPhone
+                        phone={business.phone}
+                        label="View phone"
+                        buttonClassName="h-9 w-full flex-1 px-2 text-xs"
+                        linkClassName="inline-flex h-9 flex-1 items-center justify-center gap-1 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                        iconClassName="h-3 w-3"
+                      />
 {business.whatsapp?.trim() && (
                       <a
                         href={`https://wa.me/${business.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, I'm looking for: ${part.partName} for ${part.carBrand} ${part.carModel}`)}`}
@@ -701,12 +708,13 @@ export default function BusinessProfile() {
             <Card>
               <CardHeader><CardTitle className="text-base">Contact</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <a href={`tel:${business.phone}`} className="flex items-center gap-3 p-3 rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" data-testid="link-phone">
-                  <div className="w-8 h-8 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                    <Phone className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">{business.phone}</span>
-                </a>
+                <RevealPhone
+                  phone={business.phone}
+                  buttonClassName="flex w-full items-center justify-start gap-3 rounded-md border-gray-200 bg-gray-50 p-3 text-left text-gray-900 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+                  linkClassName="flex items-center gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 text-gray-900 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+                  iconClassName="h-4 w-4 text-red-600 dark:text-red-400"
+                  testId="link-phone"
+                />
                 {business.whatsapp?.trim() && (
                 <a
                   href={`https://wa.me/${business.whatsapp.replace(/\D/g, "")}`}

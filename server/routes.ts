@@ -1172,9 +1172,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       await db.delete(featureRequests).where(and(eq(featureRequests.itemType, type as FeatureRequestItemType), eq(featureRequests.itemId, id)));
       const galleryType = type === "part" ? "spare_part" : type;
-      if (galleryType !== "support_service") {
-        await db.delete(galleryImages).where(and(eq(galleryImages.entityType, galleryType), eq(galleryImages.entityId, id)));
-      }
+      await db.delete(galleryImages).where(and(eq(galleryImages.entityType, galleryType), eq(galleryImages.entityId, id)));
       if (type === "car") await storage.deleteCar(id);
       else if (type === "part") await storage.deleteSparePart(id);
       else if (type === "garage_service") await storage.deleteGarageService(id);
@@ -1646,6 +1644,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const actor = (req as any).user;
       if (!await actorCanManageListing(actor, "support_service", req.params.id)) return res.status(404).json({ message: "Support service not found" });
       await db.delete(featureRequests).where(and(eq(featureRequests.itemType, "support_service"), eq(featureRequests.itemId, req.params.id)));
+      await db.delete(galleryImages).where(and(eq(galleryImages.entityType, "support_service"), eq(galleryImages.entityId, req.params.id)));
       await storage.deleteSupportService(req.params.id);
       res.json({ success: true });
     } catch (e: any) {
@@ -2132,7 +2131,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       if (!req.file) return res.status(400).json({ message: "No image file uploaded" });
       const { entityType, entityId } = req.params;
-      if (!["business", "car", "spare_part", "garage_service"].includes(entityType)) {
+      if (!["business", "car", "spare_part", "garage_service", "support_service"].includes(entityType)) {
         return res.status(400).json({ message: "Unsupported gallery item type" });
       }
       if (!await actorCanManageListing(req.user, entityType, entityId)) {

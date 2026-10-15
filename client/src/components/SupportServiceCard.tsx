@@ -1,6 +1,7 @@
-import { Phone, MessageCircle, Shield, Droplets, Star } from "lucide-react";
+import { MessageCircle, Shield, Droplets, Star } from "lucide-react";
 import { Link } from "wouter";
 import type { SupportService } from "@shared/schema";
+import RevealPhone from "@/components/RevealPhone";
 
 interface SupportServiceCardProps {
   service: SupportService;
@@ -69,15 +70,14 @@ export default function SupportServiceCard({ service, businessName, businessPhon
 
       {/* Actions */}
       <div className="flex gap-2 mt-auto">
-        <a href={`tel:${businessPhone}`} className="flex-1">
-          <button
-            className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            data-testid={`button-call-service-${service.id}`}
-          >
-            <Phone className="w-3.5 h-3.5" />
-            Call
-          </button>
-        </a>
+        <RevealPhone
+          phone={businessPhone}
+          label="View phone"
+          buttonClassName="h-auto flex-1 gap-1.5 rounded-xl border-gray-200 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+          linkClassName="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gray-200 px-2 py-2 text-center text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+          iconClassName="h-3.5 w-3.5"
+          testId={`button-call-service-${service.id}`}
+        />
 {businessWhatsapp?.trim() && (
         <a href={waLink} target="_blank" rel="noopener noreferrer" className="flex-1">
           <button

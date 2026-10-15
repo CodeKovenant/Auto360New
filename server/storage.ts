@@ -446,8 +446,14 @@ export class DatabaseStorage implements IStorage {
         ));
       }
       await tx.delete(galleryImages).where(and(
-        inArray(galleryImages.entityType, ["business", "car", "spare_part", "garage_service"]),
-        inArray(galleryImages.entityId, [id, ...carIds.map(item => item.id), ...partIds.map(item => item.id), ...garageServiceIds.map(item => item.id)]),
+        inArray(galleryImages.entityType, ["business", "car", "spare_part", "garage_service", "support_service"]),
+        inArray(galleryImages.entityId, [
+          id,
+          ...carIds.map(item => item.id),
+          ...partIds.map(item => item.id),
+          ...garageServiceIds.map(item => item.id),
+          ...supportServiceIds.map(item => item.id),
+        ]),
       ));
       await tx.delete(spareParts).where(eq(spareParts.businessId, id));
       await tx.delete(reviews).where(eq(reviews.businessId, id));

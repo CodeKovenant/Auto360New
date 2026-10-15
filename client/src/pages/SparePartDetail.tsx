@@ -1,12 +1,13 @@
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, MessageCircle, Package, Phone, Store, Tag } from "lucide-react";
+import { ArrowLeft, MapPin, MessageCircle, Package, Store, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import BusinessGallery from "@/components/BusinessGallery";
 import RelatedItems from "@/components/RelatedItems";
+import RevealPhone from "@/components/RevealPhone";
 import { useAuth } from "@/hooks/use-auth";
 import type { SparePart } from "@shared/schema";
 
@@ -121,9 +122,12 @@ export default function SparePartDetail() {
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                   {part.businessPhone && (
-                    <a href={"tel:" + part.businessPhone} className="block">
-                      <Button variant="outline" className="w-full"><Phone className="mr-2 h-4 w-4" />Call seller</Button>
-                    </a>
+                    <RevealPhone
+                      phone={part.businessPhone}
+                      label="View phone"
+                      buttonClassName="w-full"
+                      linkClassName="inline-flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                    />
                   )}
                   {whatsappUrl && (
                     <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block">

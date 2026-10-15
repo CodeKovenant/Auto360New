@@ -1,10 +1,12 @@
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Building2, ChevronLeft, MapPin, MessageCircle, Phone, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Building2, ChevronLeft, MapPin, MessageCircle, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import RevealPhone from "@/components/RevealPhone";
+import BusinessGallery from "@/components/BusinessGallery";
 import type { SupportService } from "@shared/schema";
 
 type SupportServiceWithBusiness = SupportService & {
@@ -79,7 +81,16 @@ export default function SupportServiceDetail() {
             </div>
           </div>
 
-          <CardContent className="grid grid-cols-1 gap-8 p-5 sm:p-8 lg:grid-cols-3">
+          <CardContent className="space-y-8 p-5 sm:p-8">
+            <BusinessGallery
+              entityType="support_service"
+              entityId={service.id}
+              canManage={false}
+              title="Service photos"
+              layout="featured"
+            />
+
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
               <section>
                 <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">About this service</h2>
@@ -117,11 +128,13 @@ export default function SupportServiceDetail() {
                   <Button variant="outline" className="w-full">View provider profile</Button>
                 </Link>
                 {service.businessPhone && (
-                  <a href={"tel:" + service.businessPhone} className="block">
-                    <Button variant="outline" className="w-full">
-                      <Phone className="mr-2 h-4 w-4" /> Call provider
-                    </Button>
-                  </a>
+                  <RevealPhone
+                    phone={service.businessPhone}
+                    label="View phone number"
+                    buttonClassName="w-full"
+                    linkClassName="inline-flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                    testId="button-call-provider"
+                  />
                 )}
                 {whatsappUrl && (
                   <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block">
@@ -132,6 +145,7 @@ export default function SupportServiceDetail() {
                 )}
               </CardContent>
             </Card>
+            </div>
           </CardContent>
         </Card>
 
