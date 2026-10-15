@@ -32,15 +32,17 @@ const PREMIUM_SECTION_TITLE: Record<(typeof PREMIUM_CATEGORY_ORDER)[number], str
 };
 
 const HOME_SPOTLIGHT_SECTIONS: {
-  category: "car_dealer" | "spare_parts" | "garage";
+  category: "car_dealer" | "spare_parts" | "garage" | "automotive_support";
+  businessCategories: readonly string[];
   title: string;
   subtitle: string;
   href: string;
   icon: LucideIcon;
 }[] = [
-  { category: "car_dealer", title: "Featured Car Dealers", subtitle: "Trusted dealers and showrooms near you", href: "/automobile-dealers", icon: Car },
-  { category: "spare_parts", title: "Featured AutoSpares", subtitle: "Genuine and quality parts for all vehicle makes", href: "/autospares-dealers", icon: Package },
-  { category: "garage", title: "Featured Garages", subtitle: "Trusted mechanics and auto repair shops near you", href: "/autogarage-repair", icon: Wrench },
+  { category: "car_dealer", businessCategories: ["car_dealer"], title: "Featured Car Dealers", subtitle: "Trusted dealers and showrooms near you", href: "/automobile-dealers", icon: Car },
+  { category: "spare_parts", businessCategories: ["spare_parts"], title: "Featured AutoSpares", subtitle: "Genuine and quality parts for all vehicle makes", href: "/autospares-dealers", icon: Package },
+  { category: "garage", businessCategories: ["garage"], title: "Featured Garages", subtitle: "Trusted mechanics and auto repair shops near you", href: "/autogarage-repair", icon: Wrench },
+  { category: "automotive_support", businessCategories: ["car_wash", "insurance", "other"], title: "Featured Automotive Support Businesses", subtitle: "Featured automotive support providers across Kenya", href: "/automotive-support", icon: Shield },
 ];
 
 const CATEGORIES = [
@@ -184,27 +186,27 @@ export default function Home() {
   const spotlightByCategory = useMemo(() => {
     const out: Record<string, BusinessRated[]> = {};
     for (const block of HOME_SPOTLIGHT_SECTIONS) {
-      const cat = block.category;
-      const fromSections = homeSections?.[cat] ?? [];
-      const premiumInCat = premiumBusinesses?.filter((b) => b.category === cat && b.featured) ?? [];
       const seen = new Set<string>();
       const merged: BusinessRated[] = [];
-      const featuredInCat = fromSections.filter((b) => b.featured);
-      for (const b of featuredInCat) {
-        if (merged.length >= SPOTLIGHT_LIMIT) break;
-        if (!seen.has(b.id)) {
-          seen.add(b.id);
-          merged.push(b);
+      for (const category of block.businessCategories) {
+        const featuredInCategory = (homeSections?.[category] ?? []).filter((business) => business.featured);
+        for (const business of featuredInCategory) {
+          if (merged.length >= SPOTLIGHT_LIMIT) break;
+          if (!seen.has(business.id)) {
+            seen.add(business.id);
+            merged.push(business);
+          }
+        }
+        const premiumInCategory = premiumBusinesses?.filter((business) => business.category === category && business.featured) ?? [];
+        for (const business of premiumInCategory) {
+          if (merged.length >= SPOTLIGHT_LIMIT) break;
+          if (!seen.has(business.id)) {
+            seen.add(business.id);
+            merged.push(business);
+          }
         }
       }
-      for (const b of premiumInCat) {
-        if (merged.length >= SPOTLIGHT_LIMIT) break;
-        if (!seen.has(b.id)) {
-          seen.add(b.id);
-          merged.push(b);
-        }
-      }
-      out[cat] = merged;
+      out[block.category] = merged;
     }
     return out;
   }, [homeSections, premiumBusinesses]);
@@ -480,17 +482,23 @@ export default function Home() {
           ? "No spare parts shops listed yet."
           : block.category === "garage"
             ? "No garages listed yet."
-            : "No car dealers listed yet.";
+            : block.category === "automotive_support"
+              ? "No automotive support businesses featured yet."
+              : "No car dealers listed yet.";
         const emptyCta =
           block.category === "garage"
             ? "Register Your Garage"
             : block.category === "spare_parts"
               ? "Register Your Shop"
+              : block.category === "automotive_support"
+                ? "Register Your Business"
               : "Register Your Business";
         const testHeading = block.category === "spare_parts"
           ? "featured-products-heading"
           : block.category === "garage"
             ? "featured-garages-heading"
+            : block.category === "automotive_support"
+              ? "featured-automotive-support-heading"
             : undefined;
 
         return (
