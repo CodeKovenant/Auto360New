@@ -356,7 +356,11 @@ export default function Dashboard() {
                     <p className="font-semibold text-gray-900 dark:text-white text-sm" data-testid="text-premium-active">Premium Business</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Your business appears as verified with a blue checkmark.
-                      {business.premiumExpiresAt && ` Expires ${new Date(business.premiumExpiresAt).toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" })}.`}
+                      {business.premiumExpiresAt && (() => {
+                        const expiresAt = new Date(business.premiumExpiresAt);
+                        const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+                        return ` Expires ${expiresAt.toLocaleDateString("en-KE", { day: "numeric", month: "long", year: "numeric" })} (${daysLeft} ${daysLeft === 1 ? "day" : "days"} remaining).`;
+                      })()}
                     </p>
                   </div>
                 </div>

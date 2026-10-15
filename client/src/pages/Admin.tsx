@@ -167,6 +167,16 @@ function formatDate(d: any) {
   return new Date(d).toLocaleDateString("en-KE", { year: "numeric", month: "short", day: "numeric" });
 }
 
+function addMonths(date: Date, months: number) {
+  const target = new Date(date);
+  const dayOfMonth = target.getDate();
+  target.setDate(1);
+  target.setMonth(target.getMonth() + months);
+  const lastDayOfMonth = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(dayOfMonth, lastDayOfMonth));
+  return target;
+}
+
 function BusinessCard({
   biz,
   actions,
@@ -323,6 +333,7 @@ export default function Admin() {
   const { user, logout } = useAuth();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const [premiumExpiryWindow, setPremiumExpiryWindow] = useState<"all" | "1" | "3" | "6" | "12">("all");
 
   if (!user || user.role !== "admin") {
     navigate("/login");
@@ -369,6 +380,12 @@ export default function Admin() {
   }>({
     queryKey: ["/api/admin/revenue"],
   });
+  const visiblePremiumSubscriptions = revenue?.activeSubscriptions.filter(subscription => {
+    if (premiumExpiryWindow === "all") return true;
+    const now = new Date();
+    const expiresAt = new Date(subscription.premiumExpiresAt);
+    return expiresAt > now && expiresAt <= addMonths(now, Number(premiumExpiryWindow));
+  }) ?? [];
 
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -1322,17 +1339,38 @@ export default function Admin() {
                 {/* Active subscriptions table */}
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <BadgeCheck className="w-4 h-4 text-yellow-500" />
-                      Active Premium Subscriptions
-                    </CardTitle>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <BadgeCheck className="w-4 h-4 text-yellow-500" />
+                        Active Premium Subscriptions
+                      </CardTitle>
+                      <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>Expires within</span>
+                        <select
+                          value={premiumExpiryWindow}
+                          onChange={event => setPremiumExpiryWindow(event.target.value as typeof premiumExpiryWindow)}
+                          className="h-9 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                          data-testid="select-premium-expiry-window"
+                        >
+                          <option value="all">All active</option>
+                          <option value="1">1 month</option>
+                          <option value="3">3 months</option>
+                          <option value="6">6 months</option>
+                          <option value="12">12 months</option>
+                        </select>
+                      </label>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    {revenue.activeSubscriptions.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-6">No active premium subscriptions</p>
+                    {visiblePremiumSubscriptions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">
+                        {premiumExpiryWindow === "all"
+                          ? "No active premium subscriptions"
+                          : `No active premium subscriptions expiring within ${premiumExpiryWindow} ${premiumExpiryWindow === "1" ? "month" : "months"}`}
+                      </p>
                     ) : (
                       <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                        {revenue.activeSubscriptions.map(sub => (
+                        {visiblePremiumSubscriptions.map(sub => (
                           <div key={sub.id} className="flex items-center gap-3 py-3" data-testid={`revenue-row-${sub.id}`}>
                             <div className="w-9 h-9 rounded-md bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0">
                               {sub.logo
