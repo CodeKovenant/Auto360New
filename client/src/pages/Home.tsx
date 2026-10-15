@@ -81,11 +81,11 @@ const HERO_SERVICE_SLIDES = [
 ] as const;
 
 type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null };
-type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null };
+type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null };
 type RecentReview = { id: string; name: string; rating: number; comment: string; businessId: string; businessName: string; createdAt: string | Date | null };
 
 type FeaturedSparePart = SparePart & { businessName: string; businessCity: string; businessLogo: string | null };
-type FeaturedSupportService = SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null };
+type FeaturedSupportService = SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; galleryImage: string | null };
 type FeaturedHomeOffers = { sparePart: FeaturedSparePart | null; supportService: FeaturedSupportService | null };
 
 type FeaturedListingCardProps = {
@@ -404,7 +404,7 @@ export default function Home() {
                     title={featuredGarageService?.name || "Explore garage services"}
                     details={featuredGarageService?.description || "Find repair and maintenance services"}
                     business={featuredGarageService ? featuredGarageService.garageName + " · " + featuredGarageService.garageCity : "From approved garages"}
-                    image={featuredGarageService?.garageLogo}
+                    image={featuredGarageService?.galleryImage || featuredGarageService?.garageLogo}
                     price={formatFeaturedPrice(featuredGarageService?.price)}
                     href={featuredGarageService ? "/services/" + featuredGarageService.id : "/garages/services"}
                     icon={Wrench}
@@ -419,7 +419,7 @@ export default function Home() {
                     title={featuredSupportService?.name || "Explore automotive support"}
                     details={featuredSupportService?.description || (featuredSupportService ? "Support from an approved automotive provider" : "Explore vehicle loans, insurance, and other support")}
                     business={featuredSupportService ? featuredSupportService.businessName + " · " + featuredSupportService.businessCity : "From approved automotive-support providers"}
-                    image={featuredSupportService?.businessLogo}
+                    image={featuredSupportService?.galleryImage || featuredSupportService?.businessLogo}
                     price={formatFeaturedPrice(featuredSupportService?.startingPrice)}
                     href={featuredSupportService ? "/support-services/" + featuredSupportService.id : "/automotive-support"}
                     icon={Shield}

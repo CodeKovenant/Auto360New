@@ -4,7 +4,7 @@ import type { SupportService } from "@shared/schema";
 import RevealPhone from "@/components/RevealPhone";
 
 interface SupportServiceCardProps {
-  service: SupportService;
+  service: SupportService & { galleryImage?: string | null };
   businessName: string;
   businessPhone: string;
   businessWhatsapp: string;
@@ -31,6 +31,11 @@ export default function SupportServiceCard({ service, businessName, businessPhon
       className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-4 flex flex-col"
       data-testid={`card-support-service-${service.id}`}
     >
+      {service.galleryImage && (
+        <Link href={`/support-services/${service.id}`} className="mb-4 block h-44 overflow-hidden bg-gray-100 dark:bg-gray-800">
+          <img src={service.galleryImage} alt={service.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        </Link>
+      )}
       <Link href={`/support-services/${service.id}`} className="block flex-1" aria-label={`View ${service.name} details`}>
       {/* Icon + name */}
       <div className="flex items-start gap-3 mb-3">

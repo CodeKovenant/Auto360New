@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { eq, ilike, and, or, sql, gte, lte, desc, inArray, isNull } from "drizzle-orm";
+import { eq, ilike, and, or, sql, gte, lte, asc, desc, inArray, isNull } from "drizzle-orm";
 import {
   users, businesses, spareParts, reviews, messages, cars, garageServices, supportServices, businessReports, galleryImages, featureRequests,
   type User, type InsertUser,
@@ -206,10 +206,10 @@ export interface IStorage {
   deleteCar(id: string): Promise<void>;
 
   // Garage Services
-  getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string; includeSuspended?: boolean }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
-  getFeaturedGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
-  getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null })[]>;
-  getGarageServiceById(id: string): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null }) | undefined>;
+  getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string; includeSuspended?: boolean }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null })[]>;
+  getFeaturedGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null })[]>;
+  getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null })[]>;
+  getGarageServiceById(id: string): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null }) | undefined>;
   getGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
   getOwnerDashboardGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
   createGarageService(service: InsertGarageService): Promise<GarageService>;
@@ -217,10 +217,10 @@ export interface IStorage {
   deleteGarageService(id: string): Promise<void>;
 
   // Support Services
-  getSupportServicesByBusinessId(businessId: string): Promise<SupportService[]>;
+  getSupportServicesByBusinessId(businessId: string): Promise<(SupportService & { galleryImage: string | null })[]>;
   getOwnerDashboardSupportServicesByBusinessId(businessId: string): Promise<SupportService[]>;
-  getSupportServiceById(id: string): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; businessPhone: string; businessWhatsapp: string; businessAddress: string }) | undefined>;
-  getFeaturedSupportServices(): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null })[]>;
+  getSupportServiceById(id: string): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; businessPhone: string; businessWhatsapp: string; businessAddress: string; galleryImage: string | null }) | undefined>;
+  getFeaturedSupportServices(): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; galleryImage: string | null })[]>;
   createSupportService(service: InsertSupportService): Promise<SupportService>;
   updateSupportService(id: string, data: Partial<SupportService>): Promise<SupportService>;
   deleteSupportService(id: string): Promise<void>;
@@ -244,6 +244,26 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  private async addFirstGalleryImages<T extends { id: string }>(
+    items: T[],
+    entityType: "garage_service" | "support_service",
+  ): Promise<(T & { galleryImage: string | null })[]> {
+    if (items.length === 0) return [];
+    const images = await db
+      .select({ entityId: galleryImages.entityId, url: galleryImages.url })
+      .from(galleryImages)
+      .where(and(
+        eq(galleryImages.entityType, entityType),
+        inArray(galleryImages.entityId, items.map(item => item.id)),
+      ))
+      .orderBy(asc(galleryImages.createdAt));
+    const firstImageById = new Map<string, string>();
+    for (const image of images) {
+      if (!firstImageById.has(image.entityId)) firstImageById.set(image.entityId, image.url);
+    }
+    return items.map(item => ({ ...item, galleryImage: firstImageById.get(item.id) ?? null }));
+  }
+
   async getUserById(id: string) {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -713,13 +733,12 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(desc(garageServices.featured), desc(garageServices.createdAt));
 
-    let filtered = svcList.filter(s => garageIds.includes(s.garageId));
-    if (filters?.location) {
-      const loc = filters.location.toLowerCase();
-      const enriched = await Promise.all(filtered.map(s => this.enrichService(s)));
-      return enriched.filter(s => s.garageCity.toLowerCase().includes(loc));
-    }
-    return Promise.all(filtered.map(s => this.enrichService(s)));
+    const filtered = svcList.filter(s => garageIds.includes(s.garageId));
+    const enriched = await Promise.all(filtered.map(s => this.enrichService(s)));
+    const locationFiltered = filters?.location
+      ? enriched.filter(service => service.garageCity.toLowerCase().includes(filters.location!.toLowerCase()))
+      : enriched;
+    return this.addFirstGalleryImages(locationFiltered, "garage_service");
   }
 
   async getPopularGarageServices() {
@@ -733,7 +752,7 @@ export class DatabaseStorage implements IStorage {
       const all = await db.select().from(garageServices).where(eq(garageServices.suspended, false)).orderBy(desc(garageServices.createdAt)).limit(6);
       filtered = all.filter(s => garageIds.includes(s.garageId)).slice(0, 6);
     }
-    return Promise.all(filtered.map(s => this.enrichService(s)));
+    return this.addFirstGalleryImages(await Promise.all(filtered.map(s => this.enrichService(s))), "garage_service");
   }
 
   async getFeaturedGarageServices() {
@@ -745,7 +764,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(inArray(garageServices.garageId, garageIds), eq(garageServices.suspended, false), eq(garageServices.featured, true)))
       .orderBy(desc(garageServices.createdAt))
       .limit(6);
-    return Promise.all(featuredServices.map(service => this.enrichService(service)));
+    return this.addFirstGalleryImages(await Promise.all(featuredServices.map(service => this.enrichService(service))), "garage_service");
   }
 
   async getGarageServiceById(id: string) {
@@ -763,7 +782,8 @@ export class DatabaseStorage implements IStorage {
       ));
     if (!garage) return undefined;
 
-    return this.enrichService(service);
+    const [enriched] = await this.addFirstGalleryImages([await this.enrichService(service)], "garage_service");
+    return enriched;
   }
 
   async getGarageServicesByGarageId(garageId: string) {
@@ -803,7 +823,8 @@ export class DatabaseStorage implements IStorage {
     if (!business) return [];
     const conditions = [eq(supportServices.businessId, businessId)];
     if (!includeSuspended) conditions.push(eq(supportServices.suspended, false));
-    return db.select().from(supportServices).where(and(...conditions)).orderBy(desc(supportServices.featured), desc(supportServices.createdAt));
+    const services = await db.select().from(supportServices).where(and(...conditions)).orderBy(desc(supportServices.featured), desc(supportServices.createdAt));
+    return this.addFirstGalleryImages(services, "support_service");
   }
 
   async getOwnerDashboardSupportServicesByBusinessId(businessId: string) {
@@ -836,11 +857,13 @@ export class DatabaseStorage implements IStorage {
       .from(supportServices)
       .innerJoin(businesses, eq(supportServices.businessId, businesses.id))
       .where(and(eq(supportServices.id, id), eq(supportServices.suspended, false), eq(businesses.status, "approved"), eq(businesses.suspended, false)));
-    return service;
+    if (!service) return undefined;
+    const [enriched] = await this.addFirstGalleryImages([service], "support_service");
+    return enriched;
   }
 
   async getFeaturedSupportServices() {
-    return db
+    const services = await db
       .select({
         id: supportServices.id,
         businessId: supportServices.businessId,
@@ -863,6 +886,7 @@ export class DatabaseStorage implements IStorage {
         desc(supportServices.createdAt),
       )
       .limit(24);
+    return this.addFirstGalleryImages(services, "support_service");
   }
   async createSupportService(service: InsertSupportService) {
     const [created] = await db.insert(supportServices).values(service).returning();
