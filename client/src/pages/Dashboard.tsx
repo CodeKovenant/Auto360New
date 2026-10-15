@@ -131,8 +131,14 @@ export default function Dashboard() {
   });
 
   const addPartMutation = useMutation({
-    mutationFn: async () => { const res = await apiRequest("POST", "/api/parts", { ...newPart, businessId: data?.business.id }); return res.json(); },
-    onSuccess: () => { toast({ title: "Part added!" }); setNewPart({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "", image: "" }); setShowAddPart(false); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    mutationFn: async (): Promise<OwnerDashboardPart> => { const res = await apiRequest("POST", "/api/parts", { ...newPart, businessId: data?.business.id }); return res.json(); },
+    onSuccess: (part) => {
+      toast({ title: "Part added!", description: "Add photos to its gallery below." });
+      setNewPart({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "", image: "" });
+      setShowAddPart(false);
+      setGalleryTarget({ entityType: "spare_part", entityId: part.id });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -149,8 +155,14 @@ export default function Dashboard() {
   });
 
   const addSupportServiceMutation = useMutation({
-    mutationFn: async () => { const res = await apiRequest("POST", "/api/support-services", { ...newSupportService, businessId: data?.business.id }); return res.json(); },
-    onSuccess: () => { toast({ title: "Service added!" }); setNewSupportService({ name: "", description: "", startingPrice: "" }); setShowAddSupportService(false); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    mutationFn: async (): Promise<OwnerDashboardSupportService> => { const res = await apiRequest("POST", "/api/support-services", { ...newSupportService, businessId: data?.business.id }); return res.json(); },
+    onSuccess: (service) => {
+      toast({ title: "Service added!", description: "Add photos to its gallery below." });
+      setNewSupportService({ name: "", description: "", startingPrice: "" });
+      setShowAddSupportService(false);
+      setGalleryTarget({ entityType: "support_service", entityId: service.id });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -195,8 +207,14 @@ export default function Dashboard() {
   });
 
   const addServiceMutation = useMutation({
-    mutationFn: async () => { const res = await apiRequest("POST", "/api/services", newService); return res.json(); },
-    onSuccess: () => { toast({ title: "Service added!" }); setShowAddService(false); setNewService({ name: "", description: "", price: "", popular: false }); queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] }); },
+    mutationFn: async (): Promise<OwnerDashboardGarageService> => { const res = await apiRequest("POST", "/api/services", newService); return res.json(); },
+    onSuccess: (service) => {
+      toast({ title: "Service added!", description: "Add photos to its gallery below." });
+      setShowAddService(false);
+      setNewService({ name: "", description: "", price: "", popular: false });
+      setGalleryTarget({ entityType: "garage_service", entityId: service.id });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -898,7 +916,7 @@ export default function Dashboard() {
                         )}
                         {galleryTarget?.entityType === "spare_part" && galleryTarget.entityId === part.id && (
                           <div className="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
-                            <BusinessGallery entityType="spare_part" entityId={part.id} canManage title="Product Photos" />
+                            <BusinessGallery entityType="spare_part" entityId={part.id} canManage title="Product Photos" initialImages={part.image ? [part.image] : []} />
                           </div>
                         )}
                       </CardContent>
