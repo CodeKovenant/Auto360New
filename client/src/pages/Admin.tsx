@@ -163,7 +163,7 @@ function getCategoryLabel(cat: string) {
 }
 
 function formatDate(d: any) {
-  if (!d) return "â";
+  if (!d) return "—";
   return new Date(d).toLocaleDateString("en-KE", { year: "numeric", month: "short", day: "numeric" });
 }
 
@@ -559,7 +559,7 @@ export default function Admin() {
     manageCatalogMutation.mutate({ item, action: "edit", fields: { [nameKey]: name, description, [priceKey]: price } });
   };
 
-  // ââ Import / Export ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ── Import / Export ──────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importDragging, setImportDragging] = useState(false);
   const [importResult, setImportResult] = useState<AdminImportResult | null>(null);
@@ -964,7 +964,7 @@ export default function Admin() {
             )}
           </TabsContent>
 
-          {/* Featured catalog management â independent of paid Premium status */}
+          {/* Featured catalog management — independent of paid Premium status */}
           <TabsContent value="featured">
             {featuredItemsLoading ? (
               <div className="space-y-3">
@@ -1330,7 +1330,7 @@ export default function Admin() {
                     <CardContent className="pt-4 pb-4 flex items-center gap-3">
                       <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
                       <p className="text-sm text-orange-800 dark:text-orange-300">
-                        <span className="font-semibold">{revenue.stats.expiringSoon} subscription{revenue.stats.expiringSoon > 1 ? "s" : ""}</span> expiring within 7 days â consider reaching out for renewal.
+                        <span className="font-semibold">{revenue.stats.expiringSoon} subscription{revenue.stats.expiringSoon > 1 ? "s" : ""}</span> expiring within 7 days — consider reaching out for renewal.
                       </p>
                     </CardContent>
                   </Card>
@@ -1586,7 +1586,7 @@ export default function Admin() {
                         data-testid="admin-import-business"
                       >
                         <option value="">Select a businessâ¦</option>
-                        {importBusinessOptions.map(biz => <option key={biz.id} value={biz.id}>{biz.name} â {biz.city}</option>)}
+                        {importBusinessOptions.map(biz => <option key={biz.id} value={biz.id}>{biz.name} — {biz.city}</option>)}
                       </select>
                       {importBusinessOptions.length === 0 && <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">No approved business matches this data type.</p>}
                     </div>
@@ -1614,7 +1614,7 @@ export default function Admin() {
                   {importType !== "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">The selected business determines where these listings appear. Check the type and business before importing.</p>}
                 </div>
 
-                {/* Drop zone â stage the file first, then confirm the selected import type below. */}
+                {/* Drop zone — stage the file first, then confirm the selected import type below. */}
                 <div
                   className={"border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer " + (importDragging ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-900")}
                   onClick={() => !importLoading && fileInputRef.current?.click()}

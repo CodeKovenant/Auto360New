@@ -48,19 +48,19 @@ export default function CarCard({ car }: CarCardProps) {
           {/* Bottom gradient */}
           <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
 
-          {/* Year â top left */}
+          {/* Year — top left */}
           <span className="absolute top-3 left-3 inline-flex items-center bg-orange-500 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow">
             {car.year}
           </span>
 
-          {/* Featured â top right */}
+          {/* Featured — top right */}
           {car.featured && (
             <span className="absolute top-3 right-3 inline-flex items-center bg-yellow-400 text-yellow-900 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow">
-              â Featured
+              ★ Featured
             </span>
           )}
 
-          {/* Condition + transmission â over gradient */}
+          {/* Condition + transmission — over gradient */}
           <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
             {car.condition && (
               <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full shadow ${

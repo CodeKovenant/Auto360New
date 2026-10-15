@@ -49,7 +49,7 @@ function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" |
   );
 }
 
-// Ã¢ÂÂÃ¢ÂÂ Share Buttons Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Share Buttons ─────────────────────────────────────────────────────────────
 function ShareButtons({ businessName }: { businessName: string }) {
   const profileUrl = typeof window !== "undefined" ? window.location.href : "";
   const shareText = `Check out ${businessName} on AutoDirectory Kenya: ${profileUrl}`;
@@ -108,11 +108,11 @@ function ShareButtons({ businessName }: { businessName: string }) {
   );
 }
 
-// Ã¢ÂÂÃ¢ÂÂ Safety Tips Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Safety Tips ───────────────────────────────────────────────────────────────
 const SAFETY_TIPS = [
   "Verify the business registration before making any payment.",
   "For high-value transactions, meet in a safe, public location.",
-  "Use official channels Ã¢ÂÂ WhatsApp, phone, or the contact form on this page.",
+  "Use official channels — WhatsApp, phone, or the contact form on this page.",
   "Do not share sensitive personal or financial information upfront.",
   "Request a receipt or written agreement for any service rendered.",
 ];
@@ -138,7 +138,7 @@ function SafetyTips() {
   );
 }
 
-// Ã¢ÂÂÃ¢ÂÂ Report Business Form Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Report Business Form ───────────────────────────────────────────────────────
 function ReportBusinessForm({ businessId }: { businessId: string }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -239,7 +239,7 @@ function ReportBusinessForm({ businessId }: { businessId: string }) {
   );
 }
 
-// Ã¢ÂÂÃ¢ÂÂ Main Page Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function BusinessProfile() {
   const params = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -355,7 +355,7 @@ export default function BusinessProfile() {
             <div className="flex-1 min-w-0">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Badge className="bg-white/10 text-white border-white/20">{categoryLabel}</Badge>
-                {business.featured && <Badge className="border-amber-300/40 bg-amber-400/20 text-amber-100">Ã¢ÂÂ Featured</Badge>}
+                {business.featured && <Badge className="border-amber-300/40 bg-amber-400/20 text-amber-100">★ Featured</Badge>}
               </div>
               <h1 className="text-2xl md:text-3xl font-bold mb-1 truncate" data-testid="business-name">{business.name}</h1>
               <div className="flex items-center gap-1 text-red-200 mb-2">
@@ -456,7 +456,7 @@ export default function BusinessProfile() {
           </CardContent>
         </Card>
 
-        {/* Automotive Support Ã¢ÂÂ Support services */}
+        {/* Automotive Support — Support services */}
         {isSupport && (
           <div>
             <div className="flex items-center gap-2 mb-4">
@@ -486,7 +486,7 @@ export default function BusinessProfile() {
           </div>
         )}
 
-        {/* Car Dealer Ã¢ÂÂ Car listings */}
+        {/* Car Dealer — Car listings */}
         {isDealer && (
           <div>
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -513,7 +513,7 @@ export default function BusinessProfile() {
           </div>
         )}
 
-        {/* Garage Ã¢ÂÂ Services */}
+        {/* Garage — Services */}
         {isGarage && (
           <div>
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
@@ -566,11 +566,11 @@ export default function BusinessProfile() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-sm text-gray-900 hover:text-orange-600 dark:text-white">{part.partName}</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {part.carBrand} {part.carModel} {part.year && `Ã¢ÂÂ¢ ${part.year}`}
+                          {part.carBrand} {part.carModel} {part.year && `• ${part.year}`}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-1">
-                        {part.featured && <Badge className="bg-amber-100 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Ã¢ÂÂ Featured</Badge>}
+                        {part.featured && <Badge className="bg-amber-100 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">★ Featured</Badge>}
                         <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">
                           {part.condition === "new" ? "New" : "Used"}
                         </Badge>

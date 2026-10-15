@@ -387,7 +387,7 @@ export default function Dashboard() {
                   <div className="flex items-start gap-3 flex-1">
                     <Sparkles className="w-7 h-7 text-orange-500 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-gray-900 dark:text-white text-sm">Get Premium â KSh {mpesaConfig?.amount?.toLocaleString() ?? "2,000"} / {mpesaConfig?.days ?? 30} days</p>
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm">Get Premium — KSh {mpesaConfig?.amount?.toLocaleString() ?? "2,000"} / {mpesaConfig?.days ?? 30} days</p>
                       <p className="text-xs text-muted-foreground mt-0.5">Stand out with a blue verified checkmark and appear in the Premium section on the homepage.</p>
                     </div>
                   </div>
@@ -636,7 +636,7 @@ export default function Dashboard() {
                                     </Badge>
                                   )}
                                 </div>
-                                <p className="text-sm text-muted-foreground">{car.brand} {car.model} â¢ {car.year} â¢ {car.location}</p>
+                                <p className="text-sm text-muted-foreground">{car.brand} {car.model} • {car.year} • {car.location}</p>
                                 <p className="text-base font-bold text-red-600 dark:text-red-400 mt-0.5">KSh {Number(car.price).toLocaleString()}</p>
                               </div>
                               <div className="flex gap-2">
@@ -897,7 +897,7 @@ export default function Dashboard() {
                               <div className="flex items-start justify-between gap-2 flex-wrap">
                                 <div>
                                   <p className="font-medium text-sm text-gray-900 dark:text-white">{part.partName}</p>
-                                  <p className="text-xs text-muted-foreground mt-0.5">{part.carBrand} {part.carModel} {part.year && `â¢ ${part.year}`}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">{part.carBrand} {part.carModel} {part.year && `• ${part.year}`}</p>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <Badge variant={part.condition === "new" ? "default" : "secondary"} className="text-xs">{part.condition === "new" ? "New" : "Used"}</Badge>
