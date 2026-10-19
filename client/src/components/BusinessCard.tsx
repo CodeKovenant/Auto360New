@@ -51,19 +51,17 @@ export default function BusinessCard({ business }: BusinessCardProps) {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-start gap-2 justify-between">
-              <h3 className="font-bold text-gray-900 dark:text-white text-[15px] leading-snug truncate pr-1">
-                {business.name}
-                {business.premium && (
-                  <span title="Premium Business">
-                    <BadgeCheck className="inline-block w-4 h-4 text-yellow-500 ml-1 mb-0.5" aria-hidden="true" data-testid={`icon-premium-${business.id}`} />
-                  </span>
-                )}
-              </h3>
-              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${style.pill}`}>
-                {getCategoryLabel(business.category)}
-              </span>
-            </div>
+            <h3 className="font-bold text-gray-900 dark:text-white text-base leading-snug break-words">
+              {business.name}
+              {business.premium && (
+                <span title="Premium Business">
+                  <BadgeCheck className="inline-block w-4 h-4 text-yellow-500 ml-1 mb-0.5" aria-hidden="true" data-testid={`icon-premium-${business.id}`} />
+                </span>
+              )}
+            </h3>
+            <span className={`mt-1 inline-flex text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${style.pill}`}>
+              {getCategoryLabel(business.category)}
+            </span>
             {business.featured && (
               <Badge className="mt-1.5 inline-flex items-center gap-1 bg-amber-100 text-[10px] text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300">
                 <Star className="h-3 w-3 fill-current" /> Featured
