@@ -1,4 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -59,9 +60,41 @@ function Router() {
 
 const NO_FOOTER_ROUTES = ["/login", "/register", "/dashboard", "/admin", "/verify-email"];
 
+const PAGE_TITLES: [string, string][] = [
+  ["/automobile-dealers", "Automobile Dealers"],
+  ["/autospares-dealers", "Auto Spares Dealers"],
+  ["/autogarage-repair", "Auto Garages"],
+  ["/businesses", "Businesses"],
+  ["/business/", "Business Profile"],
+  ["/cars/", "Car Details"],
+  ["/cars", "Cars"],
+  ["/services/", "Garage Service"],
+  ["/parts/", "Spare Part"],
+  ["/support-services/", "Support Service"],
+  ["/garages/services", "Garage Services"],
+  ["/automotive-support", "Automotive Support"],
+  ["/brand/", "Brand"],
+  ["/login", "Login"],
+  ["/register-business", "Register Your Business"],
+  ["/register", "Register"],
+  ["/dashboard", "Dashboard"],
+  ["/admin", "Admin"],
+  ["/terms", "Terms and Conditions"],
+  ["/verify-email/", "Verify Email"],
+];
+
 function Layout() {
   const [location] = useLocation();
   const showFooter = !NO_FOOTER_ROUTES.some(route => location.startsWith(route));
+
+  useEffect(() => {
+    const pageName = location === "/"
+      ? "Your Guide to the auto world"
+      : PAGE_TITLES.find(([path]) => path.endsWith("/")
+        ? location.startsWith(path)
+        : location === path || location.startsWith(`${path}/`))?.[1] ?? "Page Not Found";
+    document.title = `Auto360 - ${pageName}`;
+  }, [location]);
 
   return (
     <div className="flex flex-col min-h-screen">
