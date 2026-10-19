@@ -347,7 +347,7 @@ export default function Home() {
           ) : (
             <Carousel autoScroll opts={{ align: "start" }} className="px-1 pb-16" data-testid="featured-products-carousel">
               <CarouselContent>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/3">
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
                   <FeaturedListingCard
                     label="Car for sale"
                     title={featuredCar?.title || "Explore cars for sale"}
@@ -362,7 +362,7 @@ export default function Home() {
                     isFeatured={!!featuredCar}
                   />
                 </CarouselItem>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/3">
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
                   <FeaturedListingCard
                     label="Spare part"
                     title={featuredSparePart?.partName || "Explore spare parts"}
@@ -377,7 +377,7 @@ export default function Home() {
                     isFeatured={!!featuredSparePart}
                   />
                 </CarouselItem>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/3">
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
                   <FeaturedListingCard
                     label="Garage service"
                     title={featuredGarageService?.name || "Explore garage services"}
@@ -392,7 +392,7 @@ export default function Home() {
                     isFeatured={!!featuredGarageService?.featured}
                   />
                 </CarouselItem>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/3">
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
                   <FeaturedListingCard
                     label={isVehicleFinance ? "Vehicle finance" : "Automotive support"}
                     title={featuredSupportService?.name || "Explore automotive support"}
@@ -436,7 +436,7 @@ export default function Home() {
             <Carousel autoScroll opts={{ align: "start" }} className="px-1 pb-10" data-testid="premium-businesses-carousel">
               <CarouselContent>
                 {premiumFeaturedBusinesses.map(business => (
-                  <CarouselItem key={business.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
+                  <CarouselItem key={business.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
                     <BusinessCard business={business} />
                   </CarouselItem>
                 ))}
@@ -516,7 +516,7 @@ export default function Home() {
                 <Carousel autoScroll opts={{ align: "start" }} className="px-1 pb-16" data-testid={`featured-${block.category}-carousel`}>
                   <CarouselContent>
                     {list.map(biz => (
-                      <CarouselItem key={biz.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
+                      <CarouselItem key={biz.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
                         <BusinessCard business={biz} />
                       </CarouselItem>
                     ))}

@@ -36,7 +36,7 @@ export default function FeaturedBusinessCarousel({ businesses, title }: Featured
       <Carousel autoScroll opts={{ align: "start" }} className="px-1 pb-16" data-testid="featured-businesses-carousel">
         <CarouselContent>
           {businesses.map((business) => (
-            <CarouselItem key={business.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
+            <CarouselItem key={business.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
               <BusinessCard business={business} />
             </CarouselItem>
           ))}
