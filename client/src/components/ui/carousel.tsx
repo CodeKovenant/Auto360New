@@ -17,6 +17,7 @@ type CarouselProps = {
   plugins?: CarouselPlugin
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
+  autoScroll?: boolean
 }
 
 type CarouselContextProps = {
@@ -50,15 +51,18 @@ const Carousel = React.forwardRef<
       opts,
       setApi,
       plugins,
+      autoScroll = false,
       className,
       children,
       ...props
     },
     ref
   ) => {
+    const [isHovered, setIsHovered] = React.useState(false)
     const [carouselRef, api] = useEmblaCarousel(
       {
         ...opts,
+        loop: autoScroll || opts?.loop,
         axis: orientation === "horizontal" ? "x" : "y",
       },
       plugins
@@ -118,6 +122,23 @@ const Carousel = React.forwardRef<
       }
     }, [api, onSelect])
 
+    React.useEffect(() => {
+      if (!autoScroll || !api || isHovered || api.scrollSnapList().length < 2) {
+        return
+      }
+
+      const interval = window.setInterval(() => {
+        if (
+          document.visibilityState === "visible" &&
+          !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ) {
+          api.scrollNext()
+        }
+      }, 5000)
+
+      return () => window.clearInterval(interval)
+    }, [api, autoScroll, isHovered])
+
     return (
       <CarouselContext.Provider
         value={{
@@ -134,11 +155,19 @@ const Carousel = React.forwardRef<
       >
         <div
           ref={ref}
+          {...props}
           onKeyDownCapture={handleKeyDown}
+          onMouseEnter={event => {
+            setIsHovered(true)
+            props.onMouseEnter?.(event)
+          }}
+          onMouseLeave={event => {
+            setIsHovered(false)
+            props.onMouseLeave?.(event)
+          }}
           className={cn("relative", className)}
           role="region"
           aria-roledescription="carousel"
-          {...props}
         >
           {children}
         </div>
