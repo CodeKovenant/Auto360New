@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2, BadgeCheck, Store, MapPin, ArrowRight } from "lucide-react";
+import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2, BadgeCheck, Store, MapPin, ArrowRight, Paintbrush } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,7 @@ const CATEGORIES = [
   { value: "garage", label: "Professional Garages", icon: Wrench, href: "/autogarage-repair", color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-800" },
   { value: "spare_parts", label: "Spare Parts", icon: Package, href: "/autospares-dealers", color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-800" },
   { value: "car_wash", label: "Car Wash", icon: Droplets, href: "/businesses?category=car_wash", color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-800" },
+  { value: "vehicle_branding", label: "Vehicle Branding", icon: Paintbrush, href: "/automotive-support?tab=vehicle_branding", color: "bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-100 dark:border-fuchsia-800" },
   { value: "insurance", label: "Insurance", icon: Shield, href: "/automotive-support", color: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-800" },
   { value: "other", label: "Other Services", icon: MoreHorizontal, href: "/businesses", color: "bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700" },
 ];

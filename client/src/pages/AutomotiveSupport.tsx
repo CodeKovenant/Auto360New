@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Link, useSearch } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Droplets, BadgeDollarSign, Radio, Truck, Building2, SlidersHorizontal, X } from "lucide-react";
+import { Search, Droplets, BadgeDollarSign, Radio, Truck, Building2, SlidersHorizontal, X, Paintbrush } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,6 +47,15 @@ const TABS = [
     activeBorder: "border-orange-500",
     desc: "24/7 towing, roadside assistance, and breakdown recovery",
   },
+  {
+    value: "vehicle_branding",
+    label: "Vehicle Branding",
+    icon: Paintbrush,
+    color: "text-fuchsia-600",
+    bg: "bg-fuchsia-50 dark:bg-fuchsia-900/20",
+    activeBorder: "border-fuchsia-500",
+    desc: "Vehicle wraps, decals, fleet graphics, and custom branding",
+  },
 ];
 
 const KENYA_COUNTIES = [
@@ -61,9 +70,12 @@ const KENYA_COUNTIES = [
 
 export default function AutomotiveSupport() {
   const searchStr = useSearch();
+  const [, navigate] = useLocation();
   const params = new URLSearchParams(searchStr);
 
-  const [activeTab, setActiveTab] = useState(params.get("tab") || "car_wash_detailing");
+  const [activeTab, setActiveTab] = useState(
+    TABS.find(tab => tab.value === params.get("tab"))?.value ?? TABS[0].value
+  );
   const [search, setSearch] = useState("");
   const [county, setCounty] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
@@ -71,8 +83,7 @@ export default function AutomotiveSupport() {
 
   useEffect(() => {
     const p = new URLSearchParams(searchStr);
-    const tab = p.get("tab");
-    if (tab) setActiveTab(tab);
+    setActiveTab(TABS.find(tab => tab.value === p.get("tab"))?.value ?? TABS[0].value);
   }, [searchStr]);
 
   const queryString = new URLSearchParams({
@@ -94,7 +105,7 @@ export default function AutomotiveSupport() {
     setShowAllBusinesses(false);
   }, [queryString]);
 
-  const currentTab = TABS.find(t => t.value === activeTab)!;
+  const currentTab = TABS.find(t => t.value === activeTab) ?? TABS[0];
 
   function clearFilters() {
     setSearch("");
@@ -123,7 +134,7 @@ export default function AutomotiveSupport() {
               return (
                 <button
                   key={tab.value}
-                  onClick={() => setActiveTab(tab.value)}
+                  onClick={() => navigate(`/automotive-support?tab=${tab.value}`)}
                   data-testid={`tab-${tab.value}`}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg border-b-2 text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
                     isActive
