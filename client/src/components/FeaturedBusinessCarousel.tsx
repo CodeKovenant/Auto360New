@@ -33,7 +33,7 @@ export default function FeaturedBusinessCarousel({ businesses, title }: Featured
         </div>
       </div>
 
-      <Carousel opts={{ align: "start" }} className="px-1 pb-12" data-testid="featured-businesses-carousel">
+      <Carousel opts={{ align: "start" }} className="px-1 pb-16" data-testid="featured-businesses-carousel">
         <CarouselContent>
           {businesses.map((business) => (
             <CarouselItem key={business.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
