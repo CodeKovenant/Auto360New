@@ -430,7 +430,7 @@ export default function Home() {
               <p className="text-muted-foreground">Featured cars, spare parts, garage services, and automotive support listings from approved businesses.</p>
             </div>
             <Link href="/businesses">
-              <Button variant="outline" className="flex items-center gap-1">Browse all featured <ChevronRight className="h-4 w-4" /></Button>
+              <Button variant="outline" className="flex items-center gap-1">View all featured listings <ChevronRight className="h-4 w-4" /></Button>
             </Link>
           </div>
           {carsLoading || servicesLoading || featuredOffersLoading ? (
@@ -467,7 +467,7 @@ export default function Home() {
               </div>
               <Link href="/businesses">
                 <Button variant="outline" className="flex items-center gap-1" data-testid="button-view-all-premium">
-                  View All <ChevronRight className="w-4 h-4" />
+                  View all Premium Businesses <ChevronRight className="w-4 h-4" />
                 </Button>
               </Link>
             </div>
@@ -532,7 +532,7 @@ export default function Home() {
                 </div>
                 <Link href={block.href}>
                   <Button variant="outline" className="flex items-center gap-1">
-                    View All <ChevronRight className="w-4 h-4" />
+                    View all {block.title} <ChevronRight className="w-4 h-4" />
                   </Button>
                 </Link>
               </div>
