@@ -20,17 +20,6 @@ import type { Business, Car as CarType, GarageService, SparePart, SupportService
 type BusinessRated = Business & { avgRating: number; reviewCount: number; galleryImage: string | null };
 type HomeSections = Record<string, BusinessRated[]>;
 
-const PREMIUM_CATEGORY_ORDER = ["car_dealer", "garage", "spare_parts", "car_wash", "insurance", "other"] as const;
-
-const PREMIUM_SECTION_TITLE: Record<(typeof PREMIUM_CATEGORY_ORDER)[number], string> = {
-  car_dealer: "Premium Car Dealers",
-  garage: "Premium Garages",
-  spare_parts: "Premium Spare Parts Shops",
-  car_wash: "Premium Car Wash",
-  insurance: "Premium Insurance",
-  other: "Premium Other Services",
-};
-
 const HOME_SPOTLIGHT_SECTIONS: {
   category: "car_dealer" | "spare_parts" | "garage" | "automotive_support";
   businessCategories: readonly string[];
@@ -211,17 +200,7 @@ export default function Home() {
     return out;
   }, [homeSections, premiumBusinesses]);
 
-  const premiumByCategory = useMemo(() => {
-    const map = new Map<string, BusinessRated[]>();
-    if (!premiumBusinesses) return map;
-    for (const b of premiumBusinesses) {
-      if (!b.featured) continue;
-      const cur = map.get(b.category) ?? [];
-      cur.push(b);
-      map.set(b.category, cur);
-    }
-    return map;
-  }, [premiumBusinesses]);
+  const premiumFeaturedBusinesses = premiumBusinesses?.filter(business => business.featured) ?? [];
 
   const { data: featuredCars, isLoading: carsLoading } = useQuery<CarWithDealer[]>({
     queryKey: ["/api/cars/featured"],
@@ -437,7 +416,7 @@ export default function Home() {
       </section>
 
       {/* ── 2. PREMIUM BUSINESSES ── */}
-      {premiumBusinesses?.some((business) => business.featured) && (
+      {premiumFeaturedBusinesses.length > 0 && (
         <section className="py-14 bg-gradient-to-br from-orange-50 to-yellow-50 dark:from-orange-950/30 dark:to-yellow-950/30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
@@ -454,32 +433,21 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
-            <div className="space-y-10">
-              {PREMIUM_CATEGORY_ORDER.map(cat => {
-                const list = premiumByCategory.get(cat);
-                if (!list?.length) return null;
-                return (
-                  <div key={cat}>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{PREMIUM_SECTION_TITLE[cat]}</h3>
-                    <Carousel opts={{ align: "start" }} className="px-1 pb-16" data-testid={`premium-${cat}-carousel`}>
-                      <CarouselContent>
-                        {list.map(biz => (
-                          <CarouselItem key={biz.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
-                            <BusinessCard business={biz} />
-                          </CarouselItem>
-                        ))}
-                      </CarouselContent>
-                      {list.length > 1 && (
-                        <>
-                          <CarouselPrevious />
-                          <CarouselNext />
-                        </>
-                      )}
-                    </Carousel>
-                  </div>
-                );
-              })}
-            </div>
+            <Carousel opts={{ align: "start" }} className="px-1 pb-16" data-testid="premium-businesses-carousel">
+              <CarouselContent>
+                {premiumFeaturedBusinesses.map(business => (
+                  <CarouselItem key={business.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
+                    <BusinessCard business={business} />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              {premiumFeaturedBusinesses.length > 1 && (
+                <>
+                  <CarouselPrevious />
+                  <CarouselNext />
+                </>
+              )}
+            </Carousel>
           </div>
         </section>
       )}
