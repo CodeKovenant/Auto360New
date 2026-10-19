@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import BusinessCard from "@/components/BusinessCard";
+import FeaturedBusinessCarousel from "@/components/FeaturedBusinessCarousel";
 import type { Business } from "@shared/schema";
 import { BUSINESS_CATEGORIES } from "@shared/schema";
 
@@ -47,6 +48,9 @@ export default function Businesses() {
   const { data: businesses, isLoading } = useQuery<(Business & { avgRating: number; reviewCount: number })[]>({
     queryKey: [`/api/businesses?${queryString}`],
   });
+
+  const featuredBusinesses = businesses?.filter(biz => biz.featured) ?? [];
+  const otherBusinesses = businesses?.filter(biz => !biz.featured) ?? [];
 
   function clearFilters() {
     setSearch("");
@@ -143,14 +147,27 @@ export default function Businesses() {
           </div>
         ) : businesses && businesses.length > 0 ? (
           <>
+            <FeaturedBusinessCarousel
+              businesses={featuredBusinesses}
+              title="Featured Businesses"
+            />
             <p className="text-sm text-muted-foreground mb-5" data-testid="businesses-count">
               {businesses.length} business{businesses.length !== 1 ? "es" : ""} found
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {businesses.map(biz => (
-                <BusinessCard key={biz.id} business={biz} />
-              ))}
-            </div>
+            {otherBusinesses.length > 0 ? (
+              <>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Other listings</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {otherBusinesses.map(biz => (
+                    <BusinessCard key={biz.id} business={biz} />
+                  ))}
+                </div>
+              </>
+            ) : featuredBusinesses.length > 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No other listings to show yet.
+              </p>
+            ) : null}
           </>
         ) : (
           <div className="text-center py-20">

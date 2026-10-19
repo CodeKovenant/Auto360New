@@ -579,8 +579,7 @@ export class DatabaseStorage implements IStorage {
       .from(spareParts)
       .innerJoin(businesses, eq(spareParts.businessId, businesses.id))
       .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "spare_parts"), eq(spareParts.suspended, false), eq(spareParts.featured, true)))
-      .orderBy(desc(spareParts.createdAt))
-      .limit(12);
+      .orderBy(desc(spareParts.createdAt));
     return this.addFirstGalleryImages(parts, "spare_part");
   }
   async createSparePart(part: InsertSparePart) {
@@ -676,7 +675,7 @@ export class DatabaseStorage implements IStorage {
     const approvedDealers = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "car_dealer")));
     const dealerIds = approvedDealers.map(d => d.id);
     if (dealerIds.length === 0) return [];
-    const carList = await db.select().from(cars).where(and(eq(cars.featured, true), eq(cars.suspended, false))).orderBy(desc(cars.createdAt)).limit(6);
+    const carList = await db.select().from(cars).where(and(eq(cars.featured, true), eq(cars.suspended, false))).orderBy(desc(cars.createdAt));
     const filtered = carList.filter(c => dealerIds.includes(c.dealerId));
     return this.addFirstGalleryImages(await Promise.all(filtered.map(c => this.enrichCar(c))), "car");
   }
@@ -771,8 +770,7 @@ export class DatabaseStorage implements IStorage {
 
     const featuredServices = await db.select().from(garageServices)
       .where(and(inArray(garageServices.garageId, garageIds), eq(garageServices.suspended, false), eq(garageServices.featured, true)))
-      .orderBy(desc(garageServices.createdAt))
-      .limit(6);
+      .orderBy(desc(garageServices.createdAt));
     return this.addFirstGalleryImages(await Promise.all(featuredServices.map(service => this.enrichService(service))), "garage_service");
   }
 
@@ -893,8 +891,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(
         desc(sql`CASE WHEN ${businesses.subcategory} = 'vehicle_finance' OR ${supportServices.name} ILIKE '%loan%' OR ${supportServices.name} ILIKE '%financ%' OR COALESCE(${supportServices.description}, '') ILIKE '%loan%' OR COALESCE(${supportServices.description}, '') ILIKE '%financ%' THEN 1 ELSE 0 END`),
         desc(supportServices.createdAt),
-      )
-      .limit(24);
+      );
     return this.addFirstGalleryImages(services, "support_service");
   }
   async createSupportService(service: InsertSupportService) {

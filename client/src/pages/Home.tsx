@@ -75,7 +75,7 @@ type RecentReview = { id: string; name: string; rating: number; comment: string;
 
 type FeaturedSparePart = SparePart & { businessName: string; businessCity: string; businessLogo: string | null; galleryImage: string | null };
 type FeaturedSupportService = SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; galleryImage: string | null };
-type FeaturedHomeOffers = { sparePart: FeaturedSparePart | null; supportService: FeaturedSupportService | null };
+type FeaturedHomeOffers = { spareParts: FeaturedSparePart[]; supportServices: FeaturedSupportService[] };
 
 type FeaturedListingCardProps = {
   label: string;
@@ -214,19 +214,112 @@ export default function Home() {
     staleTime: 0,
   });
 
-  const featuredCar = featuredCars?.[0];
-  const featuredGarageService = featuredGarageServices?.[0];
-  const featuredSparePart = featuredHomeOffers?.sparePart;
-  const featuredSupportService = featuredHomeOffers?.supportService;
-  const isVehicleFinance = !!featuredSupportService && (
-    featuredSupportService.businessSubcategory === "vehicle_finance" ||
-    /loan|financ/i.test(featuredSupportService.name + " " + (featuredSupportService.description || ""))
-  );
-
-
   const { data: recentReviews, isLoading: reviewsLoading } = useQuery<RecentReview[]>({
     queryKey: ["/api/reviews/recent"],
   });
+
+  const featuredListings: FeaturedListingCardProps[] = [
+    ...(featuredCars?.length
+      ? featuredCars.map((car, index) => ({
+          label: "Car for sale",
+          title: car.title,
+          details: [car.year, car.condition === "new" ? "Brand new" : "Used"].join(" · "),
+          business: car.dealerName + " · " + car.location,
+          image: car.images?.[0] || car.galleryImage || car.dealerLogo,
+          price: formatFeaturedPrice(car.price),
+          href: "/cars/" + car.id,
+          icon: Car,
+          actionLabel: "View listing",
+          testId: index === 0 ? "featured-home-car" : `featured-home-car-${car.id}`,
+          isFeatured: true,
+        }))
+      : [{
+          label: "Car for sale",
+          title: "Explore cars for sale",
+          details: "Browse available vehicle listings",
+          business: "From approved automobile dealers",
+          href: "/cars",
+          icon: Car,
+          actionLabel: "Browse cars",
+          testId: "featured-home-car",
+        }]),
+    ...(featuredHomeOffers?.spareParts.length
+      ? featuredHomeOffers.spareParts.map((part, index) => ({
+          label: "Spare part",
+          title: part.partName,
+          details: [part.carBrand, part.carModel, part.condition === "new" ? "New" : "Used"].join(" · "),
+          business: part.businessName + " · " + part.businessCity,
+          image: part.image || part.galleryImage || part.businessLogo,
+          price: formatFeaturedPrice(part.price),
+          href: "/parts/" + part.id,
+          icon: Package,
+          actionLabel: "View listing",
+          testId: index === 0 ? "featured-home-spare-part" : `featured-home-spare-part-${part.id}`,
+          isFeatured: true,
+        }))
+      : [{
+          label: "Spare part",
+          title: "Explore spare parts",
+          details: "Browse parts listed by local dealers",
+          business: "From approved spare-parts dealers",
+          href: "/autospares-dealers",
+          icon: Package,
+          actionLabel: "Browse parts",
+          testId: "featured-home-spare-part",
+        }]),
+    ...(featuredGarageServices?.length
+      ? featuredGarageServices.map((service, index) => ({
+          label: "Garage service",
+          title: service.name,
+          details: service.description || undefined,
+          business: service.garageName + " · " + service.garageCity,
+          image: service.galleryImage || service.garageLogo,
+          price: formatFeaturedPrice(service.price),
+          href: "/services/" + service.id,
+          icon: Wrench,
+          actionLabel: "View listing",
+          testId: index === 0 ? "featured-home-garage-service" : `featured-home-garage-service-${service.id}`,
+          isFeatured: true,
+        }))
+      : [{
+          label: "Garage service",
+          title: "Explore garage services",
+          details: "Find repair and maintenance services",
+          business: "From approved garages",
+          href: "/garages/services",
+          icon: Wrench,
+          actionLabel: "Browse services",
+          testId: "featured-home-garage-service",
+        }]),
+    ...(featuredHomeOffers?.supportServices.length
+      ? featuredHomeOffers.supportServices.map((service, index) => {
+          const isVehicleFinance = service.businessSubcategory === "vehicle_finance" ||
+            /loan|financ/i.test(service.name + " " + (service.description || ""));
+          return {
+            label: isVehicleFinance ? "Vehicle finance" : "Automotive support",
+            title: service.name,
+            details: service.description || "Support from an approved automotive provider",
+            business: service.businessName + " · " + service.businessCity,
+            image: service.galleryImage || service.businessLogo,
+            price: formatFeaturedPrice(service.startingPrice),
+            href: "/support-services/" + service.id,
+            icon: Shield,
+            actionLabel: "View listing",
+            testId: index === 0 ? "featured-home-support-service" : `featured-home-support-service-${service.id}`,
+            isFeatured: true,
+          };
+        })
+      : [{
+          label: "Automotive support",
+          title: "Explore automotive support",
+          details: "Explore vehicle loans, insurance, and other support",
+          business: "From approved automotive-support providers",
+          href: "/automotive-support",
+          icon: Shield,
+          actionLabel: "Browse support",
+          testId: "featured-home-support-service",
+        }]),
+  ];
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -334,7 +427,7 @@ export default function Home() {
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="mb-1 text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">Featured Products &amp; Services</h2>
-              <p className="text-muted-foreground">A car, spare part, garage service, and automotive support listing picked from approved businesses.</p>
+              <p className="text-muted-foreground">Featured cars, spare parts, garage services, and automotive support listings from approved businesses.</p>
             </div>
             <Link href="/businesses">
               <Button variant="outline" className="flex items-center gap-1">Browse all featured <ChevronRight className="h-4 w-4" /></Button>
@@ -347,66 +440,11 @@ export default function Home() {
           ) : (
             <Carousel autoScroll opts={{ align: "start" }} className="px-1 pb-16" data-testid="featured-products-carousel">
               <CarouselContent>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                  <FeaturedListingCard
-                    label="Car for sale"
-                    title={featuredCar?.title || "Explore cars for sale"}
-                    details={featuredCar ? [featuredCar.year, featuredCar.condition === "new" ? "Brand new" : "Used"].join(" · ") : "Browse available vehicle listings"}
-                    business={featuredCar ? featuredCar.dealerName + " · " + featuredCar.location : "From approved automobile dealers"}
-                    image={featuredCar?.images?.[0] || featuredCar?.galleryImage || featuredCar?.dealerLogo}
-                    price={formatFeaturedPrice(featuredCar?.price)}
-                    href={featuredCar ? "/cars/" + featuredCar.id : "/cars"}
-                    icon={Car}
-                    actionLabel={featuredCar ? "View listing" : "Browse cars"}
-                    testId="featured-home-car"
-                    isFeatured={!!featuredCar}
-                  />
-                </CarouselItem>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                  <FeaturedListingCard
-                    label="Spare part"
-                    title={featuredSparePart?.partName || "Explore spare parts"}
-                    details={featuredSparePart ? [featuredSparePart.carBrand, featuredSparePart.carModel, featuredSparePart.condition === "new" ? "New" : "Used"].join(" · ") : "Browse parts listed by local dealers"}
-                    business={featuredSparePart ? featuredSparePart.businessName + " · " + featuredSparePart.businessCity : "From approved spare-parts dealers"}
-                    image={featuredSparePart?.image || featuredSparePart?.galleryImage || featuredSparePart?.businessLogo}
-                    price={formatFeaturedPrice(featuredSparePart?.price)}
-                    href={featuredSparePart ? "/parts/" + featuredSparePart.id : "/autospares-dealers"}
-                    icon={Package}
-                    actionLabel={featuredSparePart ? "View listing" : "Browse parts"}
-                    testId="featured-home-spare-part"
-                    isFeatured={!!featuredSparePart}
-                  />
-                </CarouselItem>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                  <FeaturedListingCard
-                    label="Garage service"
-                    title={featuredGarageService?.name || "Explore garage services"}
-                    details={featuredGarageService?.description || "Find repair and maintenance services"}
-                    business={featuredGarageService ? featuredGarageService.garageName + " · " + featuredGarageService.garageCity : "From approved garages"}
-                    image={featuredGarageService?.galleryImage || featuredGarageService?.garageLogo}
-                    price={formatFeaturedPrice(featuredGarageService?.price)}
-                    href={featuredGarageService ? "/services/" + featuredGarageService.id : "/garages/services"}
-                    icon={Wrench}
-                    actionLabel={featuredGarageService ? "View listing" : "Browse services"}
-                    testId="featured-home-garage-service"
-                    isFeatured={!!featuredGarageService?.featured}
-                  />
-                </CarouselItem>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                  <FeaturedListingCard
-                    label={isVehicleFinance ? "Vehicle finance" : "Automotive support"}
-                    title={featuredSupportService?.name || "Explore automotive support"}
-                    details={featuredSupportService?.description || (featuredSupportService ? "Support from an approved automotive provider" : "Explore vehicle loans, insurance, and other support")}
-                    business={featuredSupportService ? featuredSupportService.businessName + " · " + featuredSupportService.businessCity : "From approved automotive-support providers"}
-                    image={featuredSupportService?.galleryImage || featuredSupportService?.businessLogo}
-                    price={formatFeaturedPrice(featuredSupportService?.startingPrice)}
-                    href={featuredSupportService ? "/support-services/" + featuredSupportService.id : "/automotive-support"}
-                    icon={Shield}
-                    actionLabel={featuredSupportService ? "View listing" : "Browse support"}
-                    testId="featured-home-support-service"
-                    isFeatured={!!featuredSupportService}
-                  />
-                </CarouselItem>
+                {featuredListings.map(listing => (
+                  <CarouselItem key={listing.testId} className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                    <FeaturedListingCard {...listing} />
+                  </CarouselItem>
+                ))}
               </CarouselContent>
               <CarouselPrevious />
               <CarouselNext />
