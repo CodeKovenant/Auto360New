@@ -429,14 +429,8 @@ export default function Home() {
                   />
                 </CarouselItem>
               </CarouselContent>
-              <CarouselPrevious
-                className="z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900"
-                style={{ left: "-1rem", top: "50%", transform: "translateY(-50%)" }}
-              />
-              <CarouselNext
-                className="z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900"
-                style={{ right: "-1rem", top: "50%", transform: "translateY(-50%)" }}
-              />
+              <CarouselPrevious />
+              <CarouselNext />
             </Carousel>
           )}
         </div>
@@ -551,8 +545,8 @@ export default function Home() {
                   </CarouselContent>
                   {list.length > 1 && (
                     <>
-                      <CarouselPrevious className="z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
-                      <CarouselNext className="z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
+                      <CarouselPrevious />
+                      <CarouselNext />
                     </>
                   )}
                 </Carousel>
