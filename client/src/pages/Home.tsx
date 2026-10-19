@@ -433,7 +433,7 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
-            <Carousel autoScroll opts={{ align: "start" }} className="px-1 pb-16" data-testid="premium-businesses-carousel">
+            <Carousel autoScroll opts={{ align: "start" }} className="px-1 pb-10" data-testid="premium-businesses-carousel">
               <CarouselContent>
                 {premiumFeaturedBusinesses.map(business => (
                   <CarouselItem key={business.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
