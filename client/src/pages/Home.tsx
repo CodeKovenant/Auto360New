@@ -366,7 +366,7 @@ export default function Home() {
               {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-72 rounded-2xl" />)}
             </div>
           ) : (
-            <Carousel opts={{ align: "start" }} className="px-1" data-testid="featured-products-carousel">
+            <Carousel opts={{ align: "start" }} className="px-1 pb-12" data-testid="featured-products-carousel">
               <CarouselContent>
                 <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/3">
                   <FeaturedListingCard
@@ -461,11 +461,21 @@ export default function Home() {
                 return (
                   <div key={cat}>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{PREMIUM_SECTION_TITLE[cat]}</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                      {list.map(biz => (
-                        <BusinessCard key={biz.id} business={biz} />
-                      ))}
-                    </div>
+                    <Carousel opts={{ align: "start" }} className="px-1 pb-12" data-testid={`premium-${cat}-carousel`}>
+                      <CarouselContent>
+                        {list.map(biz => (
+                          <CarouselItem key={biz.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
+                            <BusinessCard business={biz} />
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      {list.length > 1 && (
+                        <>
+                          <CarouselPrevious />
+                          <CarouselNext />
+                        </>
+                      )}
+                    </Carousel>
                   </div>
                 );
               })}
@@ -535,7 +545,7 @@ export default function Home() {
                   </Link>
                 </div>
               ) : (
-                <Carousel opts={{ align: "start" }} className="px-1" data-testid={`featured-${block.category}-carousel`}>
+                <Carousel opts={{ align: "start" }} className="px-1 pb-12" data-testid={`featured-${block.category}-carousel`}>
                   <CarouselContent>
                     {list.map(biz => (
                       <CarouselItem key={biz.id} className="basis-[88%] sm:basis-1/2 lg:basis-1/3">
