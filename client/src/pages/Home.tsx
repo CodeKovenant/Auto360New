@@ -358,7 +358,7 @@ export default function Home() {
               <p className="text-muted-foreground">A car, spare part, garage service, and automotive support listing picked from approved businesses.</p>
             </div>
             <Link href="/businesses">
-              <Button variant="outline" className="flex items-center gap-1">Browse all listings <ChevronRight className="h-4 w-4" /></Button>
+              <Button variant="outline" className="flex items-center gap-1">Browse all featured <ChevronRight className="h-4 w-4" /></Button>
             </Link>
           </div>
           {carsLoading || servicesLoading || featuredOffersLoading ? (
@@ -368,7 +368,7 @@ export default function Home() {
           ) : (
             <Carousel opts={{ align: "start" }} className="px-1" data-testid="featured-products-carousel">
               <CarouselContent>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/3">
                   <FeaturedListingCard
                     label="Car for sale"
                     title={featuredCar?.title || "Explore cars for sale"}
@@ -383,7 +383,7 @@ export default function Home() {
                     isFeatured={!!featuredCar}
                   />
                 </CarouselItem>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/3">
                   <FeaturedListingCard
                     label="Spare part"
                     title={featuredSparePart?.partName || "Explore spare parts"}
@@ -398,7 +398,7 @@ export default function Home() {
                     isFeatured={!!featuredSparePart}
                   />
                 </CarouselItem>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/3">
                   <FeaturedListingCard
                     label="Garage service"
                     title={featuredGarageService?.name || "Explore garage services"}
@@ -413,7 +413,7 @@ export default function Home() {
                     isFeatured={!!featuredGarageService?.featured}
                   />
                 </CarouselItem>
-                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                <CarouselItem className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/3">
                   <FeaturedListingCard
                     label={isVehicleFinance ? "Vehicle finance" : "Automotive support"}
                     title={featuredSupportService?.name || "Explore automotive support"}
@@ -429,8 +429,14 @@ export default function Home() {
                   />
                 </CarouselItem>
               </CarouselContent>
-              <CarouselPrevious className="z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
-              <CarouselNext className="z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900" />
+              <CarouselPrevious
+                className="z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900"
+                style={{ left: "-1rem", top: "50%", transform: "translateY(-50%)" }}
+              />
+              <CarouselNext
+                className="z-10 border-gray-200 bg-white/95 shadow-md hover:bg-white dark:border-gray-700 dark:bg-gray-900/95 dark:hover:bg-gray-900"
+                style={{ right: "-1rem", top: "50%", transform: "translateY(-50%)" }}
+              />
             </Carousel>
           )}
         </div>

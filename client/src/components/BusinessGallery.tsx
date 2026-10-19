@@ -24,6 +24,8 @@ type GalleryPhoto = {
   caption?: string | null;
 };
 
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
 export default function BusinessGallery({
   entityType,
   entityId,
@@ -56,6 +58,11 @@ export default function BusinessGallery({
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast({ title: "Upload failed", description: "Photos must be 5 MB or smaller.", variant: "destructive" });
+      e.target.value = "";
+      return;
+    }
     setUploading(true);
     try {
       const formData = new FormData();
@@ -68,16 +75,21 @@ export default function BusinessGallery({
         body: formData,
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Upload failed");
+        const responseText = await res.text();
+        let message = responseText || "Upload failed";
+        try {
+          const err = JSON.parse(responseText);
+          message = err.message || err.error || message;
+        } catch {}
+        throw new Error(message);
       }
       queryClient.invalidateQueries({ queryKey: qKey });
       setCaption("");
-      if (fileRef.current) fileRef.current.value = "";
       toast({ title: "Image uploaded successfully" });
     } catch (err: any) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
+      if (fileRef.current) fileRef.current.value = "";
       setUploading(false);
     }
   }
@@ -124,6 +136,7 @@ export default function BusinessGallery({
               <Upload className="w-3.5 h-3.5 mr-1" />
               {uploading ? "Uploading..." : "Add Photo"}
             </Button>
+            <span className="text-xs text-muted-foreground">Max 5 MB</span>
             <input
               ref={fileRef}
               type="file"

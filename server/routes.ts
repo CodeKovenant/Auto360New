@@ -12,7 +12,7 @@ import crypto from "crypto";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses, cars, spareParts, garageServices, supportServices, reviews, businessReports, galleryImages, featureRequests, mpesaPayments, featureRequestItemTypeEnum, users, type FeatureRequestItemType, type GalleryImage } from "@shared/schema";
+import { AUTOMOTIVE_SUPPORT_SUBCATEGORIES, insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses, cars, spareParts, garageServices, supportServices, reviews, businessReports, galleryImages, featureRequests, mpesaPayments, featureRequestItemTypeEnum, users, type FeatureRequestItemType, type GalleryImage } from "@shared/schema";
 import { initiateSTKPush, PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
 import { sendVerificationEmail, sendAdminNotificationEmail, sendApprovalEmail, sendRejectionEmail, sendRegistrationConfirmationEmail, ADMIN_EMAIL, isMailConfigured } from "./mailer";
 
@@ -77,6 +77,17 @@ const logoUpload = makeUpload();
 const bannerUpload = makeUpload();
 const partImageUpload = makeUpload();
 const galleryUpload = makeUpload();
+
+function handleGalleryUpload(req: any, res: any, next: any) {
+  galleryUpload.single("image")(req, res, (error: unknown) => {
+    if (!error) return next();
+    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ message: "Image must be 5 MB or smaller" });
+    }
+    if (error instanceof Error) return res.status(400).json({ message: error.message });
+    return next(error);
+  });
+}
 
 const JWT_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "production" ? "" : "autodirectory-secret-key");
 
@@ -1663,20 +1674,45 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   function parseCSV(raw: string): Record<string, string>[] {
-    const lines = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim().split("\n");
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
-    return lines.slice(1).filter(l => l.trim()).map(line => {
-      const values: string[] = [];
-      let cur = "", inQuotes = false;
-      for (const ch of line) {
-        if (ch === '"') { inQuotes = !inQuotes; }
-        else if (ch === "," && !inQuotes) { values.push(cur.trim()); cur = ""; }
-        else { cur += ch; }
+    const records: string[][] = [];
+    let values: string[] = [];
+    let field = "";
+    let inQuotes = false;
+
+    for (let index = 0; index < raw.length; index++) {
+      const char = raw[index];
+      if (char === '"') {
+        if (inQuotes && raw[index + 1] === '"') {
+          field += '"';
+          index++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        values.push(field.trim());
+        field = "";
+      } else if ((char === "\n" || char === "\r") && !inQuotes) {
+        values.push(field.trim());
+        if (values.some(value => value !== "")) records.push(values);
+        values = [];
+        field = "";
+        if (char === "\r" && raw[index + 1] === "\n") index++;
+      } else {
+        field += char;
       }
-      values.push(cur.trim());
+    }
+
+    if (inQuotes) throw new Error("CSV contains an unterminated quoted field");
+    values.push(field.trim());
+    if (values.some(value => value !== "")) records.push(values);
+    if (records.length < 2) return [];
+
+    const headers = records[0].map((header, index) =>
+      (index === 0 ? header.replace(/^\uFEFF/, "") : header).trim()
+    );
+    return records.slice(1).map(values => {
       const row: Record<string, string> = {};
-      headers.forEach((h, i) => { row[h] = (values[i] ?? "").replace(/^"|"$/g, ""); });
+      headers.forEach((header, index) => { row[header] = values[index] ?? ""; });
       return row;
     });
   }
@@ -2031,6 +2067,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/admin/import/businesses", adminMiddleware, csvUpload.single("file"), async (req: any, res) => {
     try {
       const requestedCategory = typeof req.body?.category === "string" ? req.body.category.trim() : "";
+      const requestedSubcategory = typeof req.body?.subcategory === "string" ? req.body.subcategory.trim() : "";
       const businessCategoryMap: Record<string, "car_dealer" | "spare_parts" | "garage" | "other"> = {
         car_dealer: "car_dealer",
         spare_parts: "spare_parts",
@@ -2039,9 +2076,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       };
       const category = businessCategoryMap[requestedCategory];
       if (!category) return res.status(400).json({ message: "Select a valid business category before importing" });
+      if (requestedCategory === "automotive_support" && !AUTOMOTIVE_SUPPORT_SUBCATEGORIES.some(item => item.value === requestedSubcategory)) {
+        return res.status(400).json({ message: "Select a valid Automotive Support service type before importing" });
+      }
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const rows = parseCSV(req.file.buffer.toString("utf-8"));
       if (rows.length === 0) return res.status(400).json({ message: "CSV file is empty or has no data rows" });
+      if (!Object.prototype.hasOwnProperty.call(rows[0], "name")) {
+        return res.status(400).json({ message: "CSV must include a 'name' column. Download the Businesses template for the required format." });
+      }
       const existingBizRecords = await db.select({ name: businesses.name }).from(businesses);
       const knownNormalizedNames = new Set(
         existingBizRecords.map((r) => (r.name || "").trim().replace(/\s+/g, " ").toLowerCase()).filter(Boolean)
@@ -2077,7 +2120,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               address: (row.address ?? "").trim(),
               city: (row.city ?? "").trim(),
               description: (row.description ?? "").trim(),
-              subcategory: (row.subcategory ?? "").trim() || null,
+              subcategory: requestedCategory === "automotive_support"
+                ? requestedSubcategory
+                : (row.subcategory ?? "").trim() || null,
               carBrands: row.carBrands ? row.carBrands.split("|").map((brand: string) => brand.trim()).filter(Boolean) : null,
               website: (row.website ?? "").trim() || null,
               logo: (row.logo ?? "").trim() || null,
@@ -2127,7 +2172,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/gallery/:entityType/:entityId", authMiddleware, galleryUpload.single("image"), async (req: any, res) => {
+  app.post("/api/gallery/:entityType/:entityId", authMiddleware, handleGalleryUpload, async (req: any, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No image file uploaded" });
       const { entityType, entityId } = req.params;

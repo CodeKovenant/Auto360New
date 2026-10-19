@@ -4,7 +4,7 @@ import {
   Shield, Building2, CheckCircle, XCircle, Trash2, Users, Star,
   Clock, Flag, Phone, MessageCircle, MapPin, Mail, User, ExternalLink,
   Calendar, ChevronDown, ChevronUp, BadgeCheck, TrendingUp, DollarSign, AlertCircle, Pause, Play, Pencil,
-  Download, Upload, FileText, FileUp
+  Download, Upload, FileText, FileUp, Search
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Business, Review, User as UserType, BusinessReport } from "@shared/schema";
-import { BUSINESS_CATEGORIES, REPORT_REASONS } from "@shared/schema";
+import { AUTOMOTIVE_SUPPORT_SUBCATEGORIES, BUSINESS_CATEGORIES, REPORT_REASONS } from "@shared/schema";
 import { useState, useRef } from "react";
 import { getAuthToken } from "@/lib/auth";
 
@@ -334,6 +334,10 @@ export default function Admin() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [premiumExpiryWindow, setPremiumExpiryWindow] = useState<"all" | "1" | "3" | "6" | "12">("all");
+  const [activeAdminTab, setActiveAdminTab] = useState("pending");
+  const [adminSearch, setAdminSearch] = useState("");
+  const [businessCategoryFilter, setBusinessCategoryFilter] = useState("");
+  const [featuredTypeFilter, setFeaturedTypeFilter] = useState<FeaturedItemType | "">("");
 
   if (!user || user.role !== "admin") {
     navigate("/login");
@@ -566,6 +570,7 @@ export default function Admin() {
   const [importLoading, setImportLoading] = useState(false);
   const [importType, setImportType] = useState<AdminImportType>("businesses");
   const [importBusinessCategory, setImportBusinessCategory] = useState<AdminBusinessImportCategory | "">("");
+  const [importSupportSubcategory, setImportSupportSubcategory] = useState("");
   const [importBusinessId, setImportBusinessId] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
   const [editingBusiness, setEditingBusiness] = useState<EnrichedBusiness | null>(null);
@@ -655,6 +660,10 @@ export default function Admin() {
       toast({ title: "Choose a category", description: "Select a business category before importing.", variant: "destructive" });
       return;
     }
+    if (importType === "businesses" && importBusinessCategory === "automotive_support" && !importSupportSubcategory) {
+      toast({ title: "Choose a service type", description: "Select an Automotive Support service type before importing.", variant: "destructive" });
+      return;
+    }
     if (importType !== "businesses" && !importBusinessId) {
       toast({ title: "Choose a business", description: "Select an approved business before importing listings.", variant: "destructive" });
       return;
@@ -670,8 +679,14 @@ export default function Admin() {
       }
       const formData = new FormData();
       formData.append("file", file);
-      if (importType === "businesses") formData.append("category", importBusinessCategory);
-      else formData.append("businessId", importBusinessId);
+      if (importType === "businesses") {
+        formData.append("category", importBusinessCategory);
+        if (importBusinessCategory === "automotive_support") {
+          formData.append("subcategory", importSupportSubcategory);
+        }
+      } else {
+        formData.append("businessId", importBusinessId);
+      }
       const importPath = importType === "businesses" ? "/api/admin/import/businesses" : "/api/import/" + importType;
       const res = await fetch(importPath, {
         method: "POST",
@@ -741,6 +756,31 @@ export default function Admin() {
   const importBusinessOptions = importBusinessCategories
     ? importBusinesses.filter(biz => importBusinessCategories.includes(biz.category))
     : [];
+  const normalizedAdminSearch = adminSearch.trim().toLowerCase();
+  const matchesBusiness = (biz: EnrichedBusiness) => {
+    const matchesSearch = !normalizedAdminSearch || [
+      biz.name, biz.category, getCategoryLabel(biz.category), biz.subcategory, biz.description,
+      biz.city, biz.address, biz.phone, biz.whatsapp, biz.ownerName, biz.ownerEmail,
+    ].some(value => value?.toLowerCase().includes(normalizedAdminSearch));
+    const matchesCategory = !businessCategoryFilter || (
+      businessCategoryFilter === "automotive_support"
+        ? ["insurance", "car_wash"].includes(biz.category) || (
+          biz.category === "other" &&
+          AUTOMOTIVE_SUPPORT_SUBCATEGORIES.some(subcategory => subcategory.value === biz.subcategory)
+        )
+        : biz.category === businessCategoryFilter
+    );
+    return matchesSearch && matchesCategory;
+  };
+  const visiblePending = pending.filter(matchesBusiness);
+  const visibleApproved = approved.filter(matchesBusiness);
+  const visibleRejected = rejected.filter(matchesBusiness);
+  const matchesFeaturedItem = (item: FeaturedItem) => !normalizedAdminSearch || [
+    item.name, item.subtitle, item.description, item.price, item.type.replace(/_/g, " "),
+  ].some(value => value?.toLowerCase().includes(normalizedAdminSearch));
+  const visibleFeatureRequests = featureRequests.filter(request => !normalizedAdminSearch || [
+    request.itemName, request.itemType.replace(/_/g, " "), request.ownerName, request.ownerEmail,
+  ].some(value => value?.toLowerCase().includes(normalizedAdminSearch)));
   const linkedOwnerIds = new Set([...pending, ...approved, ...rejected].filter(biz => biz.id !== editingBusiness?.id).map(biz => biz.ownerId));
   const availableOwnerAccounts = users.filter(account => account.role === "owner" && !linkedOwnerIds.has(account.id));
 
@@ -829,7 +869,48 @@ export default function Admin() {
           </Card>
         </div>
 
-        <Tabs defaultValue="pending">
+        <Tabs value={activeAdminTab} onValueChange={value => setActiveAdminTab(value)}>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[220px] flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={adminSearch}
+                onChange={event => setAdminSearch(event.target.value)}
+                placeholder={activeAdminTab === "featured" ? "Search businesses, cars, parts, services..." : "Search businesses by name, location, phone..."}
+                className="pl-9"
+                aria-label="Search admin listings"
+                data-testid="admin-listing-search"
+              />
+            </div>
+            {["pending", "approved", "rejected"].includes(activeAdminTab) && (
+              <select
+                value={businessCategoryFilter}
+                onChange={event => setBusinessCategoryFilter(event.target.value)}
+                className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                aria-label="Filter businesses by category"
+                data-testid="admin-business-category-filter"
+              >
+                <option value="">All business categories</option>
+                {BUSINESS_CATEGORIES.map(category => (
+                  <option key={category.value} value={category.value}>{category.label}</option>
+                ))}
+              </select>
+            )}
+            {activeAdminTab === "featured" && (
+              <select
+                value={featuredTypeFilter}
+                onChange={event => setFeaturedTypeFilter(event.target.value as FeaturedItemType | "")}
+                className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+                aria-label="Filter featured catalog by item type"
+                data-testid="admin-featured-type-filter"
+              >
+                <option value="">All listing types</option>
+                {FEATURED_ITEM_GROUPS.map(group => (
+                  <option key={group.type} value={group.type}>{group.title}</option>
+                ))}
+              </select>
+            )}
+          </div>
           <TabsList className="mb-4 flex-wrap h-auto gap-1">
             <TabsTrigger value="pending" data-testid="admin-tab-pending">
               Pending ({stats.pending})
@@ -869,9 +950,11 @@ export default function Admin() {
                 <CheckCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p>No businesses pending approval</p>
               </div>
+            ) : visiblePending.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No pending businesses match your search and filters.</div>
             ) : (
               <div className="space-y-3">
-                {pending.map(biz => (
+                {visiblePending.map(biz => (
                   <BusinessCard
                     key={biz.id}
                     biz={biz}
@@ -915,9 +998,11 @@ export default function Admin() {
                 <Building2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p>No approved businesses yet</p>
               </div>
+            ) : visibleApproved.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No approved businesses match your search and filters.</div>
             ) : (
               <div className="space-y-3">
-                {approved.map(biz => (
+                {visibleApproved.map(biz => (
                   <BusinessCard
                     key={biz.id}
                     biz={biz}
@@ -979,9 +1064,11 @@ export default function Admin() {
                   </div>
                   {featureRequests.length === 0 ? (
                     <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No feature requests awaiting review.</p>
+                  ) : visibleFeatureRequests.length === 0 ? (
+                    <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No feature requests match your search.</p>
                   ) : (
                     <div className="space-y-2">
-                      {featureRequests.map(request => (
+                      {visibleFeatureRequests.map(request => (
                         <Card key={request.id}>
                           <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
                             <div className="min-w-0">
@@ -1018,7 +1105,8 @@ export default function Admin() {
                   Only approved businesses with a ready public profile can be featured. Featured status does not change paid Premium status.
                 </p>
                 {FEATURED_ITEM_GROUPS.map(({ type, title }) => {
-                  const groupItems = (featuredItems || []).filter((item) => item.type === type);
+                  if (featuredTypeFilter && featuredTypeFilter !== type) return null;
+                  const groupItems = (featuredItems || []).filter((item) => item.type === type && matchesFeaturedItem(item));
                   return (
                     <section key={type} className="space-y-3" data-testid={`admin-featured-group-${type}`}>
                       <div className="flex items-center justify-between gap-3">
@@ -1107,9 +1195,11 @@ export default function Admin() {
                 <XCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p>No rejected businesses</p>
               </div>
+            ) : visibleRejected.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No rejected businesses match your search and filters.</div>
             ) : (
               <div className="space-y-3">
-                {rejected.map(biz => (
+                {visibleRejected.map(biz => (
                   <BusinessCard
                     key={biz.id}
                     biz={biz}
@@ -1546,6 +1636,7 @@ export default function Admin() {
                         const nextType = e.target.value as AdminImportType;
                         setImportType(nextType);
                         setImportBusinessCategory("");
+                        setImportSupportSubcategory("");
                         setImportBusinessId("");
                         setImportFile(null);
                         setImportResult(null);
@@ -1565,7 +1656,12 @@ export default function Admin() {
                         id="admin-import-business-category"
                         value={importBusinessCategory}
                         disabled={importLoading}
-                        onChange={e => { setImportBusinessCategory(e.target.value as AdminBusinessImportCategory | ""); setImportResult(null); }}
+                        onChange={e => {
+                          const category = e.target.value as AdminBusinessImportCategory | "";
+                          setImportBusinessCategory(category);
+                          setImportSupportSubcategory("");
+                          setImportResult(null);
+                        }}
                         className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm"
                         data-testid="admin-import-business-category"
                       >
@@ -1593,6 +1689,26 @@ export default function Admin() {
                   )}
                 </div>
 
+                {importType === "businesses" && importBusinessCategory === "automotive_support" && (
+                  <div>
+                    <label htmlFor="admin-import-support-subcategory" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1.5">Automotive Support service type</label>
+                    <select
+                      id="admin-import-support-subcategory"
+                      value={importSupportSubcategory}
+                      disabled={importLoading}
+                      onChange={e => { setImportSupportSubcategory(e.target.value); setImportResult(null); }}
+                      className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm"
+                      data-testid="admin-import-support-subcategory"
+                    >
+                      <option value="">Select a service type…</option>
+                      {AUTOMOTIVE_SUPPORT_SUBCATEGORIES.map(subcategory => (
+                        <option key={subcategory.value} value={subcategory.value}>{subcategory.label}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">This service type is applied to every business in the CSV so it appears in the matching Automotive Support section.</p>
+                  </div>
+                )}
+
                 <div className="flex items-start justify-between gap-3 flex-wrap rounded-md border border-dashed border-gray-200 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
                   <div className="flex items-start gap-2 text-sm text-muted-foreground">
                     <FileText className="w-4 h-4 mt-0.5" />
@@ -1610,7 +1726,7 @@ export default function Admin() {
                   {importConfig.optionalColumns.length > 0 && (
                     <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">Optional: <span className="font-mono">{importConfig.optionalColumns.join(", ")}</span></p>
                   )}
-                  {importType === "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">The selected category applies to every row; any category column in the CSV is ignored. Missing optional values stay blank; use Edit profile to add them or assign an existing owner account.</p>}
+                  {importType === "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">The selected category applies to every row; any category column in the CSV is ignored. For Automotive Support, the selected service type is also applied to every row. Missing optional values stay blank; use Edit profile to add them or assign an existing owner account.</p>}
                   {importType !== "businesses" && <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">The selected business determines where these listings appear. Check the type and business before importing.</p>}
                 </div>
 
@@ -1658,7 +1774,9 @@ export default function Admin() {
                 <div className="flex justify-end">
                   <Button
                     onClick={() => { if (importFile) handleImportFile(importFile); }}
-                    disabled={!importFile || importLoading || (importType === "businesses" ? !importBusinessCategory : (!importBusinessId || importBusinessOptions.length === 0))}
+                    disabled={!importFile || importLoading || (importType === "businesses"
+                      ? !importBusinessCategory || (importBusinessCategory === "automotive_support" && !importSupportSubcategory)
+                      : (!importBusinessId || importBusinessOptions.length === 0))}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                     data-testid="admin-import-submit"
                   >
