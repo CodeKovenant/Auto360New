@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2, BadgeCheck, Store, MapPin, ArrowRight, Paintbrush } from "lucide-react";
+import { Search, Car, Wrench, Package, Droplets, Shield, MoreHorizontal, ChevronRight, CheckCircle, Building2, BadgeCheck, Store, MapPin, ArrowRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,6 @@ const CATEGORIES = [
   { value: "garage", label: "Professional Garages", icon: Wrench, href: "/autogarage-repair", color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-100 dark:border-green-800" },
   { value: "spare_parts", label: "Spare Parts", icon: Package, href: "/autospares-dealers", color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-800" },
   { value: "car_wash", label: "Car Wash", icon: Droplets, href: "/businesses?category=car_wash", color: "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 border-cyan-100 dark:border-cyan-800" },
-  { value: "vehicle_branding", label: "Vehicle Branding", icon: Paintbrush, href: "/automotive-support?tab=vehicle_branding", color: "bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-100 dark:border-fuchsia-800" },
   { value: "insurance", label: "Insurance", icon: Shield, href: "/automotive-support", color: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-800" },
   { value: "other", label: "Other Services", icon: MoreHorizontal, href: "/businesses", color: "bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700" },
 ];
@@ -220,106 +219,62 @@ export default function Home() {
   });
 
   const featuredListings: FeaturedListingCardProps[] = [
-    ...(featuredCars?.length
-      ? featuredCars.map((car, index) => ({
-          label: "Car for sale",
-          title: car.title,
-          details: [car.year, car.condition === "new" ? "Brand new" : "Used"].join(" · "),
-          business: car.dealerName + " · " + car.location,
-          image: car.images?.[0] || car.galleryImage || car.dealerLogo,
-          price: formatFeaturedPrice(car.price),
-          href: "/cars/" + car.id,
-          icon: Car,
-          actionLabel: "View listing",
-          testId: index === 0 ? "featured-home-car" : `featured-home-car-${car.id}`,
-          isFeatured: true,
-        }))
-      : [{
-          label: "Car for sale",
-          title: "Explore cars for sale",
-          details: "Browse available vehicle listings",
-          business: "From approved automobile dealers",
-          href: "/cars",
-          icon: Car,
-          actionLabel: "Browse cars",
-          testId: "featured-home-car",
-        }]),
-    ...(featuredHomeOffers?.spareParts.length
-      ? featuredHomeOffers.spareParts.map((part, index) => ({
-          label: "Spare part",
-          title: part.partName,
-          details: [part.carBrand, part.carModel, part.condition === "new" ? "New" : "Used"].join(" · "),
-          business: part.businessName + " · " + part.businessCity,
-          image: part.image || part.galleryImage || part.businessLogo,
-          price: formatFeaturedPrice(part.price),
-          href: "/parts/" + part.id,
-          icon: Package,
-          actionLabel: "View listing",
-          testId: index === 0 ? "featured-home-spare-part" : `featured-home-spare-part-${part.id}`,
-          isFeatured: true,
-        }))
-      : [{
-          label: "Spare part",
-          title: "Explore spare parts",
-          details: "Browse parts listed by local dealers",
-          business: "From approved spare-parts dealers",
-          href: "/autospares-dealers",
-          icon: Package,
-          actionLabel: "Browse parts",
-          testId: "featured-home-spare-part",
-        }]),
-    ...(featuredGarageServices?.length
-      ? featuredGarageServices.map((service, index) => ({
-          label: "Garage service",
-          title: service.name,
-          details: service.description || undefined,
-          business: service.garageName + " · " + service.garageCity,
-          image: service.galleryImage || service.garageLogo,
-          price: formatFeaturedPrice(service.price),
-          href: "/services/" + service.id,
-          icon: Wrench,
-          actionLabel: "View listing",
-          testId: index === 0 ? "featured-home-garage-service" : `featured-home-garage-service-${service.id}`,
-          isFeatured: true,
-        }))
-      : [{
-          label: "Garage service",
-          title: "Explore garage services",
-          details: "Find repair and maintenance services",
-          business: "From approved garages",
-          href: "/garages/services",
-          icon: Wrench,
-          actionLabel: "Browse services",
-          testId: "featured-home-garage-service",
-        }]),
-    ...(featuredHomeOffers?.supportServices.length
-      ? featuredHomeOffers.supportServices.map((service, index) => {
-          const isVehicleFinance = service.businessSubcategory === "vehicle_finance" ||
-            /loan|financ/i.test(service.name + " " + (service.description || ""));
-          return {
-            label: isVehicleFinance ? "Vehicle finance" : "Automotive support",
-            title: service.name,
-            details: service.description || "Support from an approved automotive provider",
-            business: service.businessName + " · " + service.businessCity,
-            image: service.galleryImage || service.businessLogo,
-            price: formatFeaturedPrice(service.startingPrice),
-            href: "/support-services/" + service.id,
-            icon: Shield,
-            actionLabel: "View listing",
-            testId: index === 0 ? "featured-home-support-service" : `featured-home-support-service-${service.id}`,
-            isFeatured: true,
-          };
-        })
-      : [{
-          label: "Automotive support",
-          title: "Explore automotive support",
-          details: "Explore vehicle loans, insurance, and other support",
-          business: "From approved automotive-support providers",
-          href: "/automotive-support",
-          icon: Shield,
-          actionLabel: "Browse support",
-          testId: "featured-home-support-service",
-        }]),
+    ...(featuredCars ?? []).map((car, index) => ({
+      label: "Car for sale",
+      title: car.title,
+      details: [car.year, car.condition === "new" ? "Brand new" : "Used"].join(" · "),
+      business: car.dealerName + " · " + car.location,
+      image: car.images?.[0] || car.galleryImage || car.dealerLogo,
+      price: formatFeaturedPrice(car.price),
+      href: "/cars/" + car.id,
+      icon: Car,
+      actionLabel: "View listing",
+      testId: index === 0 ? "featured-home-car" : `featured-home-car-${car.id}`,
+      isFeatured: true,
+    })),
+    ...(featuredHomeOffers?.spareParts ?? []).map((part, index) => ({
+      label: "Spare part",
+      title: part.partName,
+      details: [part.carBrand, part.carModel, part.condition === "new" ? "New" : "Used"].join(" · "),
+      business: part.businessName + " · " + part.businessCity,
+      image: part.image || part.galleryImage || part.businessLogo,
+      price: formatFeaturedPrice(part.price),
+      href: "/parts/" + part.id,
+      icon: Package,
+      actionLabel: "View listing",
+      testId: index === 0 ? "featured-home-spare-part" : `featured-home-spare-part-${part.id}`,
+      isFeatured: true,
+    })),
+    ...(featuredGarageServices ?? []).map((service, index) => ({
+      label: "Garage service",
+      title: service.name,
+      details: service.description || undefined,
+      business: service.garageName + " · " + service.garageCity,
+      image: service.galleryImage || service.garageLogo,
+      price: formatFeaturedPrice(service.price),
+      href: "/services/" + service.id,
+      icon: Wrench,
+      actionLabel: "View listing",
+      testId: index === 0 ? "featured-home-garage-service" : `featured-home-garage-service-${service.id}`,
+      isFeatured: true,
+    })),
+    ...(featuredHomeOffers?.supportServices ?? []).map((service, index) => {
+      const isVehicleFinance = service.businessSubcategory === "vehicle_finance" ||
+        /loan|financ/i.test(service.name + " " + (service.description || ""));
+      return {
+        label: isVehicleFinance ? "Vehicle finance" : "Automotive support",
+        title: service.name,
+        details: service.description || "Support from an approved automotive provider",
+        business: service.businessName + " · " + service.businessCity,
+        image: service.galleryImage || service.businessLogo,
+        price: formatFeaturedPrice(service.startingPrice),
+        href: "/support-services/" + service.id,
+        icon: Shield,
+        actionLabel: "View listing",
+        testId: index === 0 ? "featured-home-support-service" : `featured-home-support-service-${service.id}`,
+        isFeatured: true,
+      };
+    }),
   ];
 
   function handleSearch(e: React.FormEvent) {
@@ -423,36 +378,38 @@ export default function Home() {
       </section>
 
       {/* ── 1b. FEATURED PRODUCTS & SERVICES ── */}
-      <section className="py-12 bg-gray-50 dark:bg-gray-900">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h2 className="mb-1 text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">Featured Products &amp; Services</h2>
-              <p className="text-muted-foreground">Featured cars, spare parts, garage services, and automotive support listings from approved businesses.</p>
+      {(carsLoading || servicesLoading || featuredOffersLoading || featuredListings.length > 0) && (
+        <section className="py-12 bg-gray-50 dark:bg-gray-900">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 className="mb-1 text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">Featured Products &amp; Services</h2>
+                <p className="text-muted-foreground">Featured cars, spare parts, garage services, and automotive support listings from approved businesses.</p>
+              </div>
+              <Link href="/businesses">
+                <Button variant="outline" className="flex items-center gap-1">View all featured listings <ChevronRight className="h-4 w-4" /></Button>
+              </Link>
             </div>
-            <Link href="/businesses">
-              <Button variant="outline" className="flex items-center gap-1">View all featured listings <ChevronRight className="h-4 w-4" /></Button>
-            </Link>
+            {carsLoading || servicesLoading || featuredOffersLoading ? (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-72 rounded-2xl" />)}
+              </div>
+            ) : (
+              <Carousel autoScroll opts={{ align: "start" }} className="px-1 pb-16" data-testid="featured-products-carousel">
+                <CarouselContent>
+                  {featuredListings.map(listing => (
+                    <CarouselItem key={listing.testId} className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                      <FeaturedListingCard {...listing} />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+              </Carousel>
+            )}
           </div>
-          {carsLoading || servicesLoading || featuredOffersLoading ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-72 rounded-2xl" />)}
-            </div>
-          ) : (
-            <Carousel autoScroll opts={{ align: "start" }} className="px-1 pb-16" data-testid="featured-products-carousel">
-              <CarouselContent>
-                {featuredListings.map(listing => (
-                  <CarouselItem key={listing.testId} className="basis-[88%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                    <FeaturedListingCard {...listing} />
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
-            </Carousel>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── 2. PREMIUM BUSINESSES ── */}
       {premiumFeaturedBusinesses.length > 0 && (

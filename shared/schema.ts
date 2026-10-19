@@ -269,7 +269,6 @@ export const AUTOMOTIVE_SUPPORT_SUBCATEGORIES = [
   { value: "vehicle_finance", label: "Vehicle Finance" },
   { value: "vehicle_tracking", label: "Vehicle Tracking" },
   { value: "vehicle_towing", label: "Vehicle Towing" },
-  { value: "vehicle_branding", label: "Vehicle Branding" },
 ] as const;
 
 export const CAR_BRANDS = [
