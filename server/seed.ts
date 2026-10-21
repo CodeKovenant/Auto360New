@@ -79,6 +79,7 @@ export async function seedDatabase() {
       latitude: "-1.3049",
       longitude: "36.8395",
       status: "approved",
+      premium: false,
     }).returning();
 
     const [biz2] = await db.insert(businesses).values({
@@ -94,6 +95,7 @@ export async function seedDatabase() {
       latitude: "-1.2670",
       longitude: "36.8145",
       status: "approved",
+      premium: false,
     }).returning();
 
     const [biz3] = await db.insert(businesses).values({
@@ -109,6 +111,7 @@ export async function seedDatabase() {
       latitude: "-1.2841",
       longitude: "36.8218",
       status: "approved",
+      premium: false,
     }).returning();
 
     const [biz4] = await db.insert(businesses).values({
@@ -124,6 +127,7 @@ export async function seedDatabase() {
       latitude: "-1.2674",
       longitude: "36.8068",
       status: "approved",
+      premium: false,
     }).returning();
 
     const [biz5] = await db.insert(businesses).values({
@@ -139,6 +143,7 @@ export async function seedDatabase() {
       latitude: "-1.2921",
       longitude: "36.7915",
       status: "approved",
+      premium: false,
     }).returning();
 
     await db.insert(businesses).values({
@@ -151,6 +156,7 @@ export async function seedDatabase() {
       address: "Digo Road, Mombasa CBD",
       city: "Mombasa",
       status: "pending",
+      premium: false,
     });
 
     await db.insert(spareParts).values([
