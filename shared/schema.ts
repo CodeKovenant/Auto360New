@@ -51,7 +51,7 @@ export const businesses = pgTable("businesses", {
   status: businessStatusEnum("status").notNull().default("pending"),
   featured: boolean("featured").notNull().default(false),
   suspended: boolean("suspended").notNull().default(false),
-  premium: boolean("premium").default(false),
+  premium: boolean("premium").notNull().default(false),
   premiumExpiresAt: timestamp("premium_expires_at"),
   carBrands: text("car_brands").array(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -189,7 +189,14 @@ export const mpesaPayments = pgTable("mpesa_payments", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
 });
-export const insertBusinessSchema = createInsertSchema(businesses).omit({ id: true, createdAt: true, status: true, featured: true });
+export const insertBusinessSchema = createInsertSchema(businesses).omit({
+  id: true,
+  createdAt: true,
+  status: true,
+  featured: true,
+  premium: true,
+  premiumExpiresAt: true,
+});
 export const insertSparePartSchema = createInsertSchema(spareParts).omit({ id: true, createdAt: true, featured: true });
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true, isRead: true });

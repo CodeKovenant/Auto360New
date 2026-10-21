@@ -420,9 +420,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const body = insertBusinessSchema.parse({
         ...pickFields(req.body, ["name", "category", "subcategory", "description", "phone", "whatsapp", "address", "city", "logo", "banner", "website", "latitude", "longitude", "carBrands"]),
         ownerId: user.id,
-        premium: false,
-        premiumExpiresAt: null,
-        featured: false,
         suspended: false,
       });
       const biz = await storage.createBusiness(body);
@@ -2109,12 +2106,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               banner: (row.banner ?? "").trim() || null,
               latitude: (row.latitude ?? "").trim() || null,
               longitude: (row.longitude ?? "").trim() || null,
-              premium: false,
-              featured: false,
-              premiumExpiresAt: null,
             }),
             status: "approved" as const,
-            featured: false,
           };
           const created = await storage.createBusiness(body);
           knownNormalizedNames.add(normalizedName);

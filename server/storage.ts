@@ -168,7 +168,7 @@ export interface IStorage {
   getFeaturedBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[]>;
   getPremiumBusinesses(): Promise<(Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[]>;
   getHomepageBusinessSections(limitPerCategory: number): Promise<Record<string, (Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[]>>;
-  createBusiness(biz: InsertBusiness & Partial<Pick<Business, "status" | "featured">>): Promise<Business>;
+  createBusiness(biz: InsertBusiness & Partial<Pick<Business, "status">>): Promise<Business>;
   updateBusiness(id: string, data: Partial<Business>): Promise<Business>;
   deleteBusiness(id: string): Promise<void>;
   getPendingBusinesses(): Promise<Business[]>;
@@ -435,7 +435,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async createBusiness(biz: InsertBusiness & Partial<Pick<Business, "status" | "featured">>) {
+  async createBusiness(biz: InsertBusiness & Partial<Pick<Business, "status">>) {
     const [created] = await db.insert(businesses).values(biz).returning();
     return created;
   }
