@@ -436,7 +436,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBusiness(biz: InsertBusiness & Partial<Pick<Business, "status">>) {
-    const [created] = await db.insert(businesses).values(biz).returning();
+    const [created] = await db.insert(businesses).values({
+      ...biz,
+      featured: false,
+      premium: false,
+      premiumExpiresAt: null,
+    }).returning();
     return created;
   }
 
