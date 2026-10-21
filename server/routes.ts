@@ -1828,6 +1828,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             price: row.price || null,
             description: row.description || null,
             image: row.image || null,
+            featured: false,
           });
           const created = await createSparePartIfNotDuplicate(body);
           if (created.duplicate) {
@@ -1889,6 +1890,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             description: row.description || null,
             price: row.price || null,
             popular: false,
+            featured: false,
           });
           await storage.createGarageService(body);
           knownServiceNames.add(normalizedName);
@@ -1947,6 +1949,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             name: row.name || "",
             description: row.description || null,
             startingPrice: row.startingPrice || row.price || null,
+            featured: false,
           });
           await storage.createSupportService(body);
           knownServiceNames.add(normalizedName);
