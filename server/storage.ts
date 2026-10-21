@@ -422,11 +422,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(businesses)
         .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.featured, true), eq(businesses.category, category)))
-        .orderBy(
-          desc(businesses.featured),
-          desc(sql`CASE WHEN ${businesses.premium} IS TRUE THEN 1 ELSE 0 END`),
-          desc(businesses.createdAt)
-        )
+        .orderBy(desc(businesses.featured), desc(businesses.createdAt))
         .limit(cap);
       const ratedBusinesses = await Promise.all(
         categoryBusinesses.map(async (biz) => {
