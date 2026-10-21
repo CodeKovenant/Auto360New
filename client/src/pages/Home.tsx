@@ -440,7 +440,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── 3. FEATURED BUSINESSES BY CATEGORY (admin-featured, then Premium) ── */}
+      {/* ── 3. SITE-WIDE FEATURED BUSINESSES BY CATEGORY ── */}
       {HOME_SPOTLIGHT_SECTIONS.map(block => {
         const list = spotlightByCategory[block.category] ?? [];
         const Icon = block.icon;

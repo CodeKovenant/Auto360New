@@ -412,7 +412,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getHomepageBusinessSections(limitPerCategory: number) {
-    await clearPremiumFlagsPastExpiryInDb();
     const categories = ["car_dealer", "garage", "spare_parts", "car_wash", "insurance", "other"] as const;
     const cap = Math.max(1, Math.min(limitPerCategory, 24));
     const result: Record<string, (Business & { avgRating: number; reviewCount: number; galleryImage: string | null })[]> = {};
@@ -422,7 +421,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(businesses)
         .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.featured, true), eq(businesses.category, category)))
-        .orderBy(desc(businesses.featured), desc(businesses.createdAt))
+        .orderBy(desc(businesses.createdAt))
         .limit(cap);
       const ratedBusinesses = await Promise.all(
         categoryBusinesses.map(async (biz) => {

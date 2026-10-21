@@ -455,7 +455,6 @@ export default function Admin() {
       toast({ title: activate ? "Homepage Premium activated!" : "Homepage Premium removed." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
