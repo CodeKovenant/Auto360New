@@ -109,7 +109,7 @@ export const cars = pgTable("cars", {
   images: text("images").array(),
   location: text("location").notNull(),
   condition: carConditionEnum("condition").notNull().default("used"),
-  featured: boolean("featured").default(false),
+  featured: boolean("featured").notNull().default(false),
   suspended: boolean("suspended").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
