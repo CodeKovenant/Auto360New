@@ -171,23 +171,15 @@ export default function Home() {
     staleTime: 0,
   });
 
-  /** Admin-featured listings come before paid Premium listings; Premium remains a separate status. */
+  /** Site-wide Featured and Homepage Premium are independent statuses. */
   const spotlightByCategory = useMemo(() => {
     const out: Record<string, BusinessRated[]> = {};
     for (const block of HOME_SPOTLIGHT_SECTIONS) {
       const seen = new Set<string>();
       const merged: BusinessRated[] = [];
       for (const category of block.businessCategories) {
-        const featuredInCategory = (homeSections?.[category] ?? []).filter((business) => business.featured);
+        const featuredInCategory = (homeSections?.[category] ?? []).filter(business => business.featured);
         for (const business of featuredInCategory) {
-          if (merged.length >= SPOTLIGHT_LIMIT) break;
-          if (!seen.has(business.id)) {
-            seen.add(business.id);
-            merged.push(business);
-          }
-        }
-        const premiumInCategory = premiumBusinesses?.filter((business) => business.category === category && business.featured) ?? [];
-        for (const business of premiumInCategory) {
           if (merged.length >= SPOTLIGHT_LIMIT) break;
           if (!seen.has(business.id)) {
             seen.add(business.id);
@@ -198,9 +190,9 @@ export default function Home() {
       out[block.category] = merged;
     }
     return out;
-  }, [homeSections, premiumBusinesses]);
+  }, [homeSections]);
 
-  const premiumFeaturedBusinesses = premiumBusinesses?.filter(business => business.featured) ?? [];
+  const premiumFeaturedBusinesses = premiumBusinesses ?? [];
 
   const { data: featuredCars, isLoading: carsLoading } = useQuery<CarWithDealer[]>({
     queryKey: ["/api/cars/featured"],
@@ -494,7 +486,7 @@ export default function Home() {
                   </Button>
                 </Link>
               </div>
-              {list.length === 0 && (homeSectionsLoading || premiumLoading) ? (
+              {list.length === 0 && homeSectionsLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <Skeleton key={i} className="h-48 rounded-md" />

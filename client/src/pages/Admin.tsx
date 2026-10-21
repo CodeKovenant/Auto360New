@@ -107,31 +107,31 @@ const ADMIN_IMPORT_CONFIG: Record<AdminImportType, { label: string; requiredColu
     label: "Businesses",
     requiredColumns: ["name", "phone"],
     optionalColumns: ["whatsapp", "address", "city", "description", "subcategory", "carBrands", "website", "logo", "banner", "latitude", "longitude"],
-    description: "Each imported business gets an approved public profile and is not featured by default. Assign an existing owner account so they can complete missing details; feature the business later to promote it on its category page.",
+    description: "Imported businesses are approved but not Site-wide Featured or Homepage Premium by default. Set either option manually after import. Assign an existing owner account so they can complete missing details.",
   },
   cars: {
     label: "Cars",
     requiredColumns: ["title", "brand", "model", "year", "price", "location"],
     optionalColumns: ["mileage", "fuelType", "transmission", "condition", "description"],
-    description: "Car listings will be attached to the selected approved car dealer.",
+    description: "Car listings will be attached to the selected approved car dealer and are not Site-wide Featured by default. Set featured status manually after import.",
   },
   parts: {
     label: "Spare Parts",
     requiredColumns: ["partName", "carBrand", "carModel"],
     optionalColumns: ["year", "condition", "price", "description"],
-    description: "Spare parts will be attached to the selected approved spare-parts business.",
+    description: "Spare parts will be attached to the selected approved spare-parts business and are not Site-wide Featured by default. Set featured status manually after import.",
   },
   services: {
     label: "Garage Services",
     requiredColumns: ["name"],
     optionalColumns: ["description", "price"],
-    description: "Services will be attached to the selected approved garage.",
+    description: "Services will be attached to the selected approved garage and are not Site-wide Featured by default. Set featured status manually after import.",
   },
   "support-services": {
     label: "Support Services",
     requiredColumns: ["name"],
     optionalColumns: ["description", "startingPrice"],
-    description: "Support services will be attached to the selected approved support business.",
+    description: "Support services will be attached to the selected approved support business and are not Site-wide Featured by default. Set featured status manually after import.",
   },
 };
 
@@ -452,7 +452,7 @@ export default function Admin() {
       await apiRequest("POST", endpoint, { businessId });
     },
     onSuccess: (_, { activate }) => {
-      toast({ title: activate ? "Premium activated!" : "Premium deactivated." });
+      toast({ title: activate ? "Homepage Premium activated!" : "Homepage Premium removed." });
       queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/home-sections?limit=6"] });
@@ -882,7 +882,7 @@ export default function Admin() {
                 data-testid="admin-listing-search"
               />
             </div>
-            {["pending", "approved", "rejected"].includes(activeAdminTab) && (
+            {["pending", "approved", "homepage-premium", "rejected"].includes(activeAdminTab) && (
               <select
                 value={businessCategoryFilter}
                 onChange={event => setBusinessCategoryFilter(event.target.value)}
@@ -919,7 +919,10 @@ export default function Admin() {
               Approved ({stats.approved})
             </TabsTrigger>
             <TabsTrigger value="featured" data-testid="admin-tab-featured">
-              Featured {featureRequests.length > 0 && <Badge className="ml-1 bg-red-600 text-white">{featureRequests.length}</Badge>}
+              Site-wide Featured {featureRequests.length > 0 && <Badge className="ml-1 bg-red-600 text-white">{featureRequests.length}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="homepage-premium" data-testid="admin-tab-homepage-premium">
+              Homepage Premium ({approved.filter(biz => biz.premium).length})
             </TabsTrigger>
             <TabsTrigger value="rejected" data-testid="admin-tab-rejected">
               Rejected ({stats.rejected})
@@ -1011,18 +1014,6 @@ export default function Admin() {
                       <>
                         <Button
                           size="sm"
-                          variant={biz.premium ? "default" : "outline"}
-                          className={biz.premium ? "bg-red-600 hover:bg-red-700 text-white" : "text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950"}
-                          onClick={() => togglePremiumMutation.mutate({ businessId: biz.id, activate: !biz.premium })}
-                          disabled={togglePremiumMutation.isPending}
-                          title={biz.premium ? "Remove premium status" : "Grant premium status"}
-                          data-testid={`button-toggle-premium-${biz.id}`}
-                        >
-                          <BadgeCheck className="w-4 h-4 mr-1" />
-                          {biz.premium ? "Premium" : "Set Premium"}
-                        </Button>
-                        <Button
-                          size="sm"
                           variant="outline"
                           onClick={() => suspendBusinessMutation.mutate({ id: biz.id, suspended: !biz.suspended })}
                           disabled={suspendBusinessMutation.isPending}
@@ -1049,7 +1040,52 @@ export default function Admin() {
             )}
           </TabsContent>
 
-          {/* Featured catalog management — independent of paid Premium status */}
+          <TabsContent value="homepage-premium">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Homepage Premium Businesses</h2>
+              <p className="text-sm text-muted-foreground">
+                Manage businesses shown in the homepage Premium carousel. This status is independent of Site-wide Featured.
+              </p>
+            </div>
+            {isLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-20 rounded-xl" />)}
+              </div>
+            ) : approved.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Building2 className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p>No approved businesses available for Homepage Premium.</p>
+              </div>
+            ) : visibleApproved.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No approved businesses match your search and filters.</div>
+            ) : (
+              <div className="space-y-3">
+                {visibleApproved.map(biz => (
+                  <BusinessCard
+                    key={biz.id}
+                    biz={biz}
+                    onEdit={startBusinessEdit}
+                    actions={
+                      <Button
+                        size="sm"
+                        variant={biz.premium ? "default" : "outline"}
+                        className={biz.premium ? "bg-red-600 hover:bg-red-700 text-white" : "text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950"}
+                        onClick={() => togglePremiumMutation.mutate({ businessId: biz.id, activate: !biz.premium })}
+                        disabled={togglePremiumMutation.isPending}
+                        title={biz.premium ? "Remove from Homepage Premium" : "Add to Homepage Premium"}
+                        data-testid={`button-toggle-premium-${biz.id}`}
+                      >
+                        <BadgeCheck className="w-4 h-4 mr-1" />
+                        {biz.premium ? "Homepage Premium" : "Set Homepage Premium"}
+                      </Button>
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Site-wide featured catalog management */}
           <TabsContent value="featured">
             {featuredItemsLoading ? (
               <div className="space-y-3">
@@ -1102,7 +1138,7 @@ export default function Admin() {
                   )}
                 </section>
                 <p className="text-sm text-muted-foreground">
-                  Only approved businesses with a ready public profile can be featured. Featured status does not change paid Premium status.
+                  Site-wide Featured controls placement on relevant category and listing pages. Homepage Premium is managed in its own tab and appears only in the homepage Premium section. Imports set neither status automatically.
                 </p>
                 {FEATURED_ITEM_GROUPS.map(({ type, title }) => {
                   if (featuredTypeFilter && featuredTypeFilter !== type) return null;
