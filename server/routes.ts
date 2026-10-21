@@ -339,11 +339,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           .returning({ id: mpesaPayments.id });
         if (!completed) return "duplicate";
 
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + PREMIUM_DAYS);
-        await tx.update(businesses)
-          .set({ premium: true, premiumExpiresAt: expiresAt })
-          .where(eq(businesses.id, payment.businessId));
         return "completed";
       });
       if (result === "unknown") {
