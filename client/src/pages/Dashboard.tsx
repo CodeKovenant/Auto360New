@@ -107,19 +107,6 @@ export default function Dashboard() {
   // Import modal state
   const [importModalType, setImportModalType] = useState<"cars" | "parts" | "services" | "support-services" | null>(null);
 
-  // M-Pesa premium state
-  const [mpesaPhone, setMpesaPhone] = useState("");
-
-  const { data: mpesaConfig } = useQuery<{ amount: number; days: number; configured: boolean }>({
-    queryKey: ["/api/mpesa/config"],
-  });
-
-  const premiumMutation = useMutation({
-    mutationFn: async () => { const res = await apiRequest("POST", "/api/mpesa/initiate", { phone: mpesaPhone }); return res.json(); },
-    onSuccess: (data: { message: string }) => { toast({ title: "Payment initiated!", description: data.message }); setMpesaPhone(""); },
-    onError: (e: Error) => toast({ title: "Payment failed", description: e.message, variant: "destructive" }),
-  });
-
   function startEdit() {
     if (data?.business) { setEditForm({ ...data.business }); setEditMode(true); }
   }
@@ -383,36 +370,14 @@ export default function Dashboard() {
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <div className="flex items-start gap-3 flex-1">
-                    <Sparkles className="w-7 h-7 text-orange-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white text-sm">Get Premium — KSh {mpesaConfig?.amount?.toLocaleString() ?? "2,000"} / {mpesaConfig?.days ?? 30} days</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Stand out with a blue verified checkmark and appear in the Premium section on the homepage.</p>
-                    </div>
+                <div className="flex items-start gap-3">
+                  <Sparkles className="w-7 h-7 text-orange-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm">Homepage Premium</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Homepage Premium is currently managed by an administrator. If your business is activated, its expiry date will appear here.
+                    </p>
                   </div>
-                  {business.status === "approved" ? (
-                    <div className="flex gap-2 items-center flex-shrink-0">
-                      <Input
-                        placeholder="07XXXXXXXX"
-                        value={mpesaPhone}
-                        onChange={e => setMpesaPhone(e.target.value)}
-                        className="w-36 h-9 text-sm"
-                        data-testid="input-mpesa-phone"
-                      />
-                      <Button
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-white h-9 whitespace-nowrap"
-                        onClick={() => premiumMutation.mutate()}
-                        disabled={premiumMutation.isPending || !mpesaPhone}
-                        data-testid="button-pay-premium"
-                      >
-                        {premiumMutation.isPending ? "Processing..." : "Pay via M-Pesa"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic flex-shrink-0">Available after approval</p>
-                  )}
                 </div>
               )}
             </CardContent>

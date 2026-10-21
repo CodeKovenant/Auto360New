@@ -13,7 +13,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { AUTOMOTIVE_SUPPORT_SUBCATEGORIES, insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses, cars, spareParts, garageServices, supportServices, reviews, businessReports, galleryImages, featureRequests, mpesaPayments, featureRequestItemTypeEnum, users, type FeatureRequestItemType, type GalleryImage } from "@shared/schema";
-import { initiateSTKPush, PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
+import { PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
 import { sendVerificationEmail, sendAdminNotificationEmail, sendApprovalEmail, sendRejectionEmail, sendRegistrationConfirmationEmail, ADMIN_EMAIL, isMailConfigured } from "./mailer";
 
 // Ensure uploads directories exist
@@ -305,27 +305,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.post("/api/mpesa/initiate", ownerMiddleware, async (req, res) => {
-    try {
-      const user = (req as any).user;
-      if (user.role !== "owner") return res.status(403).json({ message: "Only business owners can make premium payments" });
-      const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
-      if (!phone) return res.status(400).json({ message: "Phone number required" });
-      const biz = await storage.getBusinessByOwnerId(user.id);
-      if (!biz) return res.status(404).json({ message: "No business found" });
-      if (biz.status !== "approved") return res.status(403).json({ message: "Business must be approved first" });
-      if (biz.suspended) return res.status(403).json({ message: "Suspended businesses cannot activate premium" });
-
-      const result = await initiateSTKPush(phone, biz.id, biz.name);
-      if (!result.CheckoutRequestID) throw new Error("M-Pesa did not return a checkout request id");
-      await db.insert(mpesaPayments).values({
-        businessId: biz.id,
-        checkoutRequestId: result.CheckoutRequestID,
-        amount: PREMIUM_AMOUNT,
-      });
-      res.json({ success: true, message: "Payment request sent to your phone. Enter your M-Pesa PIN to confirm.", checkoutRequestId: result.CheckoutRequestID });
-    } catch (e: any) {
-      res.status(500).json({ message: e.message || "Failed to initiate payment" });
-    }
+    res.status(403).json({ message: "Homepage Premium is currently managed by an administrator." });
   });
 
   app.post("/api/mpesa/callback", async (req, res) => {
