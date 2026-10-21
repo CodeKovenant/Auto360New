@@ -79,6 +79,7 @@ export async function seedDatabase() {
       latitude: "-1.3049",
       longitude: "36.8395",
       status: "approved",
+      featured: false,
       premium: false,
     }).returning();
 
@@ -95,6 +96,7 @@ export async function seedDatabase() {
       latitude: "-1.2670",
       longitude: "36.8145",
       status: "approved",
+      featured: false,
       premium: false,
     }).returning();
 
@@ -111,6 +113,7 @@ export async function seedDatabase() {
       latitude: "-1.2841",
       longitude: "36.8218",
       status: "approved",
+      featured: false,
       premium: false,
     }).returning();
 
@@ -127,6 +130,7 @@ export async function seedDatabase() {
       latitude: "-1.2674",
       longitude: "36.8068",
       status: "approved",
+      featured: false,
       premium: false,
     }).returning();
 
@@ -143,6 +147,7 @@ export async function seedDatabase() {
       latitude: "-1.2921",
       longitude: "36.7915",
       status: "approved",
+      featured: false,
       premium: false,
     }).returning();
 
@@ -156,6 +161,7 @@ export async function seedDatabase() {
       address: "Digo Road, Mombasa CBD",
       city: "Mombasa",
       status: "pending",
+      featured: false,
       premium: false,
     });
 
@@ -169,6 +175,7 @@ export async function seedDatabase() {
         condition: "new",
         price: "KSh 2,800",
         description: "OEM quality front brake pads. Fits all Corolla models 2016-2022.",
+        featured: false,
       },
       {
         businessId: biz3.id,
@@ -179,6 +186,7 @@ export async function seedDatabase() {
         condition: "new",
         price: "KSh 850",
         description: "Genuine air filter for optimal engine performance.",
+        featured: false,
       },
       {
         businessId: biz3.id,
@@ -189,6 +197,7 @@ export async function seedDatabase() {
         condition: "used",
         price: "KSh 9,500",
         description: "Refurbished alternator, tested and in good working condition.",
+        featured: false,
       },
       {
         businessId: biz3.id,
@@ -199,6 +208,7 @@ export async function seedDatabase() {
         condition: "new",
         price: "KSh 14,500",
         description: "Heavy duty rear shock absorbers, sold as a pair.",
+        featured: false,
       },
     ]);
 
@@ -223,14 +233,14 @@ export async function seedDatabase() {
 
     // Seed support services for car wash and insurance businesses
     await db.insert(supportServices).values([
-      { businessId: biz4.id, name: "Full Hand Wash", description: "Complete exterior hand wash with microfibre cloths, rinse and dry.", startingPrice: "500" },
-      { businessId: biz4.id, name: "Interior Detailing", description: "Deep vacuum, dashboard wipe, seat shampoo and odour removal.", startingPrice: "1,500" },
-      { businessId: biz4.id, name: "Ceramic Coating", description: "Professional ceramic coat for long-lasting paint protection (up to 2 years).", startingPrice: "25,000" },
-      { businessId: biz4.id, name: "Wax & Polish", description: "Premium carnauba wax application for a high-gloss finish.", startingPrice: "3,000" },
-      { businessId: biz5.id, name: "Comprehensive Insurance", description: "Full coverage: accident, fire, theft, and third-party liability.", startingPrice: "18,000" },
-      { businessId: biz5.id, name: "Third Party Insurance", description: "Mandatory minimum coverage — covers damage to third parties.", startingPrice: "5,500" },
-      { businessId: biz5.id, name: "PSV Insurance", description: "Cover for matatus, buses, and other public service vehicles.", startingPrice: "35,000" },
-      { businessId: biz5.id, name: "Fleet Insurance", description: "Discounted bulk cover for 5+ vehicles — ideal for corporates.", startingPrice: "90,000" },
+      { businessId: biz4.id, name: "Full Hand Wash", description: "Complete exterior hand wash with microfibre cloths, rinse and dry.", startingPrice: "500", featured: false },
+      { businessId: biz4.id, name: "Interior Detailing", description: "Deep vacuum, dashboard wipe, seat shampoo and odour removal.", startingPrice: "1,500", featured: false },
+      { businessId: biz4.id, name: "Ceramic Coating", description: "Professional ceramic coat for long-lasting paint protection (up to 2 years).", startingPrice: "25,000", featured: false },
+      { businessId: biz4.id, name: "Wax & Polish", description: "Premium carnauba wax application for a high-gloss finish.", startingPrice: "3,000", featured: false },
+      { businessId: biz5.id, name: "Comprehensive Insurance", description: "Full coverage: accident, fire, theft, and third-party liability.", startingPrice: "18,000", featured: false },
+      { businessId: biz5.id, name: "Third Party Insurance", description: "Mandatory minimum coverage — covers damage to third parties.", startingPrice: "5,500", featured: false },
+      { businessId: biz5.id, name: "PSV Insurance", description: "Cover for matatus, buses, and other public service vehicles.", startingPrice: "35,000", featured: false },
+      { businessId: biz5.id, name: "Fleet Insurance", description: "Discounted bulk cover for 5+ vehicles — ideal for corporates.", startingPrice: "90,000", featured: false },
     ]);
 
     console.log("Database seeded successfully!");
@@ -262,7 +272,7 @@ async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
       transmission: "automatic",
       description: "Well-maintained Toyota Land Cruiser V8. Full leather interior, sunroof, rear entertainment, and full service history. Single owner.",
       location: "Nairobi",
-      featured: true,
+      featured: false,
     },
     {
       dealerId,
@@ -276,7 +286,7 @@ async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
       transmission: "automatic",
       description: "Toyota Prado TX-L in excellent condition. Sunroof, leather seats, rear camera. All service records available.",
       location: "Nairobi",
-      featured: true,
+      featured: false,
     },
     {
       dealerId,
@@ -290,7 +300,7 @@ async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
       transmission: "automatic",
       description: "Subaru Outback AWD with eye-sight assist, heated seats and sunroof. Clean accident-free history.",
       location: "Nairobi",
-      featured: true,
+      featured: false,
     },
     {
       dealerId,
@@ -318,7 +328,7 @@ async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
       transmission: "automatic",
       description: "Mazda CX-5 diesel AWD, Bose sound system, navigation, blind spot monitoring. Excellent fuel economy.",
       location: "Nairobi",
-      featured: true,
+      featured: false,
     },
     {
       dealerId,
@@ -342,6 +352,7 @@ async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
       name: "Full Engine Overhaul",
       description: "Complete engine rebuild including valve work, piston rings, gaskets, and timing belt replacement. All work comes with a 6-month warranty.",
       price: "KSh 45,000+",
+      featured: false,
       popular: true,
     },
     {
@@ -349,6 +360,7 @@ async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
       name: "Oil Change & Filter Service",
       description: "Full synthetic or semi-synthetic oil change with filter replacement. Includes free 20-point vehicle inspection.",
       price: "KSh 2,500",
+      featured: false,
       popular: true,
     },
     {
@@ -356,6 +368,7 @@ async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
       name: "Brake Service",
       description: "Brake pad and disc replacement for all four wheels. Includes brake fluid flush and bleeding.",
       price: "KSh 8,000+",
+      featured: false,
       popular: true,
     },
     {
@@ -363,6 +376,7 @@ async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
       name: "AC Service & Recharge",
       description: "Air conditioning diagnosis, refrigerant recharge, compressor check, and cabin filter replacement.",
       price: "KSh 4,500",
+      featured: false,
       popular: true,
     },
     {
@@ -370,6 +384,7 @@ async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
       name: "Wheel Alignment & Balancing",
       description: "Computer-aided wheel alignment and balancing for all four wheels. Includes tire rotation.",
       price: "KSh 3,000",
+      featured: false,
       popular: false,
     },
     {
@@ -377,6 +392,7 @@ async function seedCarsAndServicesWithIds(dealerId: string, garageId: string) {
       name: "Electrical Diagnostics",
       description: "Full vehicle electrical system scan using OBD-II diagnostics. Covers ECU, sensors, and warning lights.",
       price: "KSh 1,500",
+      featured: false,
       popular: true,
     },
   ]);

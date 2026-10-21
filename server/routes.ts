@@ -422,6 +422,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         ownerId: user.id,
         premium: false,
         premiumExpiresAt: null,
+        featured: false,
         suspended: false,
       });
       const biz = await storage.createBusiness(body);
@@ -1296,6 +1297,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const body = insertSparePartSchema.parse({
         ...pickFields(req.body, ["partName", "carBrand", "carModel", "year", "condition", "price", "description", "image"]),
         businessId: business.id,
+        featured: false,
         suspended: false,
       });
       const result = await createSparePartIfNotDuplicate(body);
@@ -1443,6 +1445,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const body = insertCarSchema.parse({
         ...pickFields(req.body, ["title", "brand", "model", "year", "price", "mileage", "fuelType", "transmission", "condition", "description", "images", "location"]),
         dealerId: biz.id,
+        featured: false,
         suspended: false,
       });
       const result = await createCarIfNotDuplicate(body);
@@ -1531,6 +1534,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const body = insertGarageServiceSchema.parse({
         ...pickFields(req.body, ["name", "description", "price"]),
         garageId: biz.id,
+        featured: false,
         suspended: false,
         popular: false,
       });
@@ -1599,6 +1603,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const body = insertSupportServiceSchema.parse({
         ...pickFields(req.body, ["name", "description", "startingPrice"]),
         businessId: biz.id,
+        featured: false,
         suspended: false,
       });
       const svc = await storage.createSupportService(body);
@@ -2106,6 +2111,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               longitude: (row.longitude ?? "").trim() || null,
               premium: false,
               featured: false,
+              premiumExpiresAt: null,
             }),
             status: "approved" as const,
             featured: false,
