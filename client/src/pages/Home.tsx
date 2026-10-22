@@ -69,12 +69,12 @@ const HERO_SERVICE_SLIDES = [
   { label: "Automotive Support", lead: "Automotive", accent: "Support" },
 ] as const;
 
-type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; galleryImage: string | null };
-type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null };
+type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; dealerBanner: string | null; galleryImage: string | null };
+type ServiceWithGarage = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; garageBanner: string | null; galleryImage: string | null };
 type RecentReview = { id: string; name: string; rating: number; comment: string; businessId: string; businessName: string; createdAt: string | Date | null };
 
-type FeaturedSparePart = SparePart & { businessName: string; businessCity: string; businessLogo: string | null; galleryImage: string | null };
-type FeaturedSupportService = SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; galleryImage: string | null };
+type FeaturedSparePart = SparePart & { businessName: string; businessCity: string; businessLogo: string | null; businessBanner: string | null; galleryImage: string | null };
+type FeaturedSupportService = SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessBanner: string | null; businessSubcategory: string | null; galleryImage: string | null };
 type FeaturedHomeOffers = { spareParts: FeaturedSparePart[]; supportServices: FeaturedSupportService[] };
 
 type FeaturedListingCardProps = {
@@ -220,7 +220,7 @@ export default function Home() {
       title: car.title,
       details: [car.year, car.condition === "new" ? "Brand new" : "Used"].join(" · "),
       business: car.dealerName + " · " + car.location,
-      image: car.images?.[0] || car.galleryImage || car.dealerLogo,
+      image: car.images?.[0] || car.galleryImage || car.dealerBanner || car.dealerLogo,
       price: formatFeaturedPrice(car.price),
       href: "/cars/" + car.id,
       icon: Car,
@@ -233,7 +233,7 @@ export default function Home() {
       title: part.partName,
       details: [part.carBrand, part.carModel, part.condition === "new" ? "New" : "Used"].join(" · "),
       business: part.businessName + " · " + part.businessCity,
-      image: part.image || part.galleryImage || part.businessLogo,
+      image: part.galleryImage || part.image || part.businessBanner || part.businessLogo,
       price: formatFeaturedPrice(part.price),
       href: "/parts/" + part.id,
       icon: Package,
@@ -246,7 +246,7 @@ export default function Home() {
       title: service.name,
       details: service.description || undefined,
       business: service.garageName + " · " + service.garageCity,
-      image: service.galleryImage || service.garageLogo,
+      image: service.galleryImage || service.garageBanner || service.garageLogo,
       price: formatFeaturedPrice(service.price),
       href: "/services/" + service.id,
       icon: Wrench,
@@ -262,7 +262,7 @@ export default function Home() {
         title: service.name,
         details: service.description || "Support from an approved automotive provider",
         business: service.businessName + " · " + service.businessCity,
-        image: service.galleryImage || service.businessLogo,
+        image: service.galleryImage || service.businessBanner || service.businessLogo,
         price: formatFeaturedPrice(service.startingPrice),
         href: "/support-services/" + service.id,
         icon: Shield,

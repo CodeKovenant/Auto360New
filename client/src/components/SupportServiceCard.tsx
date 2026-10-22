@@ -1,4 +1,4 @@
-import { MessageCircle, Shield, Droplets, Star } from "lucide-react";
+import { Building2, MessageCircle, Shield, Droplets, Star } from "lucide-react";
 import { Link } from "wouter";
 import type { SupportService } from "@shared/schema";
 import RevealPhone from "@/components/RevealPhone";
@@ -8,6 +8,8 @@ interface SupportServiceCardProps {
   businessName: string;
   businessPhone: string;
   businessWhatsapp: string;
+  businessBanner?: string | null;
+  businessLogo?: string | null;
 }
 
 function getServiceIcon(name: string) {
@@ -21,21 +23,26 @@ function getServiceIcon(name: string) {
   return { icon: Star, bg: "bg-orange-100 dark:bg-orange-900/30", color: "text-orange-500 dark:text-orange-400" };
 }
 
-export default function SupportServiceCard({ service, businessName, businessPhone, businessWhatsapp }: SupportServiceCardProps) {
+export default function SupportServiceCard({ service, businessName, businessPhone, businessWhatsapp, businessBanner, businessLogo }: SupportServiceCardProps) {
   const waMessage = `Hi, I'm interested in your "${service.name}" service. Please provide more details.`;
   const waLink = `https://wa.me/${businessWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(waMessage)}`;
   const { icon: ServiceIcon, bg, color } = getServiceIcon(service.name);
+  const image = service.galleryImage || businessBanner || businessLogo;
 
   return (
     <div
       className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-4 flex flex-col"
       data-testid={`card-support-service-${service.id}`}
     >
-      {service.galleryImage && (
-        <Link href={`/support-services/${service.id}`} className="mb-4 block h-44 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-          <img src={service.galleryImage} alt={service.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+      <Link href={`/support-services/${service.id}`} className="mb-4 block h-44 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+        {image ? (
+          <img src={image} alt={service.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Building2 className="h-10 w-10 text-gray-300 dark:text-gray-600" aria-hidden="true" />
+          </div>
         </Link>
-      )}
+      </Link>
       <Link href={`/support-services/${service.id}`} className="block flex-1" aria-label={`View ${service.name} details`}>
       {/* Icon + name */}
       <div className="flex items-start gap-3 mb-3">

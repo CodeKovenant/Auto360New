@@ -176,10 +176,10 @@ export interface IStorage {
   getRejectedBusinesses(): Promise<Business[]>;
 
   // Spare Parts
-  getSparePartsByBusinessId(businessId: string): Promise<(SparePart & { galleryImage: string | null })[]>;
+  getSparePartsByBusinessId(businessId: string): Promise<(SparePart & { galleryImage: string | null; businessBanner: string | null; businessLogo: string | null })[]>;
   getOwnerDashboardSparePartsByBusinessId(businessId: string): Promise<SparePart[]>;
   getSparePartById(id: string): Promise<(SparePart & { businessName: string; businessCity: string; businessAddress: string; businessPhone: string; businessWhatsapp: string; businessLogo: string | null; businessOwnerId: string; galleryImage: string | null }) | undefined>;
-  getFeaturedSpareParts(): Promise<(SparePart & { businessName: string; businessCity: string; businessLogo: string | null; galleryImage: string | null })[]>;
+  getFeaturedSpareParts(): Promise<(SparePart & { businessName: string; businessCity: string; businessLogo: string | null; businessBanner: string | null; galleryImage: string | null })[]>;
   createSparePart(part: InsertSparePart): Promise<SparePart>;
   updateSparePart(id: string, data: Partial<SparePart>): Promise<SparePart>;
   deleteSparePart(id: string): Promise<void>;
@@ -196,9 +196,9 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
 
   // Cars
-  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string; includeSuspended?: boolean }): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; galleryImage: string | null })[]>;
-  getFeaturedCars(): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; galleryImage: string | null })[]>;
-  getCarById(id: string): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; galleryImage: string | null }) | undefined>;
+  getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string; includeSuspended?: boolean }): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; dealerBanner: string | null; galleryImage: string | null })[]>;
+  getFeaturedCars(): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; dealerBanner: string | null; galleryImage: string | null })[]>;
+  getCarById(id: string): Promise<(Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; dealerBanner: string | null; galleryImage: string | null }) | undefined>;
   getCarsByDealerId(dealerId: string): Promise<Car[]>;
   getOwnerDashboardCarsByDealerId(dealerId: string): Promise<Car[]>;
   createCar(car: InsertCar): Promise<Car>;
@@ -206,10 +206,10 @@ export interface IStorage {
   deleteCar(id: string): Promise<void>;
 
   // Garage Services
-  getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string; includeSuspended?: boolean }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null })[]>;
-  getFeaturedGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null })[]>;
-  getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null })[]>;
-  getGarageServiceById(id: string): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage: string | null }) | undefined>;
+  getGarageServices(filters?: { q?: string; location?: string; minPrice?: number; maxPrice?: number; garageId?: string; includeSuspended?: boolean }): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; garageBanner: string | null; galleryImage: string | null })[]>;
+  getFeaturedGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; garageBanner: string | null; galleryImage: string | null })[]>;
+  getPopularGarageServices(): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; garageBanner: string | null; galleryImage: string | null })[]>;
+  getGarageServiceById(id: string): Promise<(GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; garageBanner: string | null; galleryImage: string | null }) | undefined>;
   getGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
   getOwnerDashboardGarageServicesByGarageId(garageId: string): Promise<GarageService[]>;
   createGarageService(service: InsertGarageService): Promise<GarageService>;
@@ -220,7 +220,7 @@ export interface IStorage {
   getSupportServicesByBusinessId(businessId: string): Promise<(SupportService & { galleryImage: string | null })[]>;
   getOwnerDashboardSupportServicesByBusinessId(businessId: string): Promise<SupportService[]>;
   getSupportServiceById(id: string): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; businessPhone: string; businessWhatsapp: string; businessAddress: string; galleryImage: string | null }) | undefined>;
-  getFeaturedSupportServices(): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; galleryImage: string | null })[]>;
+  getFeaturedSupportServices(): Promise<(SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessBanner: string | null; businessSubcategory: string | null; galleryImage: string | null })[]>;
   createSupportService(service: InsertSupportService): Promise<SupportService>;
   updateSupportService(id: string, data: Partial<SupportService>): Promise<SupportService>;
   deleteSupportService(id: string): Promise<void>;
@@ -503,7 +503,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSparePartsByBusinessId(businessId: string, includeSuspended = false) {
-    const [business] = await db.select({ id: businesses.id }).from(businesses).where(and(
+    const [business] = await db.select({ id: businesses.id, banner: businesses.banner, logo: businesses.logo }).from(businesses).where(and(
       eq(businesses.id, businessId),
       eq(businesses.status, "approved"),
       eq(businesses.category, "spare_parts"),
@@ -513,7 +513,8 @@ export class DatabaseStorage implements IStorage {
     const conditions = [eq(spareParts.businessId, businessId)];
     if (!includeSuspended) conditions.push(eq(spareParts.suspended, false));
     const parts = await db.select().from(spareParts).where(and(...conditions)).orderBy(desc(spareParts.featured), desc(spareParts.createdAt));
-    return this.addFirstGalleryImages(parts, "spare_part");
+    const partsWithGallery = await this.addFirstGalleryImages(parts, "spare_part");
+    return partsWithGallery.map(part => ({ ...part, businessBanner: business.banner, businessLogo: business.logo }));
   }
 
   async getOwnerDashboardSparePartsByBusinessId(businessId: string) {
@@ -575,6 +576,7 @@ export class DatabaseStorage implements IStorage {
         businessName: businesses.name,
         businessCity: businesses.city,
         businessLogo: businesses.logo,
+        businessBanner: businesses.banner,
       })
       .from(spareParts)
       .innerJoin(businesses, eq(spareParts.businessId, businesses.id))
@@ -629,9 +631,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Cars
-  private async enrichCar(car: Car): Promise<Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null }> {
-    const [dealer] = await db.select({ name: businesses.name, whatsapp: businesses.whatsapp, logo: businesses.logo }).from(businesses).where(eq(businesses.id, car.dealerId));
-    return { ...car, dealerName: dealer?.name || "Unknown", dealerWhatsapp: dealer?.whatsapp || "", dealerLogo: dealer?.logo || null };
+  private async enrichCar(car: Car): Promise<Car & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; dealerBanner: string | null }> {
+    const [dealer] = await db.select({ name: businesses.name, whatsapp: businesses.whatsapp, logo: businesses.logo, banner: businesses.banner }).from(businesses).where(eq(businesses.id, car.dealerId));
+    return { ...car, dealerName: dealer?.name || "Unknown", dealerWhatsapp: dealer?.whatsapp || "", dealerLogo: dealer?.logo || null, dealerBanner: dealer?.banner || null };
   }
 
   async getCars(filters?: { brand?: string; minPrice?: number; maxPrice?: number; minYear?: number; maxYear?: number; location?: string; q?: string; dealerId?: string; condition?: string; includeSuspended?: boolean }) {
@@ -718,9 +720,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Garage Services
-  private async enrichService(svc: GarageService): Promise<GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null }> {
-    const [garage] = await db.select({ name: businesses.name, whatsapp: businesses.whatsapp, city: businesses.city, logo: businesses.logo }).from(businesses).where(eq(businesses.id, svc.garageId));
-    return { ...svc, garageName: garage?.name || "Unknown", garageWhatsapp: garage?.whatsapp || "", garageCity: garage?.city || "", garageLogo: garage?.logo || null };
+  private async enrichService(svc: GarageService): Promise<GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; garageBanner: string | null }> {
+    const [garage] = await db.select({ name: businesses.name, whatsapp: businesses.whatsapp, city: businesses.city, logo: businesses.logo, banner: businesses.banner }).from(businesses).where(eq(businesses.id, svc.garageId));
+    return { ...svc, garageName: garage?.name || "Unknown", garageWhatsapp: garage?.whatsapp || "", garageCity: garage?.city || "", garageLogo: garage?.logo || null, garageBanner: garage?.banner || null };
   }
 
   async getGarageServices(filters?: { q?: string; location?: string; garageId?: string; includeSuspended?: boolean }) {
@@ -856,6 +858,7 @@ export class DatabaseStorage implements IStorage {
         businessName: businesses.name,
         businessCity: businesses.city,
         businessLogo: businesses.logo,
+        businessBanner: businesses.banner,
         businessSubcategory: businesses.subcategory,
         businessPhone: businesses.phone,
         businessWhatsapp: businesses.whatsapp,

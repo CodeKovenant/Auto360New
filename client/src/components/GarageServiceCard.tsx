@@ -5,13 +5,14 @@ import BusinessGallery from "@/components/BusinessGallery";
 import type { GarageService } from "@shared/schema";
 
 interface GarageServiceCardProps {
-  service: GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo?: string | null; galleryImage?: string | null };
+  service: GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo?: string | null; garageBanner?: string | null; galleryImage?: string | null };
   garageId?: string;
   canManage?: boolean;
 }
 
 export default function GarageServiceCard({ service, garageId, canManage = false }: GarageServiceCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const image = service.galleryImage || service.garageBanner || service.garageLogo;
 
   return (
     <div
@@ -22,11 +23,15 @@ export default function GarageServiceCard({ service, garageId, canManage = false
       }`}
       data-testid={`card-service-${service.id}`}
     >
-      {service.galleryImage && (
-        <Link href={`/services/${service.id}`} className="block h-44 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-          <img src={service.galleryImage} alt={service.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+      <Link href={`/services/${service.id}`} className="block h-44 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+        {image ? (
+          <img src={image} alt={service.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Wrench className="h-10 w-10 text-gray-300 dark:text-gray-600" aria-hidden="true" />
+          </div>
         </Link>
-      )}
+      </Link>
       <div className="p-5 flex flex-col flex-1">
         <Link href={`/services/${service.id}`} className="block flex-1" data-testid={`link-service-${service.id}`}>
         {/* Header */}
