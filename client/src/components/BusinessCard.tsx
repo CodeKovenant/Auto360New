@@ -27,17 +27,21 @@ export default function BusinessCard({ business }: BusinessCardProps) {
 
   return (
     <div
-      className="group relative bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col"
+      className="group relative flex h-[480px] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900"
       data-testid={`card-business-${business.id}`}
     >
       {/* Category accent bar */}
       <div className={`h-1 w-full ${style.bar}`} />
 
-      {business.galleryImage && (
-        <Link href={`/business/${business.id}`} className="block h-44 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+      <Link href={`/business/${business.id}`} className="block h-44 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+        {business.galleryImage ? (
           <img src={business.galleryImage} alt={business.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-        </Link>
-      )}
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Building2 className="h-10 w-10 text-gray-300 dark:text-gray-600" aria-hidden="true" />
+          </div>
+        )}
+      </Link>
 
       <div className="p-5 flex flex-col flex-1">
         <Link href={`/business/${business.id}`} className="flex flex-col flex-1">
@@ -51,7 +55,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 dark:text-white text-base leading-snug break-words">
+            <h3 className="line-clamp-2 font-bold text-gray-900 dark:text-white text-base leading-snug break-words">
               {business.name}
               {business.premium && (
                 <span title="Premium Business">

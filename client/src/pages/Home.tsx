@@ -104,7 +104,7 @@ function FeaturedListingCard({ label, title, details, business, image, price, hr
   const Icon = icon;
   return (
     <Link href={href} className="group block h-full">
-      <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-800 dark:bg-gray-950" data-testid={testId}>
+      <article className="flex h-[370px] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-800 dark:bg-gray-950" data-testid={testId}>
         <div className="relative h-40 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
           {image ? (
             <img src={image} alt={title} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -116,10 +116,14 @@ function FeaturedListingCard({ label, title, details, business, image, price, hr
           <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-gray-800 shadow-sm dark:bg-gray-950/90 dark:text-gray-100">{label}</span>
           {isFeatured && <span className="absolute right-3 top-3 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950 shadow-sm">★ Featured</span>}
         </div>
-        <div className="flex flex-1 flex-col p-4">
-          <h3 className="line-clamp-2 min-h-[2.75rem] font-bold leading-snug text-gray-900 dark:text-white">{title}</h3>
-          {details && <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm leading-relaxed text-gray-500 dark:text-gray-400">{details}</p>}
-          {business && <p className="mt-2 line-clamp-1 text-xs font-medium text-gray-600 dark:text-gray-300">{business}</p>}
+        <div className="flex min-h-0 flex-1 flex-col p-4">
+          <h3 className="h-[2.75rem] shrink-0 line-clamp-2 font-bold leading-snug text-gray-900 dark:text-white">{title}</h3>
+          <div className="mt-2 h-10 shrink-0">
+            {details && <p className="line-clamp-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">{details}</p>}
+          </div>
+          <div className="mt-2 h-4 shrink-0">
+            {business && <p className="line-clamp-1 text-xs font-medium text-gray-600 dark:text-gray-300">{business}</p>}
+          </div>
           <div className="mt-auto flex items-end justify-between gap-2 pt-4">
             {price ? <p className="text-lg font-extrabold text-red-600 dark:text-red-400">{price}</p> : <span className="text-xs text-gray-400">See available listings</span>}
             <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-red-600 transition-colors group-hover:text-red-700 dark:text-red-400">{actionLabel}<ArrowRight className="h-3.5 w-3.5" /></span>
