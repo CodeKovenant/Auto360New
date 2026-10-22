@@ -265,6 +265,58 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/me/profile", authMiddleware, async (req: any, res) => {
+    try {
+      const user = await storage.getUserById(req.user.id);
+      if (!user) return res.status(404).json({ message: "Account not found" });
+      res.json({ id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/me/profile", authMiddleware, async (req: any, res) => {
+    try {
+      const user = await storage.getUserById(req.user.id);
+      if (!user) return res.status(404).json({ message: "Account not found" });
+
+      const fields = pickFields(req.body, ["name", "email", "currentPassword", "newPassword"]);
+      const name = typeof fields.name === "string" ? fields.name.trim() : user.name;
+      const email = typeof fields.email === "string" ? fields.email.trim().toLowerCase() : user.email;
+      const emailChanged = email !== user.email;
+      const passwordChanged = typeof fields.newPassword === "string" && fields.newPassword.length > 0;
+      if (!name) return res.status(400).json({ message: "Name is required" });
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ message: "Enter a valid email address" });
+      }
+      if (passwordChanged && fields.newPassword.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      }
+      if (emailChanged || passwordChanged) {
+        if (typeof fields.currentPassword !== "string" || !await bcrypt.compare(fields.currentPassword, user.password)) {
+          return res.status(400).json({ message: "Current password is incorrect" });
+        }
+      }
+      if (emailChanged) {
+        const existing = await storage.getUserByEmail(email);
+        if (existing && existing.id !== user.id) return res.status(409).json({ message: "Email already registered" });
+      }
+
+      const updates: Record<string, unknown> = { name, email };
+      if (passwordChanged) updates.password = await bcrypt.hash(fields.newPassword, 10);
+      const updated = await storage.updateUser(user.id, updates);
+      const token = jwt.sign({ id: updated.id, email: updated.email, name: updated.name, role: updated.role }, JWT_SECRET, { expiresIn: "30d" });
+      res.json({
+        user: { id: updated.id, name: updated.name, email: updated.email, role: updated.role },
+        token,
+        profile: { id: updated.id, name: updated.name, email: updated.email, role: updated.role, createdAt: updated.createdAt },
+      });
+    } catch (e: any) {
+      if (e.code === "23505") return res.status(409).json({ message: "Email already registered" });
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   // Business routes
   app.get("/api/businesses/featured", async (req, res) => {
     try {

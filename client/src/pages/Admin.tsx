@@ -4,7 +4,7 @@ import {
   Shield, Building2, CheckCircle, XCircle, Trash2, Users, Star,
   Clock, Flag, Phone, MessageCircle, MapPin, Mail, User, ExternalLink,
   Calendar, ChevronDown, ChevronUp, BadgeCheck, TrendingUp, DollarSign, AlertCircle, Pause, Play, Pencil,
-  Download, Upload, FileText, FileUp, Search
+  Download, Upload, FileText, FileUp, Search, KeyRound
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,21 @@ interface AdminData {
   rejected: EnrichedBusiness[];
   reviews: (Review & { businessName: string })[];
   users: Omit<UserType, "password" | "emailVerificationToken" | "emailVerifiedAt">[];
+}
+
+interface AdminProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: "admin" | "owner";
+  createdAt: string | null;
+}
+
+interface AdminProfileForm {
+  name: string;
+  email: string;
+  currentPassword: string;
+  newPassword: string;
 }
 
 interface AdminImportBusiness {
@@ -338,6 +353,8 @@ export default function Admin() {
   const [adminSearch, setAdminSearch] = useState("");
   const [businessCategoryFilter, setBusinessCategoryFilter] = useState("");
   const [featuredTypeFilter, setFeaturedTypeFilter] = useState<FeaturedItemType | "">("");
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState<AdminProfileForm | null>(null);
 
   if (!user || user.role !== "admin") {
     navigate("/login");
@@ -346,6 +363,30 @@ export default function Admin() {
 
   const { data, isLoading } = useQuery<AdminData>({
     queryKey: ["/api/admin"],
+  });
+
+  const { data: profile } = useQuery<AdminProfile>({
+    queryKey: ["/api/me/profile"],
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (form: AdminProfileForm) => {
+      const response = await apiRequest("PUT", "/api/me/profile", {
+        name: form.name,
+        email: form.email,
+        currentPassword: form.currentPassword,
+        newPassword: form.newPassword,
+      });
+      return response.json() as Promise<{ user: NonNullable<typeof user>; token: string; profile: AdminProfile }>;
+    },
+    onSuccess: result => {
+      setAuthUser(result.user, result.token);
+      queryClient.setQueryData(["/api/me/profile"], result.profile);
+      setProfileDialogOpen(false);
+      setProfileForm(null);
+      toast({ title: "Profile updated." });
+    },
+    onError: (error: Error) => toast({ title: "Profile update failed", description: error.message, variant: "destructive" }),
   });
 
   const { data: reports } = useQuery<(BusinessReport & { businessName: string })[]>({
@@ -809,6 +850,35 @@ export default function Admin() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
+        <Card className="mb-6">
+          <CardContent className="py-4 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-md bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-semibold text-gray-900 dark:text-white" data-testid="admin-profile-name">{profile?.name || user.name}</h2>
+                  <Badge variant="secondary" className="capitalize">{profile?.role || user.role}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground truncate" data-testid="admin-profile-email">{profile?.email || user.email}</p>
+                {profile?.createdAt && <p className="text-xs text-muted-foreground mt-0.5">Account created {formatDate(profile.createdAt)}</p>}
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setProfileForm({ name: profile?.name || user.name, email: profile?.email || user.email, currentPassword: "", newPassword: "" });
+                setProfileDialogOpen(true);
+              }}
+              data-testid="button-edit-admin-profile"
+            >
+              <Pencil className="w-4 h-4 mr-2" />Edit profile
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           <Card>
@@ -1912,6 +1982,46 @@ export default function Admin() {
                 <DialogFooter>
                   <Button variant="outline" onClick={() => { setEditingBusiness(null); setBusinessEditForm(null); }}>Cancel</Button>
                   <Button onClick={() => businessEditForm && editingBusiness && saveBusinessProfileMutation.mutate({ businessId: editingBusiness.id, form: businessEditForm })} disabled={saveBusinessProfileMutation.isPending || !businessEditForm.name.trim() || !businessEditForm.phone.trim()} className="bg-red-600 text-white">{saveBusinessProfileMutation.isPending ? "Saving..." : "Save profile"}</Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+        <Dialog open={profileDialogOpen} onOpenChange={open => { setProfileDialogOpen(open); if (!open) setProfileForm(null); }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle>Edit admin profile</DialogTitle></DialogHeader>
+            {profileForm && (
+              <div className="space-y-4">
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium">Full name</span>
+                  <Input autoComplete="name" value={profileForm.name} onChange={event => setProfileForm(form => form ? { ...form, name: event.target.value } : form)} />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium">Email address</span>
+                  <Input type="email" autoComplete="email" value={profileForm.email} onChange={event => setProfileForm(form => form ? { ...form, email: event.target.value } : form)} />
+                </label>
+                <div className="border-t pt-4 space-y-3">
+                  <p className="text-sm font-medium flex items-center gap-2"><KeyRound className="w-4 h-4" />Change password</p>
+                  <label className="block space-y-1">
+                    <span className="text-sm font-medium">Current password</span>
+                    <Input type="password" autoComplete="current-password" value={profileForm.currentPassword} onChange={event => setProfileForm(form => form ? { ...form, currentPassword: event.target.value } : form)} />
+                    <span className="text-xs text-muted-foreground">Required to change your email or password.</span>
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-sm font-medium">New password</span>
+                    <Input type="password" autoComplete="new-password" value={profileForm.newPassword} onChange={event => setProfileForm(form => form ? { ...form, newPassword: event.target.value } : form)} placeholder="Leave blank to keep current password" />
+                  </label>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => { setProfileDialogOpen(false); setProfileForm(null); }}>Cancel</Button>
+                  <Button
+                    onClick={() => profileForm && updateProfileMutation.mutate(profileForm)}
+                    disabled={updateProfileMutation.isPending || !profileForm.name.trim() || !profileForm.email.trim()}
+                    className="bg-red-600 text-white"
+                    data-testid="button-save-admin-profile"
+                  >
+                    {updateProfileMutation.isPending ? "Saving..." : "Save changes"}
+                  </Button>
                 </DialogFooter>
               </div>
             )}
