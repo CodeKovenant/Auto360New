@@ -1770,7 +1770,7 @@ export default function Admin() {
                         className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm"
                         data-testid="admin-import-business-category"
                       >
-                        <option value="">Select a categoryâ¦</option>
+                        <option value="">Select a category...</option>
                         {ADMIN_BUSINESS_IMPORT_CATEGORIES.map(category => <option key={category.value} value={category.value}>{category.label}</option>)}
                       </select>
                       <p className="text-xs text-muted-foreground mt-1">The selected category will be applied to every business in the CSV.</p>
@@ -1786,7 +1786,7 @@ export default function Admin() {
                         className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm"
                         data-testid="admin-import-business"
                       >
-                        <option value="">Select a businessâ¦</option>
+                        <option value="">Select a business...</option>
                         {importBusinessOptions.map(biz => <option key={biz.id} value={biz.id}>{biz.name} — {biz.city}</option>)}
                       </select>
                       {importBusinessOptions.length === 0 && <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">No approved business matches this data type.</p>}
