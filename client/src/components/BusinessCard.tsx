@@ -74,20 +74,22 @@ export default function BusinessCard({ business }: BusinessCardProps) {
                 Featured
               </Badge>
             )}
-            <div className="flex items-center gap-1.5 mt-1">
-              <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
-              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{business.city}</span>
-            </div>
-            {(business.avgRating !== undefined && business.avgRating > 0) ? (
-              <div className="flex items-center gap-1.5 mt-1.5">
+            <div className="mt-1 flex min-w-0 items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                <span className="truncate text-xs text-gray-500 dark:text-gray-400">{business.city}</span>
+              </div>
+              {(business.avgRating !== undefined && business.avgRating > 0) ? (
+                <div className="flex shrink-0 items-center gap-1.5">
                 <StarRating rating={Math.round(business.avgRating)} size="sm" />
                 <span className="text-[11px] text-gray-500 dark:text-gray-400">
                   {business.avgRating.toFixed(1)} <span className="text-gray-400">({business.reviewCount || 0})</span>
                 </span>
-              </div>
-            ) : (
-              <span className="text-[11px] text-gray-400 mt-1.5 block">No reviews yet</span>
-            )}
+                </div>
+              ) : (
+                <span className="shrink-0 text-[11px] text-gray-400">No reviews yet</span>
+              )}
+            </div>
           </div>
         </div>
 
