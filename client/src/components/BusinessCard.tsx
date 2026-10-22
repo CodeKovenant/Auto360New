@@ -64,7 +64,10 @@ export default function BusinessCard({ business }: BusinessCardProps) {
             </span>
             {business.featured && (
               <Badge className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950 shadow-sm hover:bg-amber-400 dark:bg-amber-400 dark:text-amber-950">
-                <Star className="h-3 w-3 fill-current" /> Featured
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-950/10" aria-hidden="true">
+                  <Star className="h-3.5 w-3.5 fill-amber-50 text-amber-900" />
+                </span>
+                Featured
               </Badge>
             )}
             <div className="flex items-center gap-1.5 mt-1">
