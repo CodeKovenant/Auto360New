@@ -1,6 +1,5 @@
 import { Link } from "wouter";
 import { MapPin, MessageCircle, Building2, BadgeCheck, ArrowRight, Star } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import StarRating from "./StarRating";
 import type { Business } from "@shared/schema";
 import { BUSINESS_CATEGORIES } from "@shared/schema";
@@ -33,81 +32,84 @@ export default function BusinessCard({ business }: BusinessCardProps) {
       {/* Category accent bar */}
       <div className={`h-1 w-full ${style.bar}`} />
 
-      <Link href={`/business/${business.id}`} className="block h-44 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+      <Link href={`/business/${business.id}`} className="group/image relative block h-44 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
         {business.galleryImage || business.banner ? (
-          <img src={business.galleryImage || business.banner || ""} alt={business.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          <img src={business.galleryImage || business.banner || ""} alt={business.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover/image:scale-105" />
         ) : (
-          <div className="flex h-full items-center justify-center">
+          <div className="flex h-full items-center justify-center bg-gray-50 dark:bg-gray-800">
             <Building2 className="h-10 w-10 text-gray-300 dark:text-gray-600" aria-hidden="true" />
           </div>
         )}
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3">
+          <span className={`inline-flex max-w-[70%] items-center truncate rounded-full px-2.5 py-1 text-[10px] font-semibold shadow-sm ${style.pill}`}>
+            {getCategoryLabel(business.category)}
+          </span>
+          {business.featured && (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-400 px-2.5 py-1 text-[11px] font-bold text-amber-950 shadow-sm">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-950/10" aria-hidden="true">
+                <Star className="h-2.5 w-2.5 fill-amber-50 text-amber-900" />
+              </span>
+              Featured
+            </span>
+          )}
+        </div>
       </Link>
 
-      <div className="p-5 flex flex-col flex-1">
+      <div className="flex flex-1 flex-col p-4">
         <Link href={`/business/${business.id}`} className="flex flex-col flex-1">
-        {/* Header */}
-        <div className="flex items-start gap-3.5 mb-3">
-          <div className="w-14 h-14 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             {business.logo ? (
               <img src={business.logo} alt={business.name} className="w-full h-full object-cover" />
             ) : (
-              <Building2 className="w-6 h-6 text-gray-300 dark:text-gray-600" />
+              <div className="flex h-full items-center justify-center">
+                <Building2 className="h-5 w-5 text-gray-300 dark:text-gray-600" />
+              </div>
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="line-clamp-2 font-bold text-gray-900 dark:text-white text-base leading-snug break-words">
+          <div className="min-w-0 flex-1">
+            <h3 className="line-clamp-2 text-[15px] font-bold leading-snug text-gray-900 dark:text-white">
               {business.name}
               {business.premium && (
                 <span title="Premium Business">
-                  <BadgeCheck className="inline-block w-4 h-4 text-yellow-500 ml-1 mb-0.5" aria-hidden="true" data-testid={`icon-premium-${business.id}`} />
+                  <BadgeCheck className="ml-1 inline-block h-4 w-4 text-yellow-500" aria-hidden="true" data-testid={`icon-premium-${business.id}`} />
                 </span>
               )}
             </h3>
-            <span className={`mt-1 inline-flex text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${style.pill}`}>
-              {getCategoryLabel(business.category)}
-            </span>
-            {business.featured && (
-              <Badge className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950 shadow-sm hover:bg-amber-400 dark:bg-amber-400 dark:text-amber-950">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-950/10" aria-hidden="true">
-                  <Star className="h-3.5 w-3.5 fill-amber-50 text-amber-900" />
-                </span>
-                Featured
-              </Badge>
-            )}
-            <div className="mt-1 flex min-w-0 items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                <span className="truncate text-xs text-gray-500 dark:text-gray-400">{business.city}</span>
-              </div>
-              {(business.avgRating !== undefined && business.avgRating > 0) ? (
-                <div className="flex shrink-0 items-center gap-1.5">
-                <StarRating rating={Math.round(business.avgRating)} size="sm" />
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {business.avgRating.toFixed(1)} <span className="text-gray-400">({business.reviewCount || 0})</span>
-                </span>
-                </div>
-              ) : (
-                <span className="shrink-0 text-[11px] text-gray-400">No reviews yet</span>
-              )}
-            </div>
+            <span className="mt-1 block truncate text-xs text-gray-500 dark:text-gray-400">{getCategoryLabel(business.category)}</span>
           </div>
         </div>
 
-        {/* Description */}
-        <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed flex-1">
+        <div className="mt-3 flex min-w-0 items-center justify-between gap-2 border-t border-gray-100 pt-2.5 dark:border-gray-800">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+            <span className="truncate text-xs text-gray-600 dark:text-gray-300">{business.city}</span>
+          </div>
+          {(business.avgRating !== undefined && business.avgRating > 0) ? (
+            <div className="flex shrink-0 items-center gap-1.5">
+              <StarRating rating={Math.round(business.avgRating)} size="sm" />
+              <span className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
+                {business.avgRating.toFixed(1)} <span className="font-normal text-gray-400">({business.reviewCount || 0})</span>
+              </span>
+            </div>
+          ) : (
+            <span className="shrink-0 text-[11px] text-gray-400">No reviews yet</span>
+          )}
+        </div>
+
+        <p className="mt-3 min-h-10 line-clamp-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
           {business.description}
         </p>
         </Link>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-{business.whatsapp?.trim() && (
+        <div className="mt-auto flex items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+          {business.whatsapp?.trim() && (
           <a
             href={`https://wa.me/${business.whatsapp?.replace(/\D/g, "")}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={e => e.stopPropagation()}
-            className="flex items-center gap-1.5 text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 px-3 py-1.5 rounded-lg transition-colors"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 transition-colors hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40"
             data-testid={`link-whatsapp-${business.id}`}
           >
             <MessageCircle className="w-3.5 h-3.5" />
@@ -116,7 +118,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
           )}
           <Link
             href={`/business/${business.id}`}
-            className="flex-1 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-1.5 rounded-lg transition-colors group/btn"
+            className="group/btn flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
             data-testid={`button-view-${business.id}`}
           >
             View Profile
