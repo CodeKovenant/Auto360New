@@ -34,8 +34,8 @@ export default function BusinessCard({ business }: BusinessCardProps) {
       <div className={`h-1 w-full ${style.bar}`} />
 
       <Link href={`/business/${business.id}`} className="block h-44 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-        {business.galleryImage ? (
-          <img src={business.galleryImage} alt={business.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        {business.galleryImage || business.banner ? (
+          <img src={business.galleryImage || business.banner || ""} alt={business.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
         ) : (
           <div className="flex h-full items-center justify-center">
             <Building2 className="h-10 w-10 text-gray-300 dark:text-gray-600" aria-hidden="true" />
