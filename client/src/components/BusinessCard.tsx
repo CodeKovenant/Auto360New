@@ -63,7 +63,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
               {getCategoryLabel(business.category)}
             </span>
             {business.featured && (
-              <Badge className="mt-1.5 inline-flex items-center gap-1 bg-amber-100 text-[10px] text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300">
+              <Badge className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950 shadow-sm hover:bg-amber-400 dark:bg-amber-400 dark:text-amber-950">
                 <Star className="h-3 w-3 fill-current" /> Featured
               </Badge>
             )}
