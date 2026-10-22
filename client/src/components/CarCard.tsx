@@ -3,7 +3,7 @@ import { MapPin, Fuel, Gauge, MessageCircle, Car as CarIcon, Building2, Zap, Rot
 import type { Car } from "@shared/schema";
 
 interface CarCardProps {
-  car: Car & { dealerName: string; dealerWhatsapp: string; dealerLogo?: string | null; dealerBanner?: string | null; galleryImage?: string | null };
+  car: Car & { dealerName: string; dealerWhatsapp: string; dealerLogo?: string | null; galleryImage?: string | null };
 }
 
 function formatPrice(price: string | number) {
@@ -20,7 +20,7 @@ function formatMileage(km: number | null) {
 }
 
 export default function CarCard({ car }: CarCardProps) {
-  const image = car.images?.[0] || car.galleryImage || car.dealerBanner || car.dealerLogo;
+  const image = car.images?.[0] || car.galleryImage;
   const isNew = car.condition === "new";
   const mileage = formatMileage(car.mileage);
 

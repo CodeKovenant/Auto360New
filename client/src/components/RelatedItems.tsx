@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Car as CarType, GarageService, SparePart } from "@shared/schema";
 
-type RelatedCar = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; dealerBanner: string | null; galleryImage?: string | null };
-type RelatedService = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; garageBanner: string | null; galleryImage?: string | null };
+type RelatedCar = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; galleryImage?: string | null };
+type RelatedService = GarageService & { garageName: string; garageWhatsapp: string; garageCity: string; garageLogo: string | null; galleryImage?: string | null };
 
 type Props = {
   kind: "cars" | "services" | "parts";
@@ -52,7 +52,7 @@ export default function RelatedItems({ kind, currentId, location, brand, busines
     queryKey: [servicePath],
     enabled: kind === "services",
   });
-  const { data: parts, isLoading: partsLoading } = useQuery<(SparePart & { galleryImage?: string | null; businessBanner?: string | null; businessLogo?: string | null })[]>({
+  const { data: parts, isLoading: partsLoading } = useQuery<(SparePart & { galleryImage?: string | null })[]>({
     queryKey: ["/api/parts/" + (businessId || "")],
     enabled: kind === "parts" && !!businessId,
   });
@@ -62,7 +62,7 @@ export default function RelatedItems({ kind, currentId, location, brand, busines
         id: car.id,
         title: car.title,
         subtitle: car.brand + " " + car.model + " - " + car.year,
-        image: car.images?.[0] || car.galleryImage || car.dealerBanner || car.dealerLogo,
+        image: car.images?.[0] || car.galleryImage,
         price: formatCarPrice(car.price),
         tag: car.condition === "new" ? "Brand new" : "Used",
         location: car.location,
@@ -73,7 +73,7 @@ export default function RelatedItems({ kind, currentId, location, brand, busines
           id: service.id,
           title: service.name,
           subtitle: service.garageName,
-          image: service.galleryImage || service.garageBanner || service.garageLogo,
+          image: service.galleryImage,
           price: service.price ? "From " + service.price : null,
           tag: service.popular ? "Popular" : "Garage service",
           location: service.garageCity,
@@ -83,7 +83,7 @@ export default function RelatedItems({ kind, currentId, location, brand, busines
           id: part.id,
           title: part.partName,
           subtitle: part.carBrand + " " + part.carModel + (part.year ? " - " + part.year : ""),
-          image: part.galleryImage || part.image || part.businessBanner || part.businessLogo,
+          image: part.image || part.galleryImage,
           price: part.price,
           tag: part.condition === "new" ? "New" : "Used",
           location: null,

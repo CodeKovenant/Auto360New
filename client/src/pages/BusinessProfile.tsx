@@ -479,8 +479,6 @@ export default function BusinessProfile() {
                     businessName={business.name}
                     businessPhone={business.phone}
                     businessWhatsapp={business.whatsapp}
-                    businessBanner={business.banner}
-                    businessLogo={business.logo}
                   />
                 ))}
               </div>
@@ -555,10 +553,10 @@ export default function BusinessProfile() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {spareParts.map(part => (
                   <div key={part.id} className="rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-hidden" data-testid={`part-${part.id}`}>
-                    {(part.galleryImage || part.image || business.banner || business.logo) && (
+                    {(part.image || part.galleryImage) && (
                       <Link href={"/parts/" + part.id} className="block">
                       <div className="w-full h-40 bg-gray-100 dark:bg-gray-700 overflow-hidden rounded-xl">
-                        <img src={part.galleryImage || part.image || business.banner || business.logo || ""} alt={part.partName} className="w-full h-full object-cover" data-testid={`img-part-${part.id}`} />
+                        <img src={part.image || part.galleryImage || ""} alt={part.partName} className="w-full h-full object-cover" data-testid={`img-part-${part.id}`} />
                       </div>
                       </Link>
                     )}
