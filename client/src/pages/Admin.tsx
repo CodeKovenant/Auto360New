@@ -165,6 +165,8 @@ const ADMIN_IMPORT_OPTIONS: { value: AdminImportType; label: string }[] = [
   { value: "support-services", label: "Support Services" },
 ];
 
+const ADMIN_TAB_TRIGGER_CLASS = "group h-full w-full min-w-0 px-2 py-2 text-center text-xs leading-tight whitespace-normal data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=active]:shadow-sm";
+
 const ADMIN_BUSINESS_IMPORT_CATEGORIES = [
   { value: "car_dealer", label: "Automobile Dealers" },
   { value: "spare_parts", label: "Autospares Dealers" },
@@ -980,37 +982,37 @@ export default function Admin() {
               </select>
             )}
           </div>
-          <TabsList className="mb-4 flex-wrap h-auto gap-1">
-            <TabsTrigger value="pending" data-testid="admin-tab-pending">
+          <TabsList className="mb-4 grid h-auto w-full grid-cols-2 gap-1.5 rounded-lg border border-gray-200 bg-gray-100 p-1.5 dark:border-gray-800 dark:bg-gray-900 sm:grid-cols-3 lg:grid-cols-5">
+            <TabsTrigger value="pending" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-pending">
               Pending ({stats.pending})
             </TabsTrigger>
-            <TabsTrigger value="approved" data-testid="admin-tab-approved">
+            <TabsTrigger value="approved" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-approved">
               Approved ({stats.approved})
             </TabsTrigger>
-            <TabsTrigger value="featured" data-testid="admin-tab-featured">
-              Site-wide Featured {featureRequests.length > 0 && <Badge className="ml-1 bg-red-600 text-white">{featureRequests.length}</Badge>}
+            <TabsTrigger value="featured" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-featured">
+              Site-wide Featured {featureRequests.length > 0 && <Badge className="ml-1 bg-red-600 text-white group-data-[state=active]:bg-white group-data-[state=active]:text-red-600">{featureRequests.length}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="homepage-premium" data-testid="admin-tab-homepage-premium">
+            <TabsTrigger value="homepage-premium" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-homepage-premium">
               Homepage Premium ({approved.filter(biz => biz.premium).length})
             </TabsTrigger>
-            <TabsTrigger value="rejected" data-testid="admin-tab-rejected">
+            <TabsTrigger value="rejected" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-rejected">
               Rejected ({stats.rejected})
             </TabsTrigger>
-            <TabsTrigger value="reviews" data-testid="admin-tab-reviews">
+            <TabsTrigger value="reviews" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-reviews">
               Reviews ({stats.totalReviews})
             </TabsTrigger>
-            <TabsTrigger value="users" data-testid="admin-tab-users">
+            <TabsTrigger value="users" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-users">
               Users ({users.length})
             </TabsTrigger>
-            <TabsTrigger value="reports" data-testid="admin-tab-reports">
+            <TabsTrigger value="reports" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-reports">
               Reports {reports && reports.length > 0 && (
-                <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5">{reports.length}</span>
+                <span className="ml-1 rounded-full bg-red-500 px-1.5 text-xs text-white group-data-[state=active]:bg-white group-data-[state=active]:text-red-600">{reports.length}</span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="revenue" data-testid="admin-tab-revenue">
+            <TabsTrigger value="revenue" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-revenue">
               Revenue
             </TabsTrigger>
-            <TabsTrigger value="data" data-testid="admin-tab-data">
+            <TabsTrigger value="data" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-data">
               Import / Export
             </TabsTrigger>
           </TabsList>
