@@ -419,6 +419,9 @@ export default function Admin() {
   const [adminSearch, setAdminSearch] = useState("");
   const [businessCategoryFilter, setBusinessCategoryFilter] = useState("");
   const [featuredTypeFilter, setFeaturedTypeFilter] = useState<FeaturedItemType | "">("");
+  const [reviewRatingFilter, setReviewRatingFilter] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState<"" | "admin" | "owner">("");
+  const [reportReasonFilter, setReportReasonFilter] = useState("");
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [profileForm, setProfileForm] = useState<AdminProfileForm | null>(null);
   const [businessCreateForm, setBusinessCreateForm] = useState<AdminBusinessCreateForm | null>(null);
@@ -1019,8 +1022,30 @@ export default function Admin() {
   const visibleFeatureRequests = featureRequests.filter(request => !normalizedAdminSearch || [
     request.itemName, request.itemType.replace(/_/g, " "), request.ownerName, request.ownerEmail,
   ].some(value => value?.toLowerCase().includes(normalizedAdminSearch)));
+  const visibleReviews = reviews.filter(review =>
+    (!reviewRatingFilter || String(review.rating) === reviewRatingFilter) &&
+    (!normalizedAdminSearch || [review.name, review.businessName, review.comment].some(value => value?.toLowerCase().includes(normalizedAdminSearch)))
+  );
+  const visibleUsers = users.filter(account =>
+    (!userRoleFilter || account.role === userRoleFilter) &&
+    (!normalizedAdminSearch || [account.name, account.email, account.role].some(value => value?.toLowerCase().includes(normalizedAdminSearch)))
+  );
+  const visibleReports = (reports || []).filter(report =>
+    (!reportReasonFilter || report.reason === reportReasonFilter) &&
+    (!normalizedAdminSearch || [report.businessName, report.name, report.email, report.reason, report.description].some(value => value?.toLowerCase().includes(normalizedAdminSearch)))
+  );
   const linkedOwnerIds = new Set([...pending, ...approved, ...rejected].filter(biz => biz.id !== editingBusiness?.id).map(biz => biz.ownerId));
   const availableOwnerAccounts = users.filter(account => account.role === "owner" && !linkedOwnerIds.has(account.id));
+  const hasAdminFilters = Boolean(adminSearch || businessCategoryFilter || featuredTypeFilter || reviewRatingFilter || userRoleFilter || reportReasonFilter);
+
+  function clearAdminFilters() {
+    setAdminSearch("");
+    setBusinessCategoryFilter("");
+    setFeaturedTypeFilter("");
+    setReviewRatingFilter("");
+    setUserRoleFilter("");
+    setReportReasonFilter("");
+  }
 
   function startBusinessEdit(biz: EnrichedBusiness) {
     const template = adminCategories.find(category => category.entityType === "business" && category.categoryKey === biz.category && category.name === biz.subcategory);
@@ -1218,7 +1243,15 @@ export default function Admin() {
               <Input
                 value={adminSearch}
                 onChange={event => setAdminSearch(event.target.value)}
-                placeholder={activeAdminTab === "featured" ? "Search businesses, cars, parts, services..." : "Search businesses by name, location, phone..."}
+                placeholder={activeAdminTab === "featured"
+                  ? "Search businesses, cars, parts, services..."
+                  : activeAdminTab === "reviews"
+                    ? "Search reviewer, business, or comment..."
+                    : activeAdminTab === "users"
+                      ? "Search user name or email..."
+                      : activeAdminTab === "reports"
+                        ? "Search business, reporter, or report..."
+                        : "Search businesses by name, location, or phone..."}
                 className="pl-9"
                 aria-label="Search admin listings"
                 data-testid="admin-listing-search"
@@ -1252,6 +1285,26 @@ export default function Admin() {
                 ))}
               </select>
             )}
+            {activeAdminTab === "reviews" && (
+              <select value={reviewRatingFilter} onChange={event => setReviewRatingFilter(event.target.value)} className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" aria-label="Filter reviews by rating" data-testid="admin-review-rating-filter">
+                <option value="">All ratings</option>
+                {[5, 4, 3, 2, 1].map(rating => <option key={rating} value={rating}>{rating} stars</option>)}
+              </select>
+            )}
+            {activeAdminTab === "users" && (
+              <select value={userRoleFilter} onChange={event => setUserRoleFilter(event.target.value as "" | "admin" | "owner")} className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" aria-label="Filter users by role" data-testid="admin-user-role-filter">
+                <option value="">All roles</option>
+                <option value="admin">Admins</option>
+                <option value="owner">Business owners</option>
+              </select>
+            )}
+            {activeAdminTab === "reports" && (
+              <select value={reportReasonFilter} onChange={event => setReportReasonFilter(event.target.value)} className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" aria-label="Filter reports by reason" data-testid="admin-report-reason-filter">
+                <option value="">All report reasons</option>
+                {REPORT_REASONS.map(reason => <option key={reason.value} value={reason.value}>{reason.label}</option>)}
+              </select>
+            )}
+            {hasAdminFilters && <Button type="button" variant="ghost" size="sm" onClick={clearAdminFilters} data-testid="button-clear-admin-filters">Clear filters</Button>}
           </div>
           <TabsList className="mb-4 grid h-auto w-full grid-cols-2 gap-1.5 rounded-lg border border-gray-200 bg-gray-100 p-1.5 dark:border-gray-800 dark:bg-gray-900 sm:grid-cols-3 lg:grid-cols-5">
             <TabsTrigger value="pending" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-pending">
@@ -1633,9 +1686,11 @@ export default function Admin() {
                 <Star className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p>No reviews yet</p>
               </div>
+            ) : visibleReviews.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No reviews match your search and rating filter.</div>
             ) : (
               <div className="space-y-3">
-                {reviews.map(r => (
+                {visibleReviews.map(r => (
                   <Card key={r.id} data-testid={`admin-review-${r.id}`}>
                     <CardContent className="pt-4 pb-4">
                       <div className="flex items-start gap-3 flex-wrap">
@@ -1675,9 +1730,11 @@ export default function Admin() {
                 <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p>No users yet</p>
               </div>
+            ) : visibleUsers.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No users match your search and role filter.</div>
             ) : (
               <div className="space-y-3">
-                {users.map(u => (
+                {visibleUsers.map(u => (
                   <Card key={u.id} data-testid={`admin-user-${u.id}`}>
                     <CardContent className="pt-3 pb-3">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1708,9 +1765,11 @@ export default function Admin() {
                 <Flag className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p>No reports submitted yet</p>
               </div>
+            ) : visibleReports.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">No reports match your search and reason filter.</div>
             ) : (
               <div className="space-y-3">
-                {reports.map(r => {
+                {visibleReports.map(r => {
                   const reasonLabel = REPORT_REASONS.find(x => x.value === r.reason)?.label || r.reason;
                   return (
                     <Card key={r.id} data-testid={`admin-report-${r.id}`} className="border-red-100 dark:border-red-900/30">
