@@ -4,7 +4,7 @@ import {
   Shield, Building2, CheckCircle, XCircle, Trash2, Users, Star,
   Clock, Flag, Phone, MessageCircle, MapPin, Mail, User, ExternalLink,
   Calendar, ChevronDown, ChevronUp, BadgeCheck, TrendingUp, DollarSign, AlertCircle, Pause, Play, Pencil,
-  Download, Upload, FileText, FileUp, Search, KeyRound
+  Download, Upload, FileText, FileUp, Search, KeyRound, Plus
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,10 +70,25 @@ interface AdminImportResult {
 }
 
 interface AdminBusinessEditForm {
-  name: string; description: string; phone: string; whatsapp: string; address: string; city: string;
+  name: string; category: string; description: string; phone: string; whatsapp: string; address: string; city: string;
   subcategory: string; website: string; logo: string; banner: string; latitude: string; longitude: string;
-  carBrands: string; ownerId: string;
+  carBrands: string; ownerId: string; categoryTemplateId: string; customFields: Record<string, unknown>;
 }
+
+interface AdminBusinessCreateForm {
+  ownerId: string; name: string; category: string; description: string; phone: string;
+  whatsapp: string; address: string; city: string; subcategory: string; categoryTemplateId: string; customFields: Record<string, unknown>;
+}
+
+interface AdminCatalogCreateForm {
+  businessId: string; type: "car" | "part" | "garage_service" | "support_service";
+  title: string; brand: string; model: string; year: string; price: string; location: string;
+  partName: string; carBrand: string; carModel: string; condition: string;
+  name: string; description: string; categoryTemplateId: string; customFields: Record<string, unknown>;
+}
+
+type AdminCategoryField = { key: string; label: string; type: "text" | "number" | "boolean"; required: boolean };
+type AdminCategory = { id: string; entityType: string; categoryKey: string; name: string; fields: AdminCategoryField[] };
 
 type FeaturedItemType = "business" | "car" | "part" | "garage_service" | "support_service";
 type FeaturedItem = {
@@ -184,6 +199,10 @@ function formatDate(d: any) {
   return new Date(d).toLocaleDateString("en-KE", { year: "numeric", month: "short", day: "numeric" });
 }
 
+function hasMissingRequiredFields(fields: AdminCategoryField[], values: Record<string, unknown>) {
+  return fields.some(field => field.required && (values[field.key] === undefined || values[field.key] === null || values[field.key] === ""));
+}
+
 function addMonths(date: Date, months: number) {
   const target = new Date(date);
   const dayOfMonth = target.getDate();
@@ -199,11 +218,13 @@ function BusinessCard({
   actions,
   defaultExpanded = false,
   onEdit,
+  onAddListing,
 }: {
   biz: EnrichedBusiness;
   actions: React.ReactNode;
   defaultExpanded?: boolean;
   onEdit?: (biz: EnrichedBusiness) => void;
+  onAddListing?: (biz: EnrichedBusiness) => void;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -243,8 +264,18 @@ function BusinessCard({
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/business/${biz.id}`} data-testid={`button-view-business-${biz.id}`}>
+                <ExternalLink className="mr-1 h-4 w-4" />View profile
+              </Link>
+            </Button>
             {onEdit && (
               <Button size="sm" variant="outline" onClick={() => onEdit(biz)} data-testid={`button-edit-biz-${biz.id}`}>Edit profile</Button>
+            )}
+            {onAddListing && (
+              <Button size="sm" variant="outline" onClick={() => onAddListing(biz)} data-testid={`button-add-listing-${biz.id}`}>
+                <Plus className="mr-1 h-4 w-4" />Add listing
+              </Button>
             )}
             {actions}
             <Button
@@ -357,6 +388,15 @@ export default function Admin() {
   const [featuredTypeFilter, setFeaturedTypeFilter] = useState<FeaturedItemType | "">("");
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [profileForm, setProfileForm] = useState<AdminProfileForm | null>(null);
+  const [businessCreateForm, setBusinessCreateForm] = useState<AdminBusinessCreateForm | null>(null);
+  const [catalogCreateBusiness, setCatalogCreateBusiness] = useState<EnrichedBusiness | null>(null);
+  const [catalogCreateForm, setCatalogCreateForm] = useState<AdminCatalogCreateForm | null>(null);
+  const [passwordResetUser, setPasswordResetUser] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [passwordResetValue, setPasswordResetValue] = useState("");
+  const [categoryEntityType, setCategoryEntityType] = useState("business");
+  const [categoryBusinessType, setCategoryBusinessType] = useState("car_dealer");
+  const [categoryNameDraft, setCategoryNameDraft] = useState("");
+  const [categoryFieldsDraft, setCategoryFieldsDraft] = useState<AdminCategoryField[]>([]);
 
   if (!user || user.role !== "admin") {
     navigate("/login");
@@ -369,6 +409,10 @@ export default function Admin() {
 
   const { data: profile } = useQuery<AdminProfile>({
     queryKey: ["/api/me/profile"],
+  });
+
+  const { data: adminCategories = [] } = useQuery<AdminCategory[]>({
+    queryKey: ["/api/admin/categories"],
   });
 
   const updateProfileMutation = useMutation({
@@ -621,11 +665,12 @@ export default function Admin() {
   const saveBusinessProfileMutation = useMutation({
     mutationFn: async ({ businessId, form }: { businessId: string; form: AdminBusinessEditForm }) => {
       const payload: Record<string, unknown> = {
-        name: form.name.trim(), description: form.description.trim(), phone: form.phone.trim(), whatsapp: form.whatsapp.trim(),
+        name: form.name.trim(), category: form.category, description: form.description.trim(), phone: form.phone.trim(), whatsapp: form.whatsapp.trim(),
         address: form.address.trim(), city: form.city.trim(), subcategory: form.subcategory.trim() || null,
         website: form.website.trim() || null, logo: form.logo.trim() || null, banner: form.banner.trim() || null,
         latitude: form.latitude.trim() || null, longitude: form.longitude.trim() || null,
         carBrands: form.carBrands.split(/[|,]/).map(brand => brand.trim()).filter(Boolean),
+        customFields: form.customFields,
       };
       if ((payload.carBrands as string[]).length === 0) payload.carBrands = null;
       if (form.ownerId) payload.ownerId = form.ownerId;
@@ -641,6 +686,85 @@ export default function Admin() {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const createBusinessMutation = useMutation({
+    mutationFn: async (form: AdminBusinessCreateForm) => {
+      const response = await apiRequest("POST", "/api/admin/businesses", {
+        ...form,
+        name: form.name.trim(), description: form.description.trim(), phone: form.phone.trim(),
+        whatsapp: form.whatsapp.trim(), address: form.address.trim(), city: form.city.trim(),
+        subcategory: form.subcategory.trim() || null,
+        customFields: form.customFields,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Business created." });
+      setBusinessCreateForm(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
+    },
+    onError: (error: Error) => toast({ title: "Business creation failed", description: error.message, variant: "destructive" }),
+  });
+
+  const createCatalogItemMutation = useMutation({
+    mutationFn: async ({ form, business }: { form: AdminCatalogCreateForm; business: EnrichedBusiness }) => {
+      const fields: Record<string, unknown> = { businessId: business.id, description: form.description.trim() || null, customFields: form.customFields };
+      if (form.type === "car") Object.assign(fields, { title: form.title.trim(), brand: form.brand.trim(), model: form.model.trim(), year: Number(form.year), price: form.price, location: form.location.trim() });
+      if (form.type === "part") Object.assign(fields, { partName: form.partName.trim(), carBrand: form.carBrand.trim(), carModel: form.carModel.trim(), year: form.year || null, condition: form.condition, price: form.price || null });
+      if (form.type === "garage_service") Object.assign(fields, { name: form.name.trim(), price: form.price || null });
+      if (form.type === "support_service") Object.assign(fields, { name: form.name.trim(), startingPrice: form.price || null });
+      const response = await apiRequest("POST", `/api/admin/catalog/${form.type}`, fields);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Business listing created." });
+      setCatalogCreateBusiness(null);
+      setCatalogCreateForm(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ predicate: query => typeof query.queryKey[0] === "string" && ["/api/cars", "/api/parts", "/api/services", "/api/support-services", "/api/home/featured-offers"].some(prefix => query.queryKey[0]!.startsWith(prefix)) });
+    },
+    onError: (error: Error) => toast({ title: "Listing creation failed", description: error.message, variant: "destructive" }),
+  });
+
+  const resetBusinessAccountMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      await apiRequest("PUT", `/api/admin/users/${userId}/password`, { password });
+    },
+    onSuccess: () => {
+      toast({ title: "Business account password reset." });
+      setPasswordResetUser(null);
+      setPasswordResetValue("");
+    },
+    onError: (error: Error) => toast({ title: "Password reset failed", description: error.message, variant: "destructive" }),
+  });
+
+  const createAdminCategoryMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/categories", {
+        entityType: categoryEntityType,
+        categoryKey: categoryBusinessType,
+        name: categoryNameDraft.trim(),
+        fields: categoryFieldsDraft,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Category and fields saved." });
+      setCategoryNameDraft("");
+      setCategoryFieldsDraft([]);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
+    },
+    onError: (error: Error) => toast({ title: "Category save failed", description: error.message, variant: "destructive" }),
+  });
+
+  const deleteAdminCategoryMutation = useMutation({
+    mutationFn: async (id: string) => { await apiRequest("DELETE", `/api/admin/categories/${id}`); },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] }),
+    onError: (error: Error) => toast({ title: "Category removal failed", description: error.message, variant: "destructive" }),
   });
 
   async function downloadExport(path: string, filename: string) {
@@ -827,13 +951,33 @@ export default function Admin() {
   const availableOwnerAccounts = users.filter(account => account.role === "owner" && !linkedOwnerIds.has(account.id));
 
   function startBusinessEdit(biz: EnrichedBusiness) {
+    const template = adminCategories.find(category => category.entityType === "business" && category.categoryKey === biz.category && category.name === biz.subcategory);
     setEditingBusiness(biz);
     setBusinessEditForm({
-      name: biz.name || "", description: biz.description || "", phone: biz.phone || "", whatsapp: biz.whatsapp || "",
+      name: biz.name || "", category: biz.category || "other", description: biz.description || "", phone: biz.phone || "", whatsapp: biz.whatsapp || "",
       address: biz.address || "", city: biz.city || "", subcategory: biz.subcategory || "", website: biz.website || "",
       logo: biz.logo || "", banner: biz.banner || "", latitude: String(biz.latitude ?? ""), longitude: String(biz.longitude ?? ""),
-      carBrands: (biz.carBrands || []).join(" | "), ownerId: "",
+      carBrands: (biz.carBrands || []).join(" | "), ownerId: "", categoryTemplateId: template?.id || "",
+      customFields: { ...(biz.customFields || {}) },
     });
+  }
+
+  function startCatalogCreate(biz: EnrichedBusiness) {
+    const type = biz.category === "car_dealer" ? "car" : biz.category === "spare_parts" ? "part" : biz.category === "garage" ? "garage_service" : "support_service";
+    setCatalogCreateBusiness(biz);
+    setCatalogCreateForm({
+      businessId: biz.id, type, title: "", brand: "", model: "", year: "", price: "", location: biz.city,
+      partName: "", carBrand: "", carModel: "", condition: "new", name: "", description: "", categoryTemplateId: "", customFields: {},
+    });
+  }
+
+  function matchingCategories(entityType: string, categoryKey: string) {
+    return adminCategories.filter(category => category.entityType === entityType && category.categoryKey === categoryKey);
+  }
+
+  function updateCustomField<T extends { customFields: Record<string, unknown> }>(form: T, field: AdminCategoryField, value: string) {
+    const parsedValue = field.type === "number" ? (value === "" ? "" : Number(value)) : field.type === "boolean" ? value === "true" : value;
+    return { ...form, customFields: { ...form.customFields, [field.key]: parsedValue } };
   }
 
   return (
@@ -877,6 +1021,14 @@ export default function Admin() {
               data-testid="button-edit-admin-profile"
             >
               <Pencil className="w-4 h-4 mr-2" />Edit profile
+            </Button>
+            <Button
+              size="sm"
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={() => setBusinessCreateForm({ ownerId: "", name: "", category: "car_dealer", description: "", phone: "", whatsapp: "", address: "", city: "", subcategory: "", categoryTemplateId: "", customFields: {} })}
+              data-testid="button-create-business"
+            >
+              <Plus className="mr-2 h-4 w-4" />Create business
             </Button>
           </CardContent>
         </Card>
@@ -1015,6 +1167,9 @@ export default function Admin() {
             <TabsTrigger value="data" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-data">
               Import / Export
             </TabsTrigger>
+            <TabsTrigger value="categories" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-categories">
+              Categories &amp; Fields
+            </TabsTrigger>
           </TabsList>
 
           {/* Pending */}
@@ -1033,6 +1188,7 @@ export default function Admin() {
                     key={biz.id}
                     biz={biz}
                     onEdit={startBusinessEdit}
+                    onAddListing={startCatalogCreate}
                     defaultExpanded={true}
                     actions={
                       <>
@@ -1056,6 +1212,9 @@ export default function Admin() {
                         >
                           <XCircle className="w-4 h-4 mr-1" />
                           Reject
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-red-600" onClick={() => deleteBizMutation.mutate(biz.id)} disabled={deleteBizMutation.isPending} title="Delete business">
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </>
                     }
@@ -1081,6 +1240,7 @@ export default function Admin() {
                     key={biz.id}
                     biz={biz}
                     onEdit={startBusinessEdit}
+                    onAddListing={startCatalogCreate}
                     actions={
                       <>
                         <Button
@@ -1136,6 +1296,7 @@ export default function Admin() {
                     key={biz.id}
                     biz={biz}
                     onEdit={startBusinessEdit}
+                    onAddListing={startCatalogCreate}
                     actions={
                       <Button
                         size="sm"
@@ -1311,6 +1472,7 @@ export default function Admin() {
                     key={biz.id}
                     biz={biz}
                     onEdit={startBusinessEdit}
+                    onAddListing={startCatalogCreate}
                     actions={
                       <>
                         <Button
@@ -1400,9 +1562,14 @@ export default function Admin() {
                           <p className="font-medium text-sm text-gray-900 dark:text-white">{u.name}</p>
                           <p className="text-xs text-muted-foreground">{u.email}</p>
                         </div>
-                        <Badge variant={u.role === "admin" ? "default" : "secondary"} className="text-xs capitalize">
-                          {u.role}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={u.role === "admin" ? "default" : "secondary"} className="text-xs capitalize">{u.role}</Badge>
+                          {u.role === "owner" && (
+                            <Button size="sm" variant="outline" onClick={() => { setPasswordResetUser({ id: u.id, name: u.name, email: u.email }); setPasswordResetValue(""); }}>
+                              <KeyRound className="mr-1 h-4 w-4" />Reset password
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -1646,6 +1813,34 @@ export default function Admin() {
                 </Card>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="categories" className="space-y-5">
+            <Card>
+              <CardHeader><CardTitle className="text-base">Add category</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <label className="space-y-1"><span className="text-xs font-medium">Applies to</span><select value={categoryEntityType} onChange={event => setCategoryEntityType(event.target.value)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="business">Business</option><option value="car">Cars</option><option value="part">Spare parts</option><option value="garage_service">Garage services</option><option value="support_service">Support services</option></select></label>
+                  <label className="space-y-1"><span className="text-xs font-medium">Business type</span><select value={categoryBusinessType} onChange={event => setCategoryBusinessType(event.target.value)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900">{BUSINESS_CATEGORIES.filter(category => category.value !== "automotive_support").map(category => <option key={category.value} value={category.value}>{category.label}</option>)}</select></label>
+                  <label className="space-y-1"><span className="text-xs font-medium">Category name</span><Input value={categoryNameDraft} onChange={event => setCategoryNameDraft(event.target.value)} maxLength={80} /></label>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Custom fields</h3><Button size="sm" variant="outline" onClick={() => setCategoryFieldsDraft(fields => [...fields, { key: "", label: "", type: "text", required: false }])}><Plus className="mr-1 h-4 w-4" />Add field</Button></div>
+                  {categoryFieldsDraft.map((field, index) => <div key={index} className="grid grid-cols-1 items-end gap-2 rounded-md border p-3 sm:grid-cols-[1fr_1fr_140px_auto_auto]">
+                    <label className="space-y-1"><span className="text-xs font-medium">Key</span><Input value={field.key} onChange={event => setCategoryFieldsDraft(fields => fields.map((item, itemIndex) => itemIndex === index ? { ...item, key: event.target.value } : item))} /></label>
+                    <label className="space-y-1"><span className="text-xs font-medium">Label</span><Input value={field.label} onChange={event => setCategoryFieldsDraft(fields => fields.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} /></label>
+                    <label className="space-y-1"><span className="text-xs font-medium">Field type</span><select value={field.type} onChange={event => setCategoryFieldsDraft(fields => fields.map((item, itemIndex) => itemIndex === index ? { ...item, type: event.target.value as AdminCategoryField["type"] } : item))} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="text">Text</option><option value="number">Number</option><option value="boolean">Yes / No</option></select></label>
+                    <label className="flex h-10 items-center gap-2 text-sm"><input type="checkbox" checked={field.required} onChange={event => setCategoryFieldsDraft(fields => fields.map((item, itemIndex) => itemIndex === index ? { ...item, required: event.target.checked } : item))} />Required</label>
+                    <Button size="icon" variant="ghost" aria-label="Remove field" onClick={() => setCategoryFieldsDraft(fields => fields.filter((_, itemIndex) => itemIndex !== index))}><Trash2 className="h-4 w-4" /></Button>
+                  </div>)}
+                </div>
+                <div className="flex justify-end"><Button className="bg-red-600 text-white" disabled={!categoryNameDraft.trim() || createAdminCategoryMutation.isPending || categoryFieldsDraft.some(field => !field.key.trim() || !field.label.trim())} onClick={() => createAdminCategoryMutation.mutate()}>{createAdminCategoryMutation.isPending ? "Saving..." : "Save category"}</Button></div>
+              </CardContent>
+            </Card>
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold">Configured categories</h2>
+              {adminCategories.length === 0 ? <p className="rounded-md border border-dashed p-5 text-sm text-muted-foreground">No custom categories configured.</p> : adminCategories.map(category => <Card key={category.id}><CardContent className="flex flex-wrap items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="font-medium">{category.name}</p><p className="text-xs text-muted-foreground">{category.entityType.replace(/_/g, " ")} · {getCategoryLabel(category.categoryKey)} · {category.fields.length} fields</p><p className="mt-1 text-xs text-muted-foreground">{category.fields.map(field => `${field.label}${field.required ? " *" : ""}`).join(" · ") || "No custom fields"}</p></div><Button size="sm" variant="ghost" className="text-red-600" disabled={deleteAdminCategoryMutation.isPending} onClick={() => deleteAdminCategoryMutation.mutate(category.id)} aria-label={`Delete ${category.name}`}><Trash2 className="h-4 w-4" /></Button></CardContent></Card>)}
+            </section>
           </TabsContent>
 
           {/* Import / Export */}
@@ -1945,12 +2140,117 @@ export default function Admin() {
             </Card>
           </TabsContent>
         </Tabs>
+        <Dialog open={!!businessCreateForm} onOpenChange={open => { if (!open) setBusinessCreateForm(null); }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Create business profile</DialogTitle></DialogHeader>
+            {businessCreateForm && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="space-y-1 sm:col-span-2">
+                    <span className="text-xs font-medium">Business owner account</span>
+                    <select value={businessCreateForm.ownerId} onChange={event => setBusinessCreateForm(form => form ? { ...form, ownerId: event.target.value } : form)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900">
+                      <option value="">Choose an unassigned owner account</option>
+                      {availableOwnerAccounts.map(account => <option key={account.id} value={account.id}>{account.name} ({account.email})</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium">Business name</span>
+                    <Input value={businessCreateForm.name} onChange={event => setBusinessCreateForm(form => form ? { ...form, name: event.target.value } : form)} />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium">Category</span>
+                    <select value={businessCreateForm.category} onChange={event => setBusinessCreateForm(form => form ? { ...form, category: event.target.value, subcategory: "", categoryTemplateId: "", customFields: {} } : form)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900">
+                      {BUSINESS_CATEGORIES.filter(category => category.value !== "automotive_support").map(category => <option key={category.value} value={category.value}>{category.label}</option>)}
+                    </select>
+                  </label>
+                  {([
+                    ["Phone", "phone"], ["WhatsApp", "whatsapp"], ["Address", "address"], ["City", "city"], ["Subcategory", "subcategory"],
+                  ] as const).map(([label, field]) => (
+                    <label key={field} className="space-y-1">
+                      <span className="text-xs font-medium">{label}</span>
+                      <Input value={businessCreateForm[field]} onChange={event => setBusinessCreateForm(form => form ? { ...form, [field]: event.target.value } : form)} />
+                    </label>
+                  ))}
+                  <label className="space-y-1 sm:col-span-2">
+                    <span className="text-xs font-medium">Description</span>
+                    <Textarea rows={3} value={businessCreateForm.description} onChange={event => setBusinessCreateForm(form => form ? { ...form, description: event.target.value } : form)} />
+                  </label>
+                  {matchingCategories("business", businessCreateForm.category).length > 0 && <label className="space-y-1 sm:col-span-2"><span className="text-xs font-medium">Configured category</span><select value={businessCreateForm.categoryTemplateId} onChange={event => { const template = matchingCategories("business", businessCreateForm.category).find(category => category.id === event.target.value); setBusinessCreateForm(form => form ? { ...form, categoryTemplateId: event.target.value, subcategory: template?.name || "", customFields: {} } : form); }} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="">No configured category</option>{matchingCategories("business", businessCreateForm.category).map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>}
+                  {matchingCategories("business", businessCreateForm.category).find(category => category.id === businessCreateForm.categoryTemplateId)?.fields.map(field => <label key={field.key} className="space-y-1"><span className="text-xs font-medium">{field.label}{field.required ? " *" : ""}</span>{field.type === "boolean" ? <select value={String(businessCreateForm.customFields[field.key] ?? "")} onChange={event => setBusinessCreateForm(form => form ? updateCustomField(form, field, event.target.value) : form)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="">Choose</option><option value="true">Yes</option><option value="false">No</option></select> : <Input type={field.type === "number" ? "number" : "text"} value={String(businessCreateForm.customFields[field.key] ?? "")} onChange={event => setBusinessCreateForm(form => form ? updateCustomField(form, field, event.target.value) : form)} />}</label>)}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setBusinessCreateForm(null)}>Cancel</Button>
+                  <Button className="bg-red-600 text-white" disabled={createBusinessMutation.isPending || !businessCreateForm.ownerId || !businessCreateForm.name.trim() || !businessCreateForm.phone.trim() || !businessCreateForm.address.trim() || !businessCreateForm.city.trim() || hasMissingRequiredFields(matchingCategories("business", businessCreateForm.category).find(category => category.id === businessCreateForm.categoryTemplateId)?.fields || [], businessCreateForm.customFields)} onClick={() => createBusinessMutation.mutate(businessCreateForm)}>
+                    {createBusinessMutation.isPending ? "Creating..." : "Create business"}
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!catalogCreateBusiness} onOpenChange={open => { if (!open) { setCatalogCreateBusiness(null); setCatalogCreateForm(null); } }}>
+          <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Add listing for {catalogCreateBusiness?.name}</DialogTitle></DialogHeader>
+            {catalogCreateForm && catalogCreateBusiness && (
+              <div className="space-y-4">
+                {matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).length > 0 && <label className="block space-y-1"><span className="text-xs font-medium">Configured category</span><select value={catalogCreateForm.categoryTemplateId} onChange={event => { const template = matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).find(category => category.id === event.target.value); setCatalogCreateForm(form => form ? { ...form, categoryTemplateId: event.target.value, customFields: template ? { category: template.name } : {} } : form); }} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="">No configured category</option>{matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>}
+                {matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).find(category => category.id === catalogCreateForm.categoryTemplateId)?.fields.map(field => <label key={field.key} className="block space-y-1"><span className="text-xs font-medium">{field.label}{field.required ? " *" : ""}</span>{field.type === "boolean" ? <select value={String(catalogCreateForm.customFields[field.key] ?? "")} onChange={event => setCatalogCreateForm(form => form ? updateCustomField(form, field, event.target.value) : form)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="">Choose</option><option value="true">Yes</option><option value="false">No</option></select> : <Input type={field.type === "number" ? "number" : "text"} value={String(catalogCreateForm.customFields[field.key] ?? "")} onChange={event => setCatalogCreateForm(form => form ? updateCustomField(form, field, event.target.value) : form)} />}</label>)}
+                {catalogCreateForm.type === "car" && <>
+                  <label className="block space-y-1"><span className="text-xs font-medium">Listing title</span><Input value={catalogCreateForm.title} onChange={event => setCatalogCreateForm(form => form ? { ...form, title: event.target.value } : form)} /></label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {([ ["Brand", "brand"], ["Model", "model"], ["Year", "year"], ["Price", "price"], ["Location", "location"] ] as const).map(([label, field]) => <label key={field} className="space-y-1"><span className="text-xs font-medium">{label}</span><Input type={field === "year" ? "number" : "text"} value={catalogCreateForm[field]} onChange={event => setCatalogCreateForm(form => form ? { ...form, [field]: event.target.value } : form)} /></label>)}
+                  </div>
+                </>}
+                {catalogCreateForm.type === "part" && <>
+                  <div className="grid grid-cols-2 gap-3">
+                    {([ ["Part name", "partName"], ["Vehicle brand", "carBrand"], ["Vehicle model", "carModel"], ["Year", "year"], ["Price", "price"] ] as const).map(([label, field]) => <label key={field} className="space-y-1"><span className="text-xs font-medium">{label}</span><Input value={catalogCreateForm[field]} onChange={event => setCatalogCreateForm(form => form ? { ...form, [field]: event.target.value } : form)} /></label>)}
+                    <label className="space-y-1"><span className="text-xs font-medium">Condition</span><select value={catalogCreateForm.condition} onChange={event => setCatalogCreateForm(form => form ? { ...form, condition: event.target.value } : form)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="new">New</option><option value="used">Used</option></select></label>
+                  </div>
+                </>}
+                {(catalogCreateForm.type === "garage_service" || catalogCreateForm.type === "support_service") && <>
+                  <label className="block space-y-1"><span className="text-xs font-medium">Service name</span><Input value={catalogCreateForm.name} onChange={event => setCatalogCreateForm(form => form ? { ...form, name: event.target.value } : form)} /></label>
+                  <label className="block space-y-1"><span className="text-xs font-medium">{catalogCreateForm.type === "support_service" ? "Starting price" : "Price"}</span><Input value={catalogCreateForm.price} onChange={event => setCatalogCreateForm(form => form ? { ...form, price: event.target.value } : form)} /></label>
+                </>}
+                <label className="block space-y-1"><span className="text-xs font-medium">Description</span><Textarea rows={3} value={catalogCreateForm.description} onChange={event => setCatalogCreateForm(form => form ? { ...form, description: event.target.value } : form)} /></label>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => { setCatalogCreateBusiness(null); setCatalogCreateForm(null); }}>Cancel</Button>
+                  <Button className="bg-red-600 text-white" disabled={createCatalogItemMutation.isPending || (catalogCreateForm.type === "car" && (!catalogCreateForm.title.trim() || !catalogCreateForm.brand.trim() || !catalogCreateForm.model.trim() || !catalogCreateForm.year || !catalogCreateForm.price.trim() || !catalogCreateForm.location.trim())) || (catalogCreateForm.type === "part" && (!catalogCreateForm.partName.trim() || !catalogCreateForm.carBrand.trim() || !catalogCreateForm.carModel.trim())) || (["garage_service", "support_service"].includes(catalogCreateForm.type) && !catalogCreateForm.name.trim()) || hasMissingRequiredFields(matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).find(category => category.id === catalogCreateForm.categoryTemplateId)?.fields || [], catalogCreateForm.customFields)} onClick={() => createCatalogItemMutation.mutate({ form: catalogCreateForm, business: catalogCreateBusiness })}>
+                    {createCatalogItemMutation.isPending ? "Adding..." : "Add listing"}
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!passwordResetUser} onOpenChange={open => { if (!open) { setPasswordResetUser(null); setPasswordResetValue(""); } }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Reset business account password</DialogTitle></DialogHeader>
+            {passwordResetUser && <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Set a new password for {passwordResetUser.name} ({passwordResetUser.email}). The existing password cannot be viewed.</p>
+              <label className="block space-y-1"><span className="text-sm font-medium">New password</span><Input type="password" autoComplete="new-password" value={passwordResetValue} onChange={event => setPasswordResetValue(event.target.value)} /></label>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setPasswordResetUser(null); setPasswordResetValue(""); }}>Cancel</Button>
+                <Button className="bg-red-600 text-white" disabled={passwordResetValue.length < 8 || resetBusinessAccountMutation.isPending} onClick={() => resetBusinessAccountMutation.mutate({ userId: passwordResetUser.id, password: passwordResetValue })}>{resetBusinessAccountMutation.isPending ? "Resetting..." : "Reset password"}</Button>
+              </DialogFooter>
+            </div>}
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={!!editingBusiness} onOpenChange={open => { if (!open) { setEditingBusiness(null); setBusinessEditForm(null); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Complete business profile</DialogTitle></DialogHeader>
             {businessEditForm && editingBusiness && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="space-y-1">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Category</span>
+                    <select value={businessEditForm.category} onChange={event => setBusinessEditForm(form => form ? { ...form, category: event.target.value, subcategory: "", categoryTemplateId: "", customFields: {} } : form)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900">
+                      {BUSINESS_CATEGORIES.filter(category => category.value !== "automotive_support").map(category => <option key={category.value} value={category.value}>{category.label}</option>)}
+                    </select>
+                  </label>
+                  {matchingCategories("business", businessEditForm.category).length > 0 && <label className="space-y-1"><span className="text-xs font-medium">Configured category</span><select value={businessEditForm.categoryTemplateId} onChange={event => { const template = matchingCategories("business", businessEditForm.category).find(category => category.id === event.target.value); setBusinessEditForm(form => form ? { ...form, categoryTemplateId: event.target.value, subcategory: template?.name || "", customFields: template ? { ...(editingBusiness.customFields || {}) } : {} } : form); }} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="">No configured category</option>{matchingCategories("business", businessEditForm.category).map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>}
                   {([
                     { label: "Business name", field: "name" }, { label: "Phone", field: "phone" },
                     { label: "WhatsApp", field: "whatsapp" }, { label: "Address", field: "address" },
@@ -1972,6 +2272,7 @@ export default function Admin() {
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Car brands (separate with |)</span>
                     <Input value={businessEditForm.carBrands} onChange={event => setBusinessEditForm(form => form ? { ...form, carBrands: event.target.value } : form)} />
                   </label>
+                  {matchingCategories("business", businessEditForm.category).find(category => category.id === businessEditForm.categoryTemplateId)?.fields.map(field => <label key={field.key} className="space-y-1"><span className="text-xs font-medium">{field.label}{field.required ? " *" : ""}</span>{field.type === "boolean" ? <select value={String(businessEditForm.customFields[field.key] ?? "")} onChange={event => setBusinessEditForm(form => form ? updateCustomField(form, field, event.target.value) : form)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="">Choose</option><option value="true">Yes</option><option value="false">No</option></select> : <Input type={field.type === "number" ? "number" : "text"} value={String(businessEditForm.customFields[field.key] ?? "")} onChange={event => setBusinessEditForm(form => form ? updateCustomField(form, field, event.target.value) : form)} />}</label>)}
                   <label className="space-y-1 sm:col-span-2">
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Assign to an existing business-owner account</span>
                     <select value={businessEditForm.ownerId} onChange={event => setBusinessEditForm(form => form ? { ...form, ownerId: event.target.value } : form)} className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm">

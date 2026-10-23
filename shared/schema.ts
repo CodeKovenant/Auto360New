@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, pgEnum, numeric, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, pgEnum, numeric, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -54,6 +54,7 @@ export const businesses = pgTable("businesses", {
   premium: boolean("premium").notNull().default(false),
   premiumExpiresAt: timestamp("premium_expires_at"),
   carBrands: text("car_brands").array(),
+  customFields: jsonb("custom_fields").$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -70,6 +71,7 @@ export const spareParts = pgTable("spare_parts", {
   image: text("image"),
   featured: boolean("featured").notNull().default(false),
   suspended: boolean("suspended").notNull().default(false),
+  customFields: jsonb("custom_fields").$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -111,6 +113,7 @@ export const cars = pgTable("cars", {
   condition: carConditionEnum("condition").notNull().default("used"),
   featured: boolean("featured").notNull().default(false),
   suspended: boolean("suspended").notNull().default(false),
+  customFields: jsonb("custom_fields").$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -123,6 +126,7 @@ export const garageServices = pgTable("garage_services", {
   featured: boolean("featured").notNull().default(false),
   suspended: boolean("suspended").notNull().default(false),
   popular: boolean("popular").default(false),
+  customFields: jsonb("custom_fields").$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -134,8 +138,18 @@ export const supportServices = pgTable("support_services", {
   startingPrice: text("starting_price"),
   featured: boolean("featured").notNull().default(false),
   suspended: boolean("suspended").notNull().default(false),
+  customFields: jsonb("custom_fields").$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const adminCategories = pgTable("admin_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entityType: text("entity_type").notNull(),
+  categoryKey: text("category_key").notNull(),
+  name: text("name").notNull(),
+  fields: jsonb("fields").$type<{ key: string; label: string; type: "text" | "number" | "boolean"; required: boolean }[]>().notNull().default([]),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, table => [uniqueIndex("admin_categories_entity_key_name_idx").on(table.entityType, table.categoryKey, table.name)]);
 
 export const reportReasonEnum = pgEnum("report_reason", [
   "fake_listing",
@@ -206,6 +220,7 @@ export const insertSupportServiceSchema = createInsertSchema(supportServices).om
 export const insertGalleryImageSchema = createInsertSchema(galleryImages).omit({ id: true, createdAt: true });
 export const insertBusinessReportSchema = createInsertSchema(businessReports).omit({ id: true, createdAt: true });
 export const insertFeatureRequestSchema = createInsertSchema(featureRequests).omit({ id: true, status: true, createdAt: true, reviewedAt: true });
+export const insertAdminCategorySchema = createInsertSchema(adminCategories).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -227,6 +242,8 @@ export type BusinessReport = typeof businessReports.$inferSelect;
 export type InsertBusinessReport = z.infer<typeof insertBusinessReportSchema>;
 export type FeatureRequest = typeof featureRequests.$inferSelect;
 export type InsertFeatureRequest = z.infer<typeof insertFeatureRequestSchema>;
+export type AdminCategory = typeof adminCategories.$inferSelect;
+export type InsertAdminCategory = z.infer<typeof insertAdminCategorySchema>;
 export type FeatureRequestItemType = typeof featureRequestItemTypeEnum.enumValues[number];
 export type GalleryImage = typeof galleryImages.$inferSelect;
 export type InsertGalleryImage = z.infer<typeof insertGalleryImageSchema>;

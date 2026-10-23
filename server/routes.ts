@@ -12,7 +12,7 @@ import crypto from "crypto";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { AUTOMOTIVE_SUPPORT_SUBCATEGORIES, insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, businesses, cars, spareParts, garageServices, supportServices, reviews, businessReports, galleryImages, featureRequests, mpesaPayments, featureRequestItemTypeEnum, users, type FeatureRequestItemType, type GalleryImage } from "@shared/schema";
+import { AUTOMOTIVE_SUPPORT_SUBCATEGORIES, insertUserSchema, insertBusinessSchema, insertSparePartSchema, insertReviewSchema, insertMessageSchema, insertCarSchema, insertGarageServiceSchema, insertSupportServiceSchema, insertBusinessReportSchema, adminCategories, businesses, cars, spareParts, garageServices, supportServices, reviews, businessReports, galleryImages, featureRequests, mpesaPayments, featureRequestItemTypeEnum, users, type FeatureRequestItemType, type GalleryImage } from "@shared/schema";
 import { PREMIUM_AMOUNT, PREMIUM_DAYS } from "./mpesa";
 import { sendVerificationEmail, sendAdminNotificationEmail, sendApprovalEmail, sendRejectionEmail, sendRegistrationConfirmationEmail, ADMIN_EMAIL, isMailConfigured } from "./mailer";
 
@@ -177,6 +177,29 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   await ensurePersistentUploadsTable();
   const migratedUploads = await migrateLegacyUploads();
   if (migratedUploads > 0) console.log("[uploads] migrated " + migratedUploads + " legacy files to PostgreSQL");
+
+  async function validateConfiguredFields(entityType: string, categoryKey: string, categoryName: unknown, values: unknown) {
+    if (!values || typeof values !== "object" || Array.isArray(values)) throw new Error("Custom fields must be an object");
+    const rawValues = values as Record<string, unknown>;
+    if (typeof categoryName !== "string" || !categoryName.trim()) return rawValues;
+    const [template] = await db.select().from(adminCategories).where(and(
+      eq(adminCategories.entityType, entityType),
+      eq(adminCategories.categoryKey, categoryKey),
+      eq(adminCategories.name, categoryName.trim()),
+    )).limit(1);
+    if (!template) return rawValues;
+    const normalized: Record<string, unknown> = entityType === "business" ? {} : { category: template.name };
+    for (const field of template.fields) {
+      const value = rawValues[field.key];
+      if (field.required && (value === undefined || value === null || value === "")) throw new Error(`${field.label} is required`);
+      if (value === undefined || value === null || value === "") continue;
+      if (field.type === "text" && typeof value !== "string") throw new Error(`${field.label} must be text`);
+      if (field.type === "number" && (typeof value !== "number" || !Number.isFinite(value))) throw new Error(`${field.label} must be a number`);
+      if (field.type === "boolean" && typeof value !== "boolean") throw new Error(`${field.label} must be yes or no`);
+      normalized[field.key] = value;
+    }
+    return normalized;
+  }
 
   // Prefer durable database-backed media; retain local static fallback for legacy assets.
   app.use("/uploads", async (req, res, next) => {
@@ -1028,16 +1051,72 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/admin/categories", adminMiddleware, async (_req, res) => {
+    try {
+      res.json(await db.select().from(adminCategories).orderBy(adminCategories.entityType, adminCategories.categoryKey, adminCategories.name));
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/categories", adminMiddleware, async (req, res) => {
+    try {
+      const { entityType, categoryKey, name, fields } = req.body || {};
+      const allowedTypes = ["business", "car", "part", "garage_service", "support_service"];
+      const allowedBusinessCategories = ["car_dealer", "garage", "spare_parts", "car_wash", "insurance", "other"];
+      if (!allowedTypes.includes(entityType)) return res.status(400).json({ message: "Choose a supported category type" });
+      if (typeof categoryKey !== "string" || !allowedBusinessCategories.includes(categoryKey)) return res.status(400).json({ message: "Choose a supported business category" });
+      if (typeof name !== "string" || !name.trim() || name.trim().length > 80) return res.status(400).json({ message: "Category name is required and must be 80 characters or fewer" });
+      if (!Array.isArray(fields) || fields.length > 20) return res.status(400).json({ message: "Provide up to 20 custom fields" });
+      const keys = new Set<string>();
+      const normalizedFields = fields.map((field: any) => {
+        if (!field || typeof field.key !== "string" || !/^[a-z][a-zA-Z0-9_]{0,39}$/.test(field.key)) throw new Error("Field keys must start with a lowercase letter and contain only letters, numbers, or underscores");
+        if (keys.has(field.key)) throw new Error("Custom field keys must be unique");
+        keys.add(field.key);
+        if (typeof field.label !== "string" || !field.label.trim() || field.label.trim().length > 80) throw new Error("Every custom field needs a label of 80 characters or fewer");
+        if (!["text", "number", "boolean"].includes(field.type)) throw new Error("Custom fields must use text, number, or boolean types");
+        return { key: field.key, label: field.label.trim(), type: field.type, required: field.required === true };
+      });
+      const [created] = await db.insert(adminCategories).values({
+        entityType,
+        categoryKey,
+        name: name.trim(),
+        fields: normalizedFields,
+      }).returning();
+      res.status(201).json(created);
+    } catch (e: any) {
+      res.status(e.code === "23505" ? 409 : 400).json({ message: e.code === "23505" ? "This category already exists for that business type" : e.message });
+    }
+  });
+
+  app.delete("/api/admin/categories/:id", adminMiddleware, async (req, res) => {
+    try {
+      const [deleted] = await db.delete(adminCategories).where(eq(adminCategories.id, req.params.id)).returning({ id: adminCategories.id });
+      if (!deleted) return res.status(404).json({ message: "Category not found" });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   app.put("/api/admin/businesses/:id", adminMiddleware, async (req, res) => {
     try {
       const business = await storage.getBusinessById(req.params.id);
       if (!business) return res.status(404).json({ message: "Business not found" });
       const body = req.body || {};
-      const editableFields = new Set(["name", "description", "phone", "whatsapp", "address", "city", "subcategory", "website", "logo", "banner", "latitude", "longitude", "carBrands"]);
+      const editableFields = new Set(["name", "category", "description", "phone", "whatsapp", "address", "city", "subcategory", "website", "logo", "banner", "latitude", "longitude", "carBrands", "customFields"]);
       const submittedFields = Object.fromEntries(Object.entries(body).filter(([key]) => editableFields.has(key)));
       if (typeof submittedFields.name === "string" && !submittedFields.name.trim()) return res.status(400).json({ message: "Business name cannot be empty" });
       if (typeof submittedFields.phone === "string" && !submittedFields.phone.trim()) return res.status(400).json({ message: "Business phone cannot be empty" });
       const parsed = insertBusinessSchema.partial().parse(submittedFields);
+      if (parsed.customFields !== undefined) {
+        parsed.customFields = await validateConfiguredFields(
+          "business",
+          String(parsed.category ?? business.category),
+          parsed.subcategory ?? business.subcategory,
+          parsed.customFields,
+        );
+      }
       let ownerId: string | undefined;
       if (typeof body.ownerId === "string" && body.ownerId.trim()) {
         const owner = await storage.getUserById(body.ownerId.trim());
@@ -1049,6 +1128,40 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (Object.keys(parsed).length === 0 && !ownerId) return res.json(business);
       const updated = await storage.updateBusiness(business.id, { ...parsed, ...(ownerId ? { ownerId } : {}) } as any);
       res.json(updated);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/businesses", adminMiddleware, async (req, res) => {
+    try {
+      const body = req.body || {};
+      const owner = typeof body.ownerId === "string" ? await storage.getUserById(body.ownerId) : undefined;
+      if (!owner || owner.role !== "owner") return res.status(400).json({ message: "Choose an existing business-owner account" });
+      if (await storage.getBusinessByOwnerId(owner.id)) return res.status(409).json({ message: "This account already manages a business" });
+      const parsed = insertBusinessSchema.parse({
+        ...Object.fromEntries(Object.entries(body).filter(([key]) => key !== "status")),
+        ownerId: owner.id,
+      });
+      parsed.customFields = await validateConfiguredFields("business", parsed.category, parsed.subcategory, parsed.customFields);
+      const status = body.status === "approved" || body.status === "rejected" ? body.status : "pending";
+      const created = await storage.createBusiness({ ...parsed, status });
+      res.status(201).json(created);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/admin/users/:id/password", adminMiddleware, async (req, res) => {
+    try {
+      const account = await storage.getUserById(req.params.id);
+      if (!account || account.role !== "owner") return res.status(404).json({ message: "Business-owner account not found" });
+      const password = req.body?.password;
+      if (typeof password !== "string" || password.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      }
+      await storage.updateUser(account.id, { password: await bcrypt.hash(password, 10) });
+      res.json({ success: true });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
@@ -1171,22 +1284,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const body = req.body || {};
       let item;
       if (type === "car") {
-        const editable = new Set(["title", "brand", "model", "year", "price", "mileage", "fuelType", "transmission", "condition", "description", "images", "location"]);
+        const editable = new Set(["title", "brand", "model", "year", "price", "mileage", "fuelType", "transmission", "condition", "description", "images", "location", "customFields"]);
         const fields = insertCarSchema.partial().parse(Object.fromEntries(Object.entries(body).filter(([key]) => editable.has(key))));
         if (Object.keys(fields).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
         item = await storage.updateCar(id, fields);
       } else if (type === "part") {
-        const editable = new Set(["partName", "carBrand", "carModel", "year", "condition", "price", "description", "image"]);
+        const editable = new Set(["partName", "carBrand", "carModel", "year", "condition", "price", "description", "image", "customFields"]);
         const fields = insertSparePartSchema.partial().parse(Object.fromEntries(Object.entries(body).filter(([key]) => editable.has(key))));
         if (Object.keys(fields).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
         item = await storage.updateSparePart(id, fields);
       } else if (type === "garage_service") {
-        const editable = new Set(["name", "description", "price"]);
+        const editable = new Set(["name", "description", "price", "customFields"]);
         const fields = insertGarageServiceSchema.partial().parse(Object.fromEntries(Object.entries(body).filter(([key]) => editable.has(key))));
         if (Object.keys(fields).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
         item = await storage.updateGarageService(id, fields);
       } else if (type === "support_service") {
-        const editable = new Set(["name", "description", "startingPrice"]);
+        const editable = new Set(["name", "description", "startingPrice", "customFields"]);
         const fields = insertSupportServiceSchema.partial().parse(Object.fromEntries(Object.entries(body).filter(([key]) => editable.has(key))));
         if (Object.keys(fields).length === 0) return res.status(400).json({ message: "Provide at least one editable field" });
         item = await storage.updateSupportService(id, fields);
@@ -1195,6 +1308,42 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       if (!item) return res.status(404).json({ message: "Catalog item not found" });
       res.json(item);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/catalog/:type", adminMiddleware, async (req, res) => {
+    try {
+      const { type } = req.params;
+      const body = req.body || {};
+      const businessId = body.businessId;
+      if (typeof businessId !== "string" || !businessId) return res.status(400).json({ message: "Choose a business" });
+      const business = await storage.getBusinessById(businessId);
+      if (!business) return res.status(404).json({ message: "Business not found" });
+      const categoryName = body.customFields && typeof body.customFields === "object" ? body.customFields.category : undefined;
+      const customFields = await validateConfiguredFields(type, business.category, categoryName, body.customFields ?? {});
+      let created;
+      if (type === "car" && business.category === "car_dealer") {
+        const fields = insertCarSchema.parse({ ...body, customFields, dealerId: business.id, featured: false, suspended: false });
+        const result = await createCarIfNotDuplicate(fields);
+        if (result.duplicate) return res.status(409).json({ message: "An identical car listing already exists" });
+        created = result.record;
+      } else if (type === "part" && business.category === "spare_parts") {
+        const fields = insertSparePartSchema.parse({ ...body, customFields, businessId: business.id, featured: false, suspended: false });
+        const result = await createSparePartIfNotDuplicate(fields);
+        if (result.duplicate) return res.status(409).json({ message: "An identical spare-part listing already exists" });
+        created = result.record;
+      } else if (type === "garage_service" && business.category === "garage") {
+        const fields = insertGarageServiceSchema.parse({ ...body, customFields, garageId: business.id, featured: false, suspended: false });
+        created = await storage.createGarageService(fields);
+      } else if (type === "support_service" && ["insurance", "car_wash", "other"].includes(business.category)) {
+        const fields = insertSupportServiceSchema.parse({ ...body, customFields, businessId: business.id, featured: false, suspended: false });
+        created = await storage.createSupportService(fields);
+      } else {
+        return res.status(400).json({ message: "This listing type is not available for the selected business" });
+      }
+      res.status(201).json(created);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
