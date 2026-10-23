@@ -188,7 +188,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       eq(adminCategories.name, categoryName.trim()),
     )).limit(1);
     if (!template) return rawValues;
-    const normalized: Record<string, unknown> = entityType === "business" ? {} : { category: template.name };
+    const normalized: Record<string, unknown> = { ...rawValues, ...(entityType === "business" ? {} : { category: template.name }) };
     for (const field of template.fields) {
       const value = rawValues[field.key];
       if (field.required && (value === undefined || value === null || value === "")) throw new Error(`${field.label} is required`);
@@ -886,7 +886,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: biz.id,
           type: "business",
           name: biz.name,
-          subtitle: `${biz.category.replace(/_/g, " ")} Â· ${biz.city}`,
+          subtitle: `${biz.category.replace(/_/g, " ")} | ${biz.city}`,
           featured: !!biz.featured,
           status: biz.status,
           suspended: !!biz.suspended,
@@ -895,7 +895,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: car.id,
           type: "car",
           name: car.title,
-          subtitle: `${car.brand} ${car.model} Â· ${car.dealerName}`,
+          subtitle: `${car.brand} ${car.model} | ${car.dealerName}`,
           featured: !!car.featured,
           suspended: !!car.suspended,
           description: car.description,
@@ -905,7 +905,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: service.id,
           type: "garage_service",
           name: service.name,
-          subtitle: `Garage service Â· ${service.garageName}`,
+          subtitle: `Garage service | ${service.garageName}`,
           featured: !!service.featured,
           suspended: !!service.suspended,
           description: service.description,
@@ -915,7 +915,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: part.id,
           type: "part",
           name: part.partName,
-          subtitle: `Spare part Â· ${businessNames.get(part.businessId) || "Business"}`,
+          subtitle: `Spare part | ${businessNames.get(part.businessId) || "Business"}`,
           featured: !!part.featured,
           suspended: !!part.suspended,
           description: part.description,
@@ -925,7 +925,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: service.id,
           type: "support_service",
           name: service.name,
-          subtitle: `Automotive support Â· ${businessNames.get(service.businessId) || "Business"}`,
+          subtitle: `Automotive support | ${businessNames.get(service.businessId) || "Business"}`,
           featured: !!service.featured,
           suspended: !!service.suspended,
           description: service.description,

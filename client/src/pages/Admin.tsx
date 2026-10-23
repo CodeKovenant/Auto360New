@@ -239,6 +239,59 @@ function addMonths(date: Date, months: number) {
   return target;
 }
 
+function CustomFieldsManager({
+  fields,
+  excludeKeys = [],
+  onChange,
+}: {
+  fields: Record<string, unknown>;
+  excludeKeys?: string[];
+  onChange: (fields: Record<string, unknown>) => void;
+}) {
+  const [newKey, setNewKey] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const visibleFields = Object.entries(fields).filter(([key]) => !excludeKeys.includes(key));
+
+  function renameField(oldKey: string, nextKey: string) {
+    const normalized = nextKey.trim();
+    if (!/^[a-z][a-zA-Z0-9_]{0,39}$/.test(normalized) || (normalized in fields && normalized !== oldKey)) return;
+    const nextFields = { ...fields };
+    const value = nextFields[oldKey];
+    delete nextFields[oldKey];
+    nextFields[normalized] = value;
+    onChange(nextFields);
+  }
+
+  function addField() {
+    const key = newKey.trim();
+    if (!/^[a-z][a-zA-Z0-9_]{0,39}$/.test(key) || key in fields || excludeKeys.includes(key)) return;
+    onChange({ ...fields, [key]: newValue });
+    setNewKey("");
+    setNewValue("");
+  }
+
+  return (
+    <section className="space-y-3 rounded-md border p-3 sm:col-span-2" aria-label="Additional custom fields">
+      <div>
+        <h3 className="text-sm font-semibold">Additional fields</h3>
+        <p className="text-xs text-muted-foreground">Add, edit, rename, or remove custom values for this record.</p>
+      </div>
+      {visibleFields.map(([key, value]) => (
+        <div key={key} className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_auto]">
+          <label className="space-y-1"><span className="text-xs font-medium">Field key</span><Input value={key} onChange={event => renameField(key, event.target.value)} /></label>
+          <label className="space-y-1"><span className="text-xs font-medium">Value</span><Input value={String(value ?? "")} onChange={event => onChange({ ...fields, [key]: event.target.value })} /></label>
+          <Button type="button" size="icon" variant="ghost" className="text-red-600" aria-label={`Delete custom field ${key}`} onClick={() => { const nextFields = { ...fields }; delete nextFields[key]; onChange(nextFields); }}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_auto]">
+        <label className="space-y-1"><span className="text-xs font-medium">New field key</span><Input value={newKey} onChange={event => setNewKey(event.target.value)} placeholder="e.g. warrantyPeriod" /></label>
+        <label className="space-y-1"><span className="text-xs font-medium">New value</span><Input value={newValue} onChange={event => setNewValue(event.target.value)} /></label>
+        <Button type="button" size="sm" variant="outline" disabled={!/^[a-z][a-zA-Z0-9_]{0,39}$/.test(newKey.trim()) || newKey.trim() in fields || excludeKeys.includes(newKey.trim())} onClick={addField}><Plus className="mr-1 h-4 w-4" />Add field</Button>
+      </div>
+    </section>
+  );
+}
+
 function BusinessCard({
   biz,
   actions,
@@ -2435,6 +2488,11 @@ export default function Admin() {
               <div className="space-y-4">
                 {matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).length > 0 && <label className="block space-y-1"><span className="text-xs font-medium">Configured category</span><select value={catalogCreateForm.categoryTemplateId} onChange={event => { const template = matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).find(category => category.id === event.target.value); setCatalogCreateForm(form => form ? { ...form, categoryTemplateId: event.target.value, customFields: template ? { category: template.name } : {} } : form); }} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="">No configured category</option>{matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>}
                 {matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).find(category => category.id === catalogCreateForm.categoryTemplateId)?.fields.map(field => <label key={field.key} className="block space-y-1"><span className="text-xs font-medium">{field.label}{field.required ? " *" : ""}</span>{field.type === "boolean" ? <select value={String(catalogCreateForm.customFields[field.key] ?? "")} onChange={event => setCatalogCreateForm(form => form ? updateCustomField(form, field, event.target.value) : form)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="">Choose</option><option value="true">Yes</option><option value="false">No</option></select> : <Input type={field.type === "number" ? "number" : "text"} value={String(catalogCreateForm.customFields[field.key] ?? "")} onChange={event => setCatalogCreateForm(form => form ? updateCustomField(form, field, event.target.value) : form)} />}</label>)}
+                <CustomFieldsManager
+                  fields={catalogCreateForm.customFields}
+                  excludeKeys={["category", ...(matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).find(category => category.id === catalogCreateForm.categoryTemplateId)?.fields.map(field => field.key) || [])]}
+                  onChange={customFields => setCatalogCreateForm(form => form ? { ...form, customFields } : form)}
+                />
                 {catalogCreateForm.type === "car" && <>
                   <label className="block space-y-1"><span className="text-xs font-medium">Listing title</span><Input value={catalogCreateForm.title} onChange={event => setCatalogCreateForm(form => form ? { ...form, title: event.target.value } : form)} /></label>
                   <div className="grid grid-cols-2 gap-3">
@@ -2516,6 +2574,11 @@ export default function Admin() {
                     <Input value={businessEditForm.carBrands} onChange={event => setBusinessEditForm(form => form ? { ...form, carBrands: event.target.value } : form)} />
                   </label>
                   {matchingCategories("business", businessEditForm.category).find(category => category.id === businessEditForm.categoryTemplateId)?.fields.map(field => <label key={field.key} className="space-y-1"><span className="text-xs font-medium">{field.label}{field.required ? " *" : ""}</span>{field.type === "boolean" ? <select value={String(businessEditForm.customFields[field.key] ?? "")} onChange={event => setBusinessEditForm(form => form ? updateCustomField(form, field, event.target.value) : form)} className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"><option value="">Choose</option><option value="true">Yes</option><option value="false">No</option></select> : <Input type={field.type === "number" ? "number" : "text"} value={String(businessEditForm.customFields[field.key] ?? "")} onChange={event => setBusinessEditForm(form => form ? updateCustomField(form, field, event.target.value) : form)} />}</label>)}
+                  <CustomFieldsManager
+                    fields={businessEditForm.customFields}
+                    excludeKeys={["category", ...(matchingCategories("business", businessEditForm.category).find(category => category.id === businessEditForm.categoryTemplateId)?.fields.map(field => field.key) || [])]}
+                    onChange={customFields => setBusinessEditForm(form => form ? { ...form, customFields } : form)}
+                  />
                   <label className="space-y-1 sm:col-span-2">
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Assign to an existing business-owner account</span>
                     <select value={businessEditForm.ownerId} onChange={event => setBusinessEditForm(form => form ? { ...form, ownerId: event.target.value } : form)} className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm">
