@@ -252,6 +252,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.post("/api/upload/listing-image", authMiddleware, partImageUpload.single("image"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const url = await saveUploadedFile(req.file, "gallery", "listing");
+      res.json({ url });
+    } catch (e: any) {
+      console.error("[uploads] listing image persistence failed:", e.message);
+      res.status(500).json({ message: "Could not store listing image" });
+    }
+  });
+
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -1323,14 +1334,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!business) return res.status(404).json({ message: "Business not found" });
       const categoryName = body.customFields && typeof body.customFields === "object" ? body.customFields.category : undefined;
       const customFields = await validateConfiguredFields(type, business.category, categoryName, body.customFields ?? {});
+      const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl.trim() : "";
       let created;
       if (type === "car" && business.category === "car_dealer") {
-        const fields = insertCarSchema.parse({ ...body, customFields, dealerId: business.id, featured: false, suspended: false });
+        const fields = insertCarSchema.parse({ ...body, images: imageUrl ? [imageUrl] : body.images, customFields, dealerId: business.id, featured: false, suspended: false });
         const result = await createCarIfNotDuplicate(fields);
         if (result.duplicate) return res.status(409).json({ message: "An identical car listing already exists" });
         created = result.record;
       } else if (type === "part" && business.category === "spare_parts") {
-        const fields = insertSparePartSchema.parse({ ...body, customFields, businessId: business.id, featured: false, suspended: false });
+        const fields = insertSparePartSchema.parse({ ...body, image: imageUrl || body.image, customFields, businessId: business.id, featured: false, suspended: false });
         const result = await createSparePartIfNotDuplicate(fields);
         if (result.duplicate) return res.status(409).json({ message: "An identical spare-part listing already exists" });
         created = result.record;
@@ -1342,6 +1354,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         created = await storage.createSupportService(fields);
       } else {
         return res.status(400).json({ message: "This listing type is not available for the selected business" });
+      }
+      if (imageUrl && (type === "garage_service" || type === "support_service")) {
+        await storage.addGalleryImage({ entityType: type, entityId: created.id, url: imageUrl, caption: null });
       }
       res.status(201).json(created);
     } catch (e: any) {
@@ -1737,6 +1752,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         popular: false,
       });
       const svc = await storage.createGarageService(body);
+      if (typeof req.body?.imageUrl === "string" && req.body.imageUrl.trim()) {
+        await storage.addGalleryImage({ entityType: "garage_service", entityId: svc.id, url: req.body.imageUrl.trim(), caption: null });
+      }
       res.json(svc);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -1805,6 +1823,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         suspended: false,
       });
       const svc = await storage.createSupportService(body);
+      if (typeof req.body?.imageUrl === "string" && req.body.imageUrl.trim()) {
+        await storage.addGalleryImage({ entityType: "support_service", entityId: svc.id, url: req.body.imageUrl.trim(), caption: null });
+      }
       res.json(svc);
     } catch (e: any) {
       res.status(400).json({ message: e.message });

@@ -24,8 +24,15 @@ export default function LogoUpload({ value, onChange, kind = "logo" }: LogoUploa
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Choose an image", description: "Upload a JPG, PNG, GIF, WebP, or another supported image file.", variant: "destructive" });
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "File too large", description: `${label} must be under 5 MB.`, variant: "destructive" });
+      toast({ title: "File too large", description: `${label} must be 5 MB or smaller.`, variant: "destructive" });
+      if (fileRef.current) fileRef.current.value = "";
       return;
     }
 
@@ -120,7 +127,13 @@ export default function LogoUpload({ value, onChange, kind = "logo" }: LogoUploa
             Remove
           </Button>
         )}
-        <p className="text-xs text-muted-foreground">JPG, PNG, GIF up to 5 MB</p>
+        {isBanner ? (
+          <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
+            Use a wide landscape image, ideally at least 1600 x 600 px. The profile header crops the image to fill, so keep the main subject near the center. Image files up to 5 MB.
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">Image files up to 5 MB</p>
+        )}
       </div>
     </div>
   );

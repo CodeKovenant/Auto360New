@@ -157,7 +157,7 @@ export default function Businesses() {
             {otherBusinesses.length > 0 ? (
               <>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Other listings</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                   {otherBusinesses.map(biz => (
                     <BusinessCard key={biz.id} business={biz} />
                   ))}

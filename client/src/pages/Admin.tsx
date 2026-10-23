@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import StarRating from "@/components/StarRating";
+import ListingImageUpload from "@/components/ListingImageUpload";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -84,7 +85,7 @@ interface AdminCatalogCreateForm {
   businessId: string; type: "car" | "part" | "garage_service" | "support_service";
   title: string; brand: string; model: string; year: string; price: string; location: string;
   partName: string; carBrand: string; carModel: string; condition: string;
-  name: string; description: string; categoryTemplateId: string; customFields: Record<string, unknown>;
+  name: string; description: string; categoryTemplateId: string; customFields: Record<string, unknown>; imageUrl: string;
 }
 
 type AdminCategoryField = { key: string; label: string; type: "text" | "number" | "boolean"; required: boolean };
@@ -391,6 +392,7 @@ export default function Admin() {
   const [businessCreateForm, setBusinessCreateForm] = useState<AdminBusinessCreateForm | null>(null);
   const [catalogCreateBusiness, setCatalogCreateBusiness] = useState<EnrichedBusiness | null>(null);
   const [catalogCreateForm, setCatalogCreateForm] = useState<AdminCatalogCreateForm | null>(null);
+  const [catalogImageUploading, setCatalogImageUploading] = useState(false);
   const [passwordResetUser, setPasswordResetUser] = useState<{ id: string; name: string; email: string } | null>(null);
   const [passwordResetValue, setPasswordResetValue] = useState("");
   const [categoryEntityType, setCategoryEntityType] = useState("business");
@@ -446,6 +448,7 @@ export default function Admin() {
   const { data: featuredItems, isLoading: featuredItemsLoading } = useQuery<FeaturedItem[]>({
     queryKey: ["/api/admin/featured"],
   });
+  const featuredBusinessCount = featuredItems?.filter(item => item.type === "business").length ?? 0;
   const { data: featureRequests = [] } = useQuery<AdminFeatureRequest[]>({
     queryKey: ["/api/admin/feature-requests"],
   });
@@ -711,7 +714,7 @@ export default function Admin() {
 
   const createCatalogItemMutation = useMutation({
     mutationFn: async ({ form, business }: { form: AdminCatalogCreateForm; business: EnrichedBusiness }) => {
-      const fields: Record<string, unknown> = { businessId: business.id, description: form.description.trim() || null, customFields: form.customFields };
+      const fields: Record<string, unknown> = { businessId: business.id, description: form.description.trim() || null, customFields: form.customFields, imageUrl: form.imageUrl };
       if (form.type === "car") Object.assign(fields, { title: form.title.trim(), brand: form.brand.trim(), model: form.model.trim(), year: Number(form.year), price: form.price, location: form.location.trim() });
       if (form.type === "part") Object.assign(fields, { partName: form.partName.trim(), carBrand: form.carBrand.trim(), carModel: form.carModel.trim(), year: form.year || null, condition: form.condition, price: form.price || null });
       if (form.type === "garage_service") Object.assign(fields, { name: form.name.trim(), price: form.price || null });
@@ -967,7 +970,7 @@ export default function Admin() {
     setCatalogCreateBusiness(biz);
     setCatalogCreateForm({
       businessId: biz.id, type, title: "", brand: "", model: "", year: "", price: "", location: biz.city,
-      partName: "", carBrand: "", carModel: "", condition: "new", name: "", description: "", categoryTemplateId: "", customFields: {},
+      partName: "", carBrand: "", carModel: "", condition: "new", name: "", description: "", categoryTemplateId: "", customFields: {}, imageUrl: "",
     });
   }
 
@@ -1142,7 +1145,7 @@ export default function Admin() {
               Approved ({stats.approved})
             </TabsTrigger>
             <TabsTrigger value="featured" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-featured">
-              Site-wide Featured {featureRequests.length > 0 && <Badge className="ml-1 bg-red-600 text-white group-data-[state=active]:bg-white group-data-[state=active]:text-red-600">{featureRequests.length}</Badge>}
+              Normal Feature ({featuredBusinessCount})
             </TabsTrigger>
             <TabsTrigger value="homepage-premium" className={ADMIN_TAB_TRIGGER_CLASS} data-testid="admin-tab-homepage-premium">
               Homepage Premium ({approved.filter(biz => biz.premium).length})
@@ -2212,10 +2215,11 @@ export default function Admin() {
                   <label className="block space-y-1"><span className="text-xs font-medium">Service name</span><Input value={catalogCreateForm.name} onChange={event => setCatalogCreateForm(form => form ? { ...form, name: event.target.value } : form)} /></label>
                   <label className="block space-y-1"><span className="text-xs font-medium">{catalogCreateForm.type === "support_service" ? "Starting price" : "Price"}</span><Input value={catalogCreateForm.price} onChange={event => setCatalogCreateForm(form => form ? { ...form, price: event.target.value } : form)} /></label>
                 </>}
+                <ListingImageUpload label={catalogCreateForm.type === "car" ? "Car image" : catalogCreateForm.type === "part" ? "Product image" : "Service image"} value={catalogCreateForm.imageUrl} onChange={imageUrl => setCatalogCreateForm(form => form ? { ...form, imageUrl } : form)} onUploadingChange={setCatalogImageUploading} />
                 <label className="block space-y-1"><span className="text-xs font-medium">Description</span><Textarea rows={3} value={catalogCreateForm.description} onChange={event => setCatalogCreateForm(form => form ? { ...form, description: event.target.value } : form)} /></label>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => { setCatalogCreateBusiness(null); setCatalogCreateForm(null); }}>Cancel</Button>
-                  <Button className="bg-red-600 text-white" disabled={createCatalogItemMutation.isPending || (catalogCreateForm.type === "car" && (!catalogCreateForm.title.trim() || !catalogCreateForm.brand.trim() || !catalogCreateForm.model.trim() || !catalogCreateForm.year || !catalogCreateForm.price.trim() || !catalogCreateForm.location.trim())) || (catalogCreateForm.type === "part" && (!catalogCreateForm.partName.trim() || !catalogCreateForm.carBrand.trim() || !catalogCreateForm.carModel.trim())) || (["garage_service", "support_service"].includes(catalogCreateForm.type) && !catalogCreateForm.name.trim()) || hasMissingRequiredFields(matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).find(category => category.id === catalogCreateForm.categoryTemplateId)?.fields || [], catalogCreateForm.customFields)} onClick={() => createCatalogItemMutation.mutate({ form: catalogCreateForm, business: catalogCreateBusiness })}>
+                  <Button className="bg-red-600 text-white" disabled={createCatalogItemMutation.isPending || catalogImageUploading || (catalogCreateForm.type === "car" && (!catalogCreateForm.title.trim() || !catalogCreateForm.brand.trim() || !catalogCreateForm.model.trim() || !catalogCreateForm.year || !catalogCreateForm.price.trim() || !catalogCreateForm.location.trim())) || (catalogCreateForm.type === "part" && (!catalogCreateForm.partName.trim() || !catalogCreateForm.carBrand.trim() || !catalogCreateForm.carModel.trim())) || (["garage_service", "support_service"].includes(catalogCreateForm.type) && !catalogCreateForm.name.trim()) || hasMissingRequiredFields(matchingCategories(catalogCreateForm.type, catalogCreateBusiness.category).find(category => category.id === catalogCreateForm.categoryTemplateId)?.fields || [], catalogCreateForm.customFields)} onClick={() => createCatalogItemMutation.mutate({ form: catalogCreateForm, business: catalogCreateBusiness })}>
                     {createCatalogItemMutation.isPending ? "Adding..." : "Add listing"}
                   </Button>
                 </DialogFooter>

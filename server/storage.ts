@@ -365,7 +365,7 @@ export class DatabaseStorage implements IStorage {
         )!
       );
     }
-    const bizList = await db.select().from(businesses).where(and(...conditions)).orderBy(desc(businesses.featured), desc(businesses.createdAt));
+    const bizList = await db.select().from(businesses).where(and(...conditions)).orderBy(desc(businesses.featured), sql`RANDOM()`);
     const bizWithRatings = await Promise.all(
       bizList.map(async (biz) => {
         const { avgRating, reviewCount } = await this.getAvgRating(biz.id);
@@ -400,7 +400,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(businesses)
       .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.featured, true)))
-      .orderBy(desc(businesses.createdAt))
+      .orderBy(sql`RANDOM()`)
       .limit(6);
     const ratedBusinesses = await Promise.all(
       bizList.map(async (biz) => {
@@ -421,7 +421,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(businesses)
         .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.featured, true), eq(businesses.category, category)))
-        .orderBy(desc(businesses.createdAt))
+        .orderBy(sql`RANDOM()`)
         .limit(cap);
       const ratedBusinesses = await Promise.all(
         categoryBusinesses.map(async (biz) => {
@@ -512,7 +512,7 @@ export class DatabaseStorage implements IStorage {
     if (!business) return [];
     const conditions = [eq(spareParts.businessId, businessId)];
     if (!includeSuspended) conditions.push(eq(spareParts.suspended, false));
-    const parts = await db.select().from(spareParts).where(and(...conditions)).orderBy(desc(spareParts.featured), desc(spareParts.createdAt));
+    const parts = await db.select().from(spareParts).where(and(...conditions)).orderBy(desc(spareParts.featured), sql`RANDOM()`);
     return this.addFirstGalleryImages(parts, "spare_part");
   }
 
@@ -579,7 +579,7 @@ export class DatabaseStorage implements IStorage {
       .from(spareParts)
       .innerJoin(businesses, eq(spareParts.businessId, businesses.id))
       .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "spare_parts"), eq(spareParts.suspended, false), eq(spareParts.featured, true)))
-      .orderBy(desc(spareParts.createdAt));
+      .orderBy(sql`RANDOM()`);
     return this.addFirstGalleryImages(parts, "spare_part");
   }
   async createSparePart(part: InsertSparePart) {
@@ -665,7 +665,7 @@ export class DatabaseStorage implements IStorage {
 
     const carList = await db.select().from(cars)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(sql`CASE WHEN ${cars.featured} IS TRUE THEN 1 ELSE 0 END`), desc(cars.createdAt));
+      .orderBy(desc(sql`CASE WHEN ${cars.featured} IS TRUE THEN 1 ELSE 0 END`), sql`RANDOM()`);
 
     const filtered = carList.filter(c => dealerIds.includes(c.dealerId));
     return this.addFirstGalleryImages(await Promise.all(filtered.map(c => this.enrichCar(c))), "car");
@@ -675,7 +675,7 @@ export class DatabaseStorage implements IStorage {
     const approvedDealers = await db.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(businesses.category, "car_dealer")));
     const dealerIds = approvedDealers.map(d => d.id);
     if (dealerIds.length === 0) return [];
-    const carList = await db.select().from(cars).where(and(eq(cars.featured, true), eq(cars.suspended, false))).orderBy(desc(cars.createdAt));
+    const carList = await db.select().from(cars).where(and(eq(cars.featured, true), eq(cars.suspended, false))).orderBy(sql`RANDOM()`);
     const filtered = carList.filter(c => dealerIds.includes(c.dealerId));
     return this.addFirstGalleryImages(await Promise.all(filtered.map(c => this.enrichCar(c))), "car");
   }
@@ -692,7 +692,7 @@ export class DatabaseStorage implements IStorage {
   async getCarsByDealerId(dealerId: string) {
     return db.select().from(cars)
       .where(and(eq(cars.dealerId, dealerId), eq(cars.suspended, false)))
-      .orderBy(desc(sql`CASE WHEN ${cars.featured} IS TRUE THEN 1 ELSE 0 END`), desc(cars.createdAt));
+      .orderBy(desc(sql`CASE WHEN ${cars.featured} IS TRUE THEN 1 ELSE 0 END`), sql`RANDOM()`);
   }
 
   async getOwnerDashboardCarsByDealerId(dealerId: string) {
@@ -739,7 +739,7 @@ export class DatabaseStorage implements IStorage {
     if (!filters?.includeSuspended) conditions.push(eq(garageServices.suspended, false));
     const svcList = await db.select().from(garageServices)
       .where(and(...conditions))
-      .orderBy(desc(garageServices.featured), desc(garageServices.createdAt));
+      .orderBy(desc(garageServices.featured), sql`RANDOM()`);
 
     const filtered = svcList.filter(s => garageIds.includes(s.garageId));
     const enriched = await Promise.all(filtered.map(s => this.enrichService(s)));
@@ -754,10 +754,10 @@ export class DatabaseStorage implements IStorage {
     const garageIds = approvedGarages.map(g => g.id);
     if (garageIds.length === 0) return [];
 
-    const svcList = await db.select().from(garageServices).where(and(eq(garageServices.popular, true), eq(garageServices.suspended, false))).orderBy(desc(garageServices.createdAt)).limit(6);
+    const svcList = await db.select().from(garageServices).where(and(eq(garageServices.popular, true), eq(garageServices.suspended, false))).orderBy(sql`RANDOM()`).limit(6);
     let filtered = svcList.filter(s => garageIds.includes(s.garageId));
     if (filtered.length < 3) {
-      const all = await db.select().from(garageServices).where(eq(garageServices.suspended, false)).orderBy(desc(garageServices.createdAt)).limit(6);
+      const all = await db.select().from(garageServices).where(eq(garageServices.suspended, false)).orderBy(sql`RANDOM()`).limit(6);
       filtered = all.filter(s => garageIds.includes(s.garageId)).slice(0, 6);
     }
     return this.addFirstGalleryImages(await Promise.all(filtered.map(s => this.enrichService(s))), "garage_service");
@@ -770,7 +770,7 @@ export class DatabaseStorage implements IStorage {
 
     const featuredServices = await db.select().from(garageServices)
       .where(and(inArray(garageServices.garageId, garageIds), eq(garageServices.suspended, false), eq(garageServices.featured, true)))
-      .orderBy(desc(garageServices.createdAt));
+      .orderBy(sql`RANDOM()`);
     return this.addFirstGalleryImages(await Promise.all(featuredServices.map(service => this.enrichService(service))), "garage_service");
   }
 
@@ -794,7 +794,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getGarageServicesByGarageId(garageId: string) {
-    return db.select().from(garageServices).where(eq(garageServices.garageId, garageId)).orderBy(desc(garageServices.featured), desc(garageServices.createdAt));
+    return db.select().from(garageServices).where(eq(garageServices.garageId, garageId)).orderBy(desc(garageServices.featured), sql`RANDOM()`);
   }
 
   async getOwnerDashboardGarageServicesByGarageId(garageId: string) {
@@ -830,7 +830,7 @@ export class DatabaseStorage implements IStorage {
     if (!business) return [];
     const conditions = [eq(supportServices.businessId, businessId)];
     if (!includeSuspended) conditions.push(eq(supportServices.suspended, false));
-    const services = await db.select().from(supportServices).where(and(...conditions)).orderBy(desc(supportServices.featured), desc(supportServices.createdAt));
+    const services = await db.select().from(supportServices).where(and(...conditions)).orderBy(desc(supportServices.featured), sql`RANDOM()`);
     return this.addFirstGalleryImages(services, "support_service");
   }
 
@@ -890,7 +890,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), inArray(businesses.category, ["insurance", "car_wash", "other"]), eq(supportServices.suspended, false), eq(supportServices.featured, true)))
       .orderBy(
         desc(sql`CASE WHEN ${businesses.subcategory} = 'vehicle_finance' OR ${supportServices.name} ILIKE '%loan%' OR ${supportServices.name} ILIKE '%financ%' OR COALESCE(${supportServices.description}, '') ILIKE '%loan%' OR COALESCE(${supportServices.description}, '') ILIKE '%financ%' THEN 1 ELSE 0 END`),
-        desc(supportServices.createdAt),
+        sql`RANDOM()`,
       );
     return this.addFirstGalleryImages(services, "support_service");
   }

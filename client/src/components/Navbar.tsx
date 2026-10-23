@@ -120,7 +120,7 @@ export default function Navbar() {
                     <Link href="/admin">
                       <Button variant="outline" size="sm" className="text-xs border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400" data-testid="nav-admin">
                         <Shield className="w-3.5 h-3.5 mr-1" />
-                        Admin
+                        Dashboard
                       </Button>
                     </Link>
                   ) : (

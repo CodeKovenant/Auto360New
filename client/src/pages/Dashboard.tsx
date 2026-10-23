@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import StarRating from "@/components/StarRating";
 import LogoUpload from "@/components/LogoUpload";
 import PartImageUpload from "@/components/PartImageUpload";
+import ListingImageUpload from "@/components/ListingImageUpload";
 import BusinessGallery from "@/components/BusinessGallery";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -83,6 +84,7 @@ export default function Dashboard() {
     entityType: "car" | "spare_part" | "garage_service" | "support_service";
     entityId: string;
   } | null>(null);
+  const [listingImageUploading, setListingImageUploading] = useState(false);
 
   // Spare parts state
   const [newPart, setNewPart] = useState({ partName: "", carBrand: "", carModel: "", year: "", condition: "new", price: "", description: "", image: "" });
@@ -90,7 +92,7 @@ export default function Dashboard() {
   const [editingPart, setEditingPart] = useState<OwnerDashboardPart | null>(null);
 
   // Support services state
-  const [newSupportService, setNewSupportService] = useState({ name: "", description: "", startingPrice: "" });
+  const [newSupportService, setNewSupportService] = useState({ name: "", description: "", startingPrice: "", imageUrl: "" });
   const [showAddSupportService, setShowAddSupportService] = useState(false);
   const [editingSupportService, setEditingSupportService] = useState<OwnerDashboardSupportService | null>(null);
 
@@ -102,7 +104,7 @@ export default function Dashboard() {
   // Service state
   const [showAddService, setShowAddService] = useState(false);
   const [editingService, setEditingService] = useState<OwnerDashboardGarageService | null>(null);
-  const [newService, setNewService] = useState({ name: "", description: "", price: "", popular: false });
+  const [newService, setNewService] = useState({ name: "", description: "", price: "", popular: false, imageUrl: "" });
 
   // Import modal state
   const [importModalType, setImportModalType] = useState<"cars" | "parts" | "services" | "support-services" | null>(null);
@@ -144,8 +146,8 @@ export default function Dashboard() {
   const addSupportServiceMutation = useMutation({
     mutationFn: async (): Promise<OwnerDashboardSupportService> => { const res = await apiRequest("POST", "/api/support-services", { ...newSupportService, businessId: data?.business.id }); return res.json(); },
     onSuccess: (service) => {
-      toast({ title: "Service added!", description: "Add photos to its gallery below." });
-      setNewSupportService({ name: "", description: "", startingPrice: "" });
+      toast({ title: "Service added!" });
+      setNewSupportService({ name: "", description: "", startingPrice: "", imageUrl: "" });
       setShowAddSupportService(false);
       setGalleryTarget({ entityType: "support_service", entityId: service.id });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
@@ -196,9 +198,9 @@ export default function Dashboard() {
   const addServiceMutation = useMutation({
     mutationFn: async (): Promise<OwnerDashboardGarageService> => { const res = await apiRequest("POST", "/api/services", newService); return res.json(); },
     onSuccess: (service) => {
-      toast({ title: "Service added!", description: "Add photos to its gallery below." });
+      toast({ title: "Service added!" });
       setShowAddService(false);
-      setNewService({ name: "", description: "", price: "", popular: false });
+      setNewService({ name: "", description: "", price: "", popular: false, imageUrl: "" });
       setGalleryTarget({ entityType: "garage_service", entityId: service.id });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
     },
@@ -544,8 +546,7 @@ export default function Dashboard() {
                         </Select>
                       </div>
                       <div className="sm:col-span-2">
-                        <Label className="text-xs">Image URLs (comma-separated)</Label>
-                        <Input value={newCar.images} onChange={e => setNewCar(p => ({ ...p, images: e.target.value }))} placeholder="https://... , https://..." className="mt-1" />
+                        <ListingImageUpload label="Car image" value={newCar.images.split(",")[0]?.trim() || ""} onChange={url => setNewCar(p => ({ ...p, images: url }))} onUploadingChange={setListingImageUploading} />
                       </div>
                       <div className="sm:col-span-2">
                         <Label className="text-xs">Description</Label>
@@ -553,7 +554,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex gap-2 mt-4">
-                      <Button onClick={() => addCarMutation.mutate()} disabled={addCarMutation.isPending || !newCar.title || !newCar.brand || !newCar.model || !newCar.price || !newCar.location} className="bg-red-600 text-white" data-testid="button-save-car">
+                      <Button onClick={() => addCarMutation.mutate()} disabled={addCarMutation.isPending || listingImageUploading || !newCar.title || !newCar.brand || !newCar.model || !newCar.price || !newCar.location} className="bg-red-600 text-white" data-testid="button-save-car">
                         {addCarMutation.isPending ? "Adding..." : "Add Car"}
                       </Button>
                       <Button variant="outline" onClick={() => setShowAddCar(false)}>Cancel</Button>
@@ -676,9 +677,10 @@ export default function Dashboard() {
                         <Label className="text-xs">Description</Label>
                         <Textarea value={newService.description} onChange={e => setNewService(p => ({ ...p, description: e.target.value }))} rows={2} className="mt-1" />
                       </div>
+                      <div className="sm:col-span-2"><ListingImageUpload label="Service image" value={newService.imageUrl} onChange={url => setNewService(p => ({ ...p, imageUrl: url }))} onUploadingChange={setListingImageUploading} /></div>
                     </div>
                     <div className="flex gap-2 mt-4">
-                      <Button onClick={() => addServiceMutation.mutate()} disabled={addServiceMutation.isPending || !newService.name} className="bg-orange-500 text-white" data-testid="button-save-service">
+                      <Button onClick={() => addServiceMutation.mutate()} disabled={addServiceMutation.isPending || listingImageUploading || !newService.name} className="bg-orange-500 text-white" data-testid="button-save-service">
                         {addServiceMutation.isPending ? "Adding..." : "Add Service"}
                       </Button>
                       <Button variant="outline" onClick={() => setShowAddService(false)}>Cancel</Button>
@@ -927,9 +929,10 @@ export default function Dashboard() {
                         <Label className="text-xs">Description</Label>
                         <Textarea value={newSupportService.description} onChange={e => setNewSupportService(p => ({ ...p, description: e.target.value }))} rows={2} className="mt-1" />
                       </div>
+                      <div className="sm:col-span-2"><ListingImageUpload label="Service image" value={newSupportService.imageUrl} onChange={url => setNewSupportService(p => ({ ...p, imageUrl: url }))} onUploadingChange={setListingImageUploading} /></div>
                     </div>
                     <div className="flex gap-2 mt-4">
-                      <Button onClick={() => addSupportServiceMutation.mutate()} disabled={addSupportServiceMutation.isPending || !newSupportService.name} className="bg-orange-500 text-white" data-testid="button-save-support-service">
+                      <Button onClick={() => addSupportServiceMutation.mutate()} disabled={addSupportServiceMutation.isPending || listingImageUploading || !newSupportService.name} className="bg-orange-500 text-white" data-testid="button-save-support-service">
                         {addSupportServiceMutation.isPending ? "Adding..." : "Add Service"}
                       </Button>
                       <Button variant="outline" onClick={() => setShowAddSupportService(false)}>Cancel</Button>
