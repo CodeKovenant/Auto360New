@@ -1144,6 +1144,27 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/admin/businesses/:id/catalog", adminMiddleware, async (req, res) => {
+    try {
+      const business = await storage.getBusinessById(req.params.id);
+      if (!business) return res.status(404).json({ message: "Business not found" });
+      const [cars, parts, garageServices, supportServices] = await Promise.all([
+        db.select().from(cars).where(eq(cars.dealerId, business.id)),
+        db.select().from(spareParts).where(eq(spareParts.businessId, business.id)),
+        db.select().from(garageServices).where(eq(garageServices.garageId, business.id)),
+        db.select().from(supportServices).where(eq(supportServices.businessId, business.id)),
+      ]);
+      res.json({
+        cars: cars.map(item => ({ id: item.id, type: "car", name: item.title, description: item.description, price: String(item.price), suspended: item.suspended, details: item })),
+        parts: parts.map(item => ({ id: item.id, type: "part", name: item.partName, description: item.description, price: item.price, suspended: item.suspended, details: item })),
+        garageServices: garageServices.map(item => ({ id: item.id, type: "garage_service", name: item.name, description: item.description, price: item.price, suspended: item.suspended, details: item })),
+        supportServices: supportServices.map(item => ({ id: item.id, type: "support_service", name: item.name, description: item.description, price: item.startingPrice, suspended: item.suspended, details: item })),
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.post("/api/admin/businesses", adminMiddleware, async (req, res) => {
     try {
       const body = req.body || {};
