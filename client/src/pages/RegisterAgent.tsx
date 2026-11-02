@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Eye, EyeOff, CheckCircle, IdCard, Camera, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, IdCard, Camera, ShieldCheck, Upload, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,46 @@ function normalizeKenyanPhone(value: string) {
 function isValidKenyanPhoneNumber(value: string) {
   const normalized = normalizeKenyanPhone(value);
   return /^\+254[1-9]\d{8}$/.test(normalized);
+}
+
+type UploadFieldProps = {
+  label: string;
+  description: string;
+  file: File | null;
+  onChange: (file: File | null) => void;
+  accept?: string;
+  icon: React.ReactNode;
+};
+
+function UploadField({ label, description, file, onChange, accept = "image/*", icon }: UploadFieldProps) {
+  return (
+    <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300">
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{label}</p>
+            <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+              {file ? file.name : description}
+            </p>
+          </div>
+        </div>
+
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-red-700">
+          <Upload className="h-4 w-4" />
+          {file ? "Replace" : "Upload"}
+          <input
+            type="file"
+            accept={accept}
+            className="sr-only"
+            onChange={event => onChange(event.target.files?.[0] || null)}
+          />
+        </label>
+      </div>
+    </div>
+  );
 }
 
 export default function RegisterAgent() {
@@ -164,14 +204,21 @@ export default function RegisterAgent() {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="rounded-md border border-dashed border-gray-300 p-3 dark:border-gray-700">
-                    <Label htmlFor="id-file">Upload ID document</Label>
-                    <Input id="id-file" type="file" accept="image/*" onChange={(e) => setIdDocument(e.target.files?.[0] || null)} className="mt-1.5 file:mr-3 file:rounded file:border-0 file:bg-red-600 file:text-white file:px-3 file:py-2" />
-                  </div>
-                  <div className="rounded-md border border-dashed border-gray-300 p-3 dark:border-gray-700">
-                    <Label htmlFor="photo-file">Upload passport photo</Label>
-                    <Input id="photo-file" type="file" accept="image/*" onChange={(e) => setPassportPhoto(e.target.files?.[0] || null)} className="mt-1.5 file:mr-3 file:rounded file:border-0 file:bg-red-600 file:text-white file:px-3 file:py-2" />
-                  </div>
+                  <UploadField
+                    label="ID document"
+                    description="Upload your national ID or passport image"
+                    file={idDocument}
+                    onChange={setIdDocument}
+                    icon={<FileText className="h-5 w-5" />}
+                  />
+
+                  <UploadField
+                    label="Passport photo"
+                    description="Upload a recent passport-size photo"
+                    file={passportPhoto}
+                    onChange={setPassportPhoto}
+                    icon={<Camera className="h-5 w-5" />}
+                  />
                 </div>
 
                 <div className="rounded-lg bg-green-50 border border-green-100 p-3 text-sm text-green-800 dark:bg-green-950/20 dark:border-green-800 dark:text-green-200">
