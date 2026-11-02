@@ -27,6 +27,7 @@ import AutoDealers from "@/pages/AutoDealers";
 import AutoSpares from "@/pages/AutoSpares";
 import SparePartDetail from "@/pages/SparePartDetail";
 import AutoGarages from "@/pages/AutoGarages";
+import Browse from "@/pages/Browse";
 import Terms from "@/pages/Terms";
 import NotFound from "@/pages/not-found";
 
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/autospares-dealers" component={AutoSpares} />
       <Route path="/autogarage-repair" component={AutoGarages} />
       <Route path="/businesses" component={Businesses} />
+      <Route path="/browse" component={Browse} />
       <Route path="/business/:id" component={BusinessProfile} />
       <Route path="/cars" component={Cars} />
       <Route path="/cars/:id" component={CarDetail} />
@@ -67,6 +69,7 @@ const PAGE_TITLES: [string, string][] = [
   ["/autospares-dealers", "Auto Spares Dealers"],
   ["/autogarage-repair", "Auto Garages"],
   ["/businesses", "Businesses"],
+  ["/browse", "Browse Listings"],
   ["/business/", "Business Profile"],
   ["/cars/", "Car Details"],
   ["/cars", "Cars"],
