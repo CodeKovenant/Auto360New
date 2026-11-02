@@ -91,6 +91,22 @@ function handleGalleryUpload(req: any, res: any, next: any) {
 
 const JWT_SECRET = process.env.SESSION_SECRET || (process.env.NODE_ENV === "production" ? "" : "autodirectory-secret-key");
 
+function normalizeKenyanPhone(value: unknown) {
+  if (typeof value !== "string") return "";
+  const digits = value.replace(/[^\d+]/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("+254")) return `+254${digits.slice(4)}`;
+  if (digits.startsWith("254")) return `+${digits}`;
+  if (digits.startsWith("0")) return `+254${digits.slice(1)}`;
+  if (digits.startsWith("+")) return digits;
+  return `+254${digits}`;
+}
+
+function isValidKenyanPhoneNumber(value: unknown) {
+  const normalized = normalizeKenyanPhone(value);
+  return /^\+254[1-9]\d{8}$/.test(normalized);
+}
+
 function authMiddleware(req: any, res: any, next: any) {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) return res.status(401).json({ message: "Unauthorized" });
@@ -266,8 +282,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
+      const rawPhone = typeof req.body?.phone === "string" ? req.body.phone : "";
+      const phone = normalizeKenyanPhone(rawPhone);
+      if (!phone || !isValidKenyanPhoneNumber(phone)) {
+        return res.status(400).json({ message: "Use a valid Kenyan phone number, e.g. +254 712 345 678." });
+      }
       const body = insertUserSchema.parse({
         ...pickFields(req.body, ["name", "email", "password"]),
+        phone,
         role: "owner",
       });
       body.email = body.email.trim().toLowerCase();
@@ -275,8 +297,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (existing) return res.status(400).json({ message: "Email already registered" });
       const hashed = await bcrypt.hash(body.password, 10);
       const user = await storage.createUser({ ...body, password: hashed });
-      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: "30d" });
-      res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
+      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, phone: user.phone, role: user.role }, JWT_SECRET, { expiresIn: "30d" });
+      res.json({ user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role }, token });
     } catch (e: any) {
       if (e.code === "23505") return res.status(409).json({ message: "Email already registered" });
       res.status(400).json({ message: e.message });
@@ -292,8 +314,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!user) return res.status(401).json({ message: "Invalid email or password" });
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) return res.status(401).json({ message: "Invalid email or password" });
-      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: "30d" });
-      res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role }, token });
+      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, phone: user.phone, role: user.role }, JWT_SECRET, { expiresIn: "30d" });
+      res.json({ user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role }, token });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
@@ -303,7 +325,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const user = await storage.getUserById(req.user.id);
       if (!user) return res.status(404).json({ message: "Account not found" });
-      res.json({ id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt });
+      res.json({ id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, createdAt: user.createdAt });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -314,14 +336,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const user = await storage.getUserById(req.user.id);
       if (!user) return res.status(404).json({ message: "Account not found" });
 
-      const fields = pickFields(req.body, ["name", "email", "currentPassword", "newPassword"]);
+      const fields = pickFields(req.body, ["name", "email", "phone", "currentPassword", "newPassword"]);
       const name = typeof fields.name === "string" ? fields.name.trim() : user.name;
       const email = typeof fields.email === "string" ? fields.email.trim().toLowerCase() : user.email;
+      const phone = typeof fields.phone === "string" ? fields.phone.trim() : user.phone;
       const emailChanged = email !== user.email;
       const passwordChanged = typeof fields.newPassword === "string" && fields.newPassword.length > 0;
       if (!name) return res.status(400).json({ message: "Name is required" });
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return res.status(400).json({ message: "Enter a valid email address" });
+      }
+      if (!phone) {
+        return res.status(400).json({ message: "Telephone number is required" });
       }
       if (passwordChanged && fields.newPassword.length < 8) {
         return res.status(400).json({ message: "Password must be at least 8 characters" });
@@ -336,7 +362,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (existing && existing.id !== user.id) return res.status(409).json({ message: "Email already registered" });
       }
 
-      const updates: Record<string, unknown> = { name, email };
+      const updates: Record<string, unknown> = { name, email, phone };
       if (passwordChanged) updates.password = await bcrypt.hash(fields.newPassword, 10);
       const updated = await storage.updateUser(user.id, updates);
       const token = jwt.sign({ id: updated.id, email: updated.email, name: updated.name, role: updated.role }, JWT_SECRET, { expiresIn: "30d" });

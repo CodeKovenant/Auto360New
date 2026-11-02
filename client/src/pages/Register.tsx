@@ -18,9 +18,25 @@ const FEATURES = [
   "M-Pesa premium subscription available",
 ];
 
+function normalizeKenyanPhone(value: string) {
+  const digits = value.replace(/[^\d+]/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("+254")) return `+254${digits.slice(4)}`;
+  if (digits.startsWith("254")) return `+${digits}`;
+  if (digits.startsWith("0")) return `+254${digits.slice(1)}`;
+  if (digits.startsWith("+")) return digits;
+  return `+254${digits}`;
+}
+
+function isValidKenyanPhoneNumber(value: string) {
+  const normalized = normalizeKenyanPhone(value);
+  return /^\+254[1-9]\d{8}$/.test(normalized);
+}
+
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -36,9 +52,18 @@ export default function Register() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name || !email || !password) return;
+    if (!name || !email || !phone || !password) return;
     if (password.length < 6) {
       toast({ title: "Password too short", description: "Password must be at least 6 characters.", variant: "destructive" });
+      return;
+    }
+    const trimmedPhone = phone.trim();
+    if (!trimmedPhone) {
+      toast({ title: "Telephone number required", description: "Please enter your telephone number.", variant: "destructive" });
+      return;
+    }
+    if (!isValidKenyanPhoneNumber(trimmedPhone)) {
+      toast({ title: "Invalid phone number", description: "Use a valid Kenyan number like +254 712 345 678.", variant: "destructive" });
       return;
     }
     if (!agreedToTerms) {
@@ -47,7 +72,8 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      const res = await apiRequest("POST", "/api/auth/register", { name, email, password, role: "owner" });
+      const normalizedPhone = normalizeKenyanPhone(trimmedPhone);
+      const res = await apiRequest("POST", "/api/auth/register", { name, email, phone: normalizedPhone, password, role: "owner" });
       const data = await res.json();
       login(data.user, data.token);
       toast({ title: "Account created!", description: "Welcome to Auto360Ke." });
@@ -130,6 +156,19 @@ export default function Register() {
                     className="mt-1.5 h-11"
                     required
                     data-testid="input-email"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Telephone number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="+254 700 000 000"
+                    className="mt-1.5 h-11"
+                    required
+                    data-testid="input-phone"
                   />
                 </div>
                 <div>

@@ -159,7 +159,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
-  getAllUsers(): Promise<Pick<User, "id" | "name" | "email" | "role" | "createdAt">[]>;
+  getAllUsers(): Promise<Pick<User, "id" | "name" | "email" | "phone" | "role" | "createdAt">[]>;
 
   // Businesses
   getBusinessById(id: string): Promise<Business | undefined>;
@@ -294,6 +294,7 @@ export class DatabaseStorage implements IStorage {
       id: users.id,
       name: users.name,
       email: users.email,
+      phone: users.phone,
       role: users.role,
       createdAt: users.createdAt,
     }).from(users).orderBy(users.createdAt);

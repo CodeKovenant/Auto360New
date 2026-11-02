@@ -27,6 +27,7 @@ export async function seedDatabase() {
     const [admin] = await db.insert(users).values({
       name: "Admin User",
       email: "admin@autodirectory.com",
+      phone: "+254700111111",
       password: adminPassword,
       role: "admin",
     }).returning();
@@ -34,6 +35,7 @@ export async function seedDatabase() {
     const [owner1] = await db.insert(users).values({
       name: "James Mwangi",
       email: "james@abcmotors.co.ke",
+      phone: "+254700123456",
       password: ownerPassword,
       role: "owner",
     }).returning();
@@ -41,6 +43,7 @@ export async function seedDatabase() {
     const [owner2] = await db.insert(users).values({
       name: "Sarah Ochieng",
       email: "sarah@nairobigarage.co.ke",
+      phone: "+254711654321",
       password: ownerPassword,
       role: "owner",
     }).returning();
@@ -48,6 +51,7 @@ export async function seedDatabase() {
     const [owner3] = await db.insert(users).values({
       name: "Peter Kamau",
       email: "peter@spareparts254.co.ke",
+      phone: "+254722987654",
       password: ownerPassword,
       role: "owner",
     }).returning();
@@ -55,6 +59,7 @@ export async function seedDatabase() {
     const [owner4] = await db.insert(users).values({
       name: "Grace Njeri",
       email: "grace@shinewash.co.ke",
+      phone: "+254733333333",
       password: ownerPassword,
       role: "owner",
     }).returning();
@@ -62,6 +67,7 @@ export async function seedDatabase() {
     const [owner5] = await db.insert(users).values({
       name: "David Otieno",
       email: "david@trustinsure.co.ke",
+      phone: "+254744444444",
       password: ownerPassword,
       role: "owner",
     }).returning();
