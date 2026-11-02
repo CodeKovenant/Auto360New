@@ -3,7 +3,8 @@ import { pgTable, text, varchar, integer, boolean, timestamp, pgEnum, numeric, j
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const userRoleEnum = pgEnum("user_role", ["admin", "owner"]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "owner", "agent"]);
+export const userStatusEnum = pgEnum("user_status", ["pending", "approved", "rejected"]);
 export const businessStatusEnum = pgEnum("business_status", ["pending", "approved", "rejected"]);
 export const featureRequestItemTypeEnum = pgEnum("feature_request_item_type", ["business", "car", "part", "garage_service", "support_service"]);
 export const featureRequestStatusEnum = pgEnum("feature_request_status", ["pending", "approved", "rejected"]);
@@ -26,8 +27,15 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   phone: text("phone").notNull(),
+  agentId: text("agent_id"),
+  idNumber: text("id_number"),
+  idDocumentUrl: text("id_document_url"),
+  passportPhotoUrl: text("passport_photo_url"),
+  refereeName: text("referee_name"),
+  refereePhone: text("referee_phone"),
   password: text("password").notNull(),
   role: userRoleEnum("role").notNull().default("owner"),
+  status: userStatusEnum("status").notNull().default("approved"),
   emailVerificationToken: text("email_verification_token"),
   emailVerifiedAt: timestamp("email_verified_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -36,6 +44,8 @@ export const users = pgTable("users", {
 export const businesses = pgTable("businesses", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   ownerId: varchar("owner_id").notNull().references(() => users.id),
+  registeredBy: text("registered_by").notNull().default("owner"),
+  registeredByAgentId: text("registered_by_agent_id"),
   name: text("name").notNull(),
   category: businessCategoryEnum("category").notNull(),
   subcategory: text("subcategory"),
@@ -192,7 +202,7 @@ export const featureRequests = pgTable("feature_requests", {
     .where(sql`${table.status} = 'pending'`),
 ]);
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, status: true });
 
 export const mpesaPayments = pgTable("mpesa_payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -52,7 +52,7 @@ export default function Dashboard() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
-  if (!user || user.role !== "owner") { navigate("/login"); return null; }
+  if (!user || (user.role !== "owner" && user.role !== "agent")) { navigate("/login"); return null; }
 
   const { data, isLoading, isError, error, isFetching, refetch } = useQuery<DashboardData>({ queryKey: ["/api/dashboard"] });
   const featureRequestMutation = useMutation({

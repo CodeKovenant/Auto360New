@@ -21,6 +21,8 @@ export default function RegisterBusiness() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [registrantType, setRegistrantType] = useState<"owner" | "agent">(user?.role === "agent" ? "agent" : "owner");
+  const [registeredByAgentId, setRegisteredByAgentId] = useState(user?.role === "agent" ? user.agentId || "" : "");
 
   const [form, setForm] = useState({
     name: "",
@@ -59,6 +61,10 @@ export default function RegisterBusiness() {
       toast({ title: "Missing fields", description: "Please fill in all required fields.", variant: "destructive" });
       return;
     }
+    if (user?.role === "agent" && registrantType === "agent" && !registeredByAgentId) {
+      toast({ title: "Agent ID required", description: "Please select your valid agent ID before continuing.", variant: "destructive" });
+      return;
+    }
     if (!agreedToTerms) {
       toast({ title: "Terms required", description: "Please read and accept the Terms & Conditions to continue.", variant: "destructive" });
       return;
@@ -75,6 +81,8 @@ export default function RegisterBusiness() {
         ...form,
         category: dbCategory,
         ownerId: user.id,
+        registeredBy: registrantType,
+        registeredByAgentId: registrantType === "agent" ? registeredByAgentId : null,
         carBrands: needsBrands ? selectedBrands : [],
       });
       queryClient.invalidateQueries({ queryKey: ["/api/businesses"] });
@@ -142,6 +150,41 @@ export default function RegisterBusiness() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5">
+              {user?.role === "agent" && (
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <Label htmlFor="registrant-type">Who is registering this business? <span className="text-red-500">*</span></Label>
+                    <Select value={registrantType} onValueChange={(value) => setRegistrantType(value as "owner" | "agent")}>
+                      <SelectTrigger className="mt-1" data-testid="select-registrant-type">
+                        <SelectValue placeholder="Select registrant type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="owner">Owner</SelectItem>
+                        <SelectItem value="agent">Agent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {registrantType === "agent" && (
+                    <div>
+                      <Label htmlFor="agent-id-select">Agent ID <span className="text-red-500">*</span></Label>
+                      <Select value={registeredByAgentId} onValueChange={setRegisteredByAgentId}>
+                        <SelectTrigger className="mt-1" data-testid="select-agent-id">
+                          <SelectValue placeholder="Select your agent ID" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {user?.agentId ? (
+                            <SelectItem value={user.agentId}>{user.agentId}</SelectItem>
+                          ) : (
+                            <SelectItem value="">No agent ID available</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="biz-name">Business Name <span className="text-red-500">*</span></Label>

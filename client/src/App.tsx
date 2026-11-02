@@ -11,6 +11,7 @@ import Businesses from "@/pages/Businesses";
 import BusinessProfile from "@/pages/BusinessProfile";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import RegisterAgent from "@/pages/RegisterAgent";
 import RegisterBusiness from "@/pages/RegisterBusiness";
 import Dashboard from "@/pages/Dashboard";
 import Admin from "@/pages/Admin";
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/brand/:brand" component={BrandPage} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/register-agent" component={RegisterAgent} />
       <Route path="/register-business" component={RegisterBusiness} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/admin" component={Admin} />
@@ -58,7 +60,7 @@ function Router() {
   );
 }
 
-const NO_FOOTER_ROUTES = ["/login", "/register", "/dashboard", "/admin", "/verify-email"];
+const NO_FOOTER_ROUTES = ["/login", "/register", "/register-agent", "/dashboard", "/admin", "/verify-email"];
 
 const PAGE_TITLES: [string, string][] = [
   ["/automobile-dealers", "Automobile Dealers"],
@@ -77,6 +79,7 @@ const PAGE_TITLES: [string, string][] = [
   ["/login", "Login"],
   ["/register-business", "Register Your Business"],
   ["/register", "Register"],
+  ["/register-agent", "Agent Registration"],
   ["/dashboard", "Dashboard"],
   ["/admin", "Admin"],
   ["/terms", "Terms and Conditions"],

@@ -45,6 +45,7 @@ function isNavActive(href: string, location: string): boolean {
 function getRoleLabel(role: string) {
   if (role === "admin") return "Admin";
   if (role === "owner") return "Business";
+  if (role === "agent") return "Agent";
   return "User";
 }
 

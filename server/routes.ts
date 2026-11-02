@@ -77,6 +77,8 @@ const logoUpload = makeUpload();
 const bannerUpload = makeUpload();
 const partImageUpload = makeUpload();
 const galleryUpload = makeUpload();
+const idDocumentUpload = makeUpload();
+const passportPhotoUpload = makeUpload();
 
 function handleGalleryUpload(req: any, res: any, next: any) {
   galleryUpload.single("image")(req, res, (error: unknown) => {
@@ -129,7 +131,7 @@ function adminMiddleware(req: any, res: any, next: any) {
 
 function ownerMiddleware(req: any, res: any, next: any) {
   authMiddleware(req, res, () => {
-    if (req.user?.role !== "owner" && req.user?.role !== "admin") return res.status(403).json({ message: "Owner access required" });
+    if (req.user?.role !== "owner" && req.user?.role !== "agent" && req.user?.role !== "admin") return res.status(403).json({ message: "Owner access required" });
     next();
   });
 }
@@ -164,7 +166,7 @@ async function getListingBusinessId(type: string, id: string): Promise<string | 
 
 async function actorCanManageBusiness(actor: any, businessId: string): Promise<boolean> {
   if (actor?.role === "admin") return true;
-  if (actor?.role !== "owner") return false;
+  if (actor?.role !== "owner" && actor?.role !== "agent") return false;
   const business = await storage.getBusinessById(businessId);
   return business?.ownerId === actor.id;
 }
@@ -279,6 +281,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.post("/api/upload/id-document", idDocumentUpload.single("image"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const url = await saveUploadedFile(req.file, "gallery", "id-document");
+      res.json({ url });
+    } catch (e: any) {
+      console.error("[uploads] id document persistence failed:", e.message);
+      res.status(500).json({ message: "Could not store the ID document" });
+    }
+  });
+
+  app.post("/api/upload/passport-photo", passportPhotoUpload.single("image"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const url = await saveUploadedFile(req.file, "gallery", "passport-photo");
+      res.json({ url });
+    } catch (e: any) {
+      console.error("[uploads] passport photo persistence failed:", e.message);
+      res.status(500).json({ message: "Could not store the passport photo" });
+    }
+  });
+
   // Auth routes
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -297,8 +321,57 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (existing) return res.status(400).json({ message: "Email already registered" });
       const hashed = await bcrypt.hash(body.password, 10);
       const user = await storage.createUser({ ...body, password: hashed });
-      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, phone: user.phone, role: user.role }, JWT_SECRET, { expiresIn: "30d" });
-      res.json({ user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role }, token });
+      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, phone: user.phone, agentId: user.agentId, role: user.role }, JWT_SECRET, { expiresIn: "30d" });
+      res.json({ user: { id: user.id, name: user.name, email: user.email, phone: user.phone, agentId: user.agentId, role: user.role }, token });
+    } catch (e: any) {
+      if (e.code === "23505") return res.status(409).json({ message: "Email already registered" });
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/auth/register-agent", async (req, res) => {
+    try {
+      const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+      const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+      const password = typeof req.body?.password === "string" ? req.body.password : "";
+      const phone = normalizeKenyanPhone(req.body?.phone);
+      const idNumber = typeof req.body?.idNumber === "string" ? req.body.idNumber.trim() : "";
+      const idDocumentUrl = typeof req.body?.idDocumentUrl === "string" ? req.body.idDocumentUrl.trim() : "";
+      const passportPhotoUrl = typeof req.body?.passportPhotoUrl === "string" ? req.body.passportPhotoUrl.trim() : "";
+      const refereeName = typeof req.body?.refereeName === "string" ? req.body.refereeName.trim() : "";
+      const refereePhone = normalizeKenyanPhone(req.body?.refereePhone);
+
+      if (!name || !email || !password || !phone || !idNumber || !idDocumentUrl || !passportPhotoUrl || !refereeName || !refereePhone) {
+        return res.status(400).json({ message: "Complete all required agent onboarding fields before submitting." });
+      }
+      if (!isValidKenyanPhoneNumber(phone) || !isValidKenyanPhoneNumber(refereePhone)) {
+        return res.status(400).json({ message: "Use valid Kenyan phone numbers for the agent and referee." });
+      }
+      if (password.length < 8) return res.status(400).json({ message: "Password must be at least 8 characters long" });
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ message: "Enter a valid email address" });
+      const existing = await storage.getUserByEmail(email);
+      if (existing) return res.status(409).json({ message: "Email already registered" });
+
+      const agentId = `AGT-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+      const user = await storage.createUser({
+        name,
+        email,
+        phone,
+        agentId,
+        idNumber,
+        idDocumentUrl,
+        passportPhotoUrl,
+        refereeName,
+        refereePhone,
+        password: await bcrypt.hash(password, 10),
+        role: "agent",
+        status: "pending",
+      } as any);
+
+      res.status(201).json({
+        message: "Agent registration submitted successfully. Your account is pending admin approval.",
+        user: { id: user.id, name: user.name, email: user.email, phone: user.phone, agentId: user.agentId, role: user.role, status: user.status },
+      });
     } catch (e: any) {
       if (e.code === "23505") return res.status(409).json({ message: "Email already registered" });
       res.status(400).json({ message: e.message });
@@ -314,8 +387,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!user) return res.status(401).json({ message: "Invalid email or password" });
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) return res.status(401).json({ message: "Invalid email or password" });
-      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, phone: user.phone, role: user.role }, JWT_SECRET, { expiresIn: "30d" });
-      res.json({ user: { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role }, token });
+      if (user.role === "agent" && user.status && user.status !== "approved") {
+        return res.status(403).json({ message: "Your agent account is awaiting admin approval." });
+      }
+      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, phone: user.phone, agentId: user.agentId, role: user.role }, JWT_SECRET, { expiresIn: "30d" });
+      res.json({ user: { id: user.id, name: user.name, email: user.email, phone: user.phone, agentId: user.agentId, role: user.role, status: user.status }, token });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
@@ -325,7 +401,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const user = await storage.getUserById(req.user.id);
       if (!user) return res.status(404).json({ message: "Account not found" });
-      res.json({ id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, createdAt: user.createdAt });
+      res.json({ id: user.id, name: user.name, email: user.email, phone: user.phone, agentId: user.agentId, role: user.role, status: user.status, createdAt: user.createdAt });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -527,11 +603,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/businesses", authMiddleware, async (req, res) => {
     try {
       const user = (req as any).user;
-      if (user.role !== "owner") return res.status(403).json({ message: "Only business-owner accounts can register a business" });
+      if (user.role !== "owner" && user.role !== "agent") return res.status(403).json({ message: "Only business-owner or agent accounts can register a business" });
+      if (user.role === "agent" && user.status && user.status !== "approved") return res.status(403).json({ message: "Your agent account must be approved before creating a business." });
       if (await storage.getBusinessByOwnerId(user.id)) return res.status(409).json({ message: "Your account already has a business profile" });
+
+      const registeredBy = req.body?.registeredBy === "agent" ? "agent" : "owner";
+      const selectedAgentId = typeof req.body?.registeredByAgentId === "string" ? req.body.registeredByAgentId.trim() : "";
+      if (user.role === "agent" && registeredBy === "agent") {
+        if (!selectedAgentId || selectedAgentId !== user.agentId) {
+          return res.status(400).json({ message: "Select your valid agent ID to register this business." });
+        }
+      }
+
       const body = insertBusinessSchema.parse({
-        ...pickFields(req.body, ["name", "category", "subcategory", "description", "phone", "whatsapp", "address", "city", "logo", "banner", "website", "latitude", "longitude", "carBrands"]),
+        ...pickFields(req.body, ["name", "category", "subcategory", "description", "phone", "whatsapp", "address", "city", "logo", "banner", "website", "latitude", "longitude", "carBrands", "registeredBy", "registeredByAgentId"]),
         ownerId: user.id,
+        registeredBy,
+        registeredByAgentId: registeredBy === "agent" ? selectedAgentId : null,
         suspended: false,
       });
       const biz = await storage.createBusiness(body);
@@ -1157,7 +1245,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let ownerId: string | undefined;
       if (typeof body.ownerId === "string" && body.ownerId.trim()) {
         const owner = await storage.getUserById(body.ownerId.trim());
-        if (!owner || owner.role !== "owner") return res.status(400).json({ message: "Choose an existing business-owner account" });
+        if (!owner || (owner.role !== "owner" && owner.role !== "agent")) return res.status(400).json({ message: "Choose an existing business-owner or agent account" });
         const existingBusiness = await storage.getBusinessByOwnerId(owner.id);
         if (existingBusiness && existingBusiness.id !== business.id) return res.status(409).json({ message: "This account already manages another business" });
         ownerId = owner.id;
@@ -1195,7 +1283,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const body = req.body || {};
       const owner = typeof body.ownerId === "string" ? await storage.getUserById(body.ownerId) : undefined;
-      if (!owner || owner.role !== "owner") return res.status(400).json({ message: "Choose an existing business-owner account" });
+      if (!owner || (owner.role !== "owner" && owner.role !== "agent")) return res.status(400).json({ message: "Choose an existing business-owner or agent account" });
       if (await storage.getBusinessByOwnerId(owner.id)) return res.status(409).json({ message: "This account already manages a business" });
       const parsed = insertBusinessSchema.parse({
         ...Object.fromEntries(Object.entries(body).filter(([key]) => key !== "status")),
@@ -1213,13 +1301,35 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.put("/api/admin/users/:id/password", adminMiddleware, async (req, res) => {
     try {
       const account = await storage.getUserById(req.params.id);
-      if (!account || account.role !== "owner") return res.status(404).json({ message: "Business-owner account not found" });
+      if (!account || (account.role !== "owner" && account.role !== "agent")) return res.status(404).json({ message: "Business-owner or agent account not found" });
       const password = req.body?.password;
       if (typeof password !== "string" || password.length < 8) {
         return res.status(400).json({ message: "Password must be at least 8 characters" });
       }
       await storage.updateUser(account.id, { password: await bcrypt.hash(password, 10) });
       res.json({ success: true });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/admin/users/:id/approve", adminMiddleware, async (req, res) => {
+    try {
+      const account = await storage.getUserById(req.params.id);
+      if (!account) return res.status(404).json({ message: "User not found" });
+      const updated = await storage.updateUser(account.id, { status: "approved" });
+      res.json(updated);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/admin/users/:id/reject", adminMiddleware, async (req, res) => {
+    try {
+      const account = await storage.getUserById(req.params.id);
+      if (!account) return res.status(404).json({ message: "User not found" });
+      const updated = await storage.updateUser(account.id, { status: "rejected" });
+      res.json(updated);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }

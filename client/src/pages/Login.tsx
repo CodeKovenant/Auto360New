@@ -135,11 +135,17 @@ export default function Login() {
                 </Button>
               </form>
 
-              <div className="mt-6 text-center">
+              <div className="mt-6 text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
                   Don't have an account?{" "}
                   <Link href="/register" className="text-red-600 dark:text-red-400 font-semibold hover:underline">
                     Create one free
+                  </Link>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Register as an agent?{" "}
+                  <Link href="/register-agent" className="text-red-600 dark:text-red-400 font-semibold hover:underline">
+                    Agent onboarding
                   </Link>
                 </p>
               </div>

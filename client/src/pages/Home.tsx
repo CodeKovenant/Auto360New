@@ -610,7 +610,7 @@ export default function Home() {
       </section>
 
       {/* ── 7. HOW IT WORKS ── */}
-      <section className="py-16 bg-gray-50 dark:bg-gray-900">
+      <section id="how-it-works" className="py-16 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <span className="inline-block text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-widest mb-2">Simple Process</span>

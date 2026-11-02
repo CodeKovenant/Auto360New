@@ -26,5 +26,5 @@ export function useAuth() {
     queryClient.clear();
   }
 
-  return { user, login, logout, isAdmin: user?.role === "admin", isOwner: user?.role === "owner" };
+  return { user, login, logout, isAdmin: user?.role === "admin", isOwner: user?.role === "owner" || user?.role === "agent" };
 }

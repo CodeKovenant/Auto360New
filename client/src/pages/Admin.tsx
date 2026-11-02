@@ -44,7 +44,7 @@ interface AdminProfile {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "owner";
+  role: "admin" | "owner" | "agent";
   createdAt: string | null;
 }
 
@@ -473,7 +473,7 @@ export default function Admin() {
   const [businessCategoryFilter, setBusinessCategoryFilter] = useState("");
   const [featuredTypeFilter, setFeaturedTypeFilter] = useState<FeaturedItemType | "">("");
   const [reviewRatingFilter, setReviewRatingFilter] = useState("");
-  const [userRoleFilter, setUserRoleFilter] = useState<"" | "admin" | "owner">("");
+  const [userRoleFilter, setUserRoleFilter] = useState<"" | "admin" | "owner" | "agent">("");
   const [reportReasonFilter, setReportReasonFilter] = useState("");
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [profileForm, setProfileForm] = useState<AdminProfileForm | null>(null);
@@ -603,6 +603,28 @@ export default function Admin() {
       queryClient.invalidateQueries({ queryKey: ["/api/businesses/premium"] });
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const approveUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("PUT", `/api/admin/users/${id}/approve`);
+    },
+    onSuccess: () => {
+      toast({ title: "Agent approved." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+    },
+    onError: (e: Error) => toast({ title: "Approval failed", description: e.message, variant: "destructive" }),
+  });
+
+  const rejectUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("PUT", `/api/admin/users/${id}/reject`);
+    },
+    onSuccess: () => {
+      toast({ title: "Agent rejected." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
+    },
+    onError: (e: Error) => toast({ title: "Rejection failed", description: e.message, variant: "destructive" }),
   });
 
   const deleteBizMutation = useMutation({
@@ -1081,14 +1103,14 @@ export default function Admin() {
   );
   const visibleUsers = users.filter(account =>
     (!userRoleFilter || account.role === userRoleFilter) &&
-    (!normalizedAdminSearch || [account.name, account.email, account.role].some(value => value?.toLowerCase().includes(normalizedAdminSearch)))
+    (!normalizedAdminSearch || [account.name, account.email, account.role, account.status, account.phone].some(value => value?.toLowerCase().includes(normalizedAdminSearch)))
   );
   const visibleReports = (reports || []).filter(report =>
     (!reportReasonFilter || report.reason === reportReasonFilter) &&
     (!normalizedAdminSearch || [report.businessName, report.name, report.email, report.reason, report.description].some(value => value?.toLowerCase().includes(normalizedAdminSearch)))
   );
   const linkedOwnerIds = new Set([...pending, ...approved, ...rejected].filter(biz => biz.id !== editingBusiness?.id).map(biz => biz.ownerId));
-  const availableOwnerAccounts = users.filter(account => account.role === "owner" && !linkedOwnerIds.has(account.id));
+  const availableOwnerAccounts = users.filter(account => (account.role === "owner" || account.role === "agent") && !linkedOwnerIds.has(account.id));
   const hasAdminFilters = Boolean(adminSearch || businessCategoryFilter || featuredTypeFilter || reviewRatingFilter || userRoleFilter || reportReasonFilter);
 
   function clearAdminFilters() {
@@ -1345,10 +1367,11 @@ export default function Admin() {
               </select>
             )}
             {activeAdminTab === "users" && (
-              <select value={userRoleFilter} onChange={event => setUserRoleFilter(event.target.value as "" | "admin" | "owner")} className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" aria-label="Filter users by role" data-testid="admin-user-role-filter">
+              <select value={userRoleFilter} onChange={event => setUserRoleFilter(event.target.value as "" | "admin" | "owner" | "agent")} className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900" aria-label="Filter users by role" data-testid="admin-user-role-filter">
                 <option value="">All roles</option>
                 <option value="admin">Admins</option>
                 <option value="owner">Business owners</option>
+                <option value="agent">Agents</option>
               </select>
             )}
             {activeAdminTab === "reports" && (
@@ -1794,10 +1817,24 @@ export default function Admin() {
                         <div>
                           <p className="font-medium text-sm text-gray-900 dark:text-white">{u.name}</p>
                           <p className="text-xs text-muted-foreground">{u.email}</p>
+                          {u.phone && <p className="text-[11px] text-muted-foreground">{u.phone}</p>}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant={u.role === "admin" ? "default" : "secondary"} className="text-xs capitalize">{u.role}</Badge>
-                          {u.role === "owner" && (
+                          {u.role === "agent" && (
+                            <Badge className={u.status === "approved" ? "bg-green-100 text-green-700" : u.status === "rejected" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}>{u.status || "pending"}</Badge>
+                          )}
+                          {u.role === "agent" && u.status !== "approved" && (
+                            <>
+                              <Button size="sm" variant="outline" onClick={() => approveUserMutation.mutate(u.id)} disabled={approveUserMutation.isPending}>
+                                <CheckCircle className="mr-1 h-4 w-4" />Approve
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-red-600" onClick={() => rejectUserMutation.mutate(u.id)} disabled={rejectUserMutation.isPending}>
+                                <XCircle className="mr-1 h-4 w-4" />Reject
+                              </Button>
+                            </>
+                          )}
+                          {(u.role === "owner" || u.role === "agent") && (
                             <Button size="sm" variant="outline" onClick={() => { setPasswordResetUser({ id: u.id, name: u.name, email: u.email }); setPasswordResetValue(""); }}>
                               <KeyRound className="mr-1 h-4 w-4" />Reset password
                             </Button>
