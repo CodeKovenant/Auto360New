@@ -63,10 +63,34 @@ const STEPS = [
 ];
 
 const HERO_SERVICE_SLIDES = [
-  { label: "Automobile Dealers", lead: "Automobile", accent: "Dealers" },
-  { label: "Autospares Dealers", lead: "Autospares", accent: "Dealers" },
-  { label: "Autogarage Repair", lead: "Autogarage", accent: "Repair" },
-  { label: "Automotive Support", lead: "Automotive", accent: "Support" },
+  {
+    label: "Automobile Dealers",
+    lead: "Automobile",
+    accent: "Dealers",
+    badge: "Verified Car Dealers",
+    description: "Explore trusted car dealers with quality new and used vehicles across Kenya.",
+  },
+  {
+    label: "Autospares Dealers",
+    lead: "Autospares",
+    accent: "Dealers",
+    badge: "Genuine Spare Parts",
+    description: "Find quality spare parts, accessories and workshop essentials from trusted suppliers.",
+  },
+  {
+    label: "Autogarage Repair",
+    lead: "Autogarage",
+    accent: "Repair",
+    badge: "Trusted Garage Services",
+    description: "Book reliable garage repairs, servicing and maintenance from vetted automotive experts.",
+  },
+  {
+    label: "Automotive Support",
+    lead: "Automotive",
+    accent: "Support",
+    badge: "Support & Protection",
+    description: "Discover car wash, insurance, financing and other essential automotive support services.",
+  },
 ] as const;
 
 type CarWithDealer = CarType & { dealerName: string; dealerWhatsapp: string; dealerLogo: string | null; galleryImage: string | null };
@@ -300,7 +324,7 @@ export default function Home() {
             <div className="w-full max-w-3xl text-left">
               <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-1.5 rounded-full text-sm font-medium mb-5 border border-white/20">
                 <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                Trusted Car Services Near You
+                {activeHeroSlide.badge}
               </div>
               <h1
                 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-5 drop-shadow-lg"
@@ -311,7 +335,7 @@ export default function Home() {
                 <span className="text-orange-400">{activeHeroSlide.accent}</span>
               </h1>
               <p className="text-lg md:text-xl text-gray-200 mb-6 max-w-xl drop-shadow leading-relaxed">
-                Connect with verified dealers, spare parts shops &amp; garage services across Kenya's 47 counties.
+                {activeHeroSlide.description}
               </p>
               <form onSubmit={handleSearch} className="flex items-center gap-3 max-w-xl mb-6">
                 <div className="flex-1 relative">
