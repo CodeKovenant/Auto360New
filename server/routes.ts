@@ -26,10 +26,12 @@ if (!fs.existsSync(bannersDir)) fs.mkdirSync(bannersDir, { recursive: true });
 if (!fs.existsSync(partsDir)) fs.mkdirSync(partsDir, { recursive: true });
 if (!fs.existsSync(galleryDir)) fs.mkdirSync(galleryDir, { recursive: true });
 
-function makeUpload() {
+const AGENT_UPLOAD_LIMIT_BYTES = 2 * 1024 * 1024;
+
+function makeUpload(maxFileSize = 5 * 1024 * 1024) {
   return multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: maxFileSize },
     fileFilter: (_req, file, cb) => {
       if (file.mimetype.startsWith("image/")) cb(null, true);
       else cb(new Error("Only image files are allowed"));
@@ -77,8 +79,19 @@ const logoUpload = makeUpload();
 const bannerUpload = makeUpload();
 const partImageUpload = makeUpload();
 const galleryUpload = makeUpload();
-const idDocumentUpload = makeUpload();
-const passportPhotoUpload = makeUpload();
+const idDocumentUpload = makeUpload(AGENT_UPLOAD_LIMIT_BYTES);
+const passportPhotoUpload = makeUpload(AGENT_UPLOAD_LIMIT_BYTES);
+
+function handleFileUpload(multerUpload: ReturnType<typeof multer>, fieldName: string, req: any, res: any, next: any) {
+  multerUpload.single(fieldName)(req, res, (error: unknown) => {
+    if (!error) return next();
+    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ message: `${fieldName} must be 2 MB or smaller` });
+    }
+    if (error instanceof Error) return res.status(400).json({ message: error.message });
+    return next(error);
+  });
+}
 
 function handleGalleryUpload(req: any, res: any, next: any) {
   galleryUpload.single("image")(req, res, (error: unknown) => {
@@ -281,7 +294,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/upload/id-document", idDocumentUpload.single("image"), async (req: any, res) => {
+  app.post("/api/upload/id-document", (req: any, res: any, next: any) => handleFileUpload(idDocumentUpload, "image", req, res, next), async (req: any, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const url = await saveUploadedFile(req.file, "gallery", "id-document");
@@ -292,7 +305,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/upload/passport-photo", passportPhotoUpload.single("image"), async (req: any, res) => {
+  app.post("/api/upload/passport-photo", (req: any, res: any, next: any) => handleFileUpload(passportPhotoUpload, "image", req, res, next), async (req: any, res) => {
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const url = await saveUploadedFile(req.file, "gallery", "passport-photo");

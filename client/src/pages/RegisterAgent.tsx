@@ -64,6 +64,16 @@ function UploadField({ label, description, file, onChange, accept = "image/*", i
   );
 }
 
+const AGENT_DOCUMENT_SIZE_LIMIT_MB = 2;
+
+function validateAgentUpload(file: File | null, fieldName: string) {
+  if (!file) return true;
+  if (file.size > AGENT_DOCUMENT_SIZE_LIMIT_MB * 1024 * 1024) {
+    return `${fieldName} must be ${AGENT_DOCUMENT_SIZE_LIMIT_MB} MB or smaller.`;
+  }
+  return true;
+}
+
 export default function RegisterAgent() {
   const [form, setForm] = useState({
     name: "",
@@ -108,6 +118,13 @@ export default function RegisterAgent() {
     }
     if (form.password.length < 8) {
       toast({ title: "Password too short", description: "Password must be at least 8 characters.", variant: "destructive" });
+      return;
+    }
+
+    const idError = validateAgentUpload(idDocument, "ID document");
+    const photoError = validateAgentUpload(passportPhoto, "Passport photo");
+    if (idError !== true || photoError !== true) {
+      toast({ title: "File too large", description: idError !== true ? idError : photoError, variant: "destructive" });
       return;
     }
 
@@ -204,11 +221,22 @@ export default function RegisterAgent() {
                 </div>
 
                 <div className="space-y-3">
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+                    Maximum file size: {AGENT_DOCUMENT_SIZE_LIMIT_MB} MB per image. Upload clear JPG, PNG, or WebP files only.
+                  </div>
+
                   <UploadField
                     label="ID document"
                     description="Upload your national ID or passport image"
                     file={idDocument}
-                    onChange={setIdDocument}
+                    onChange={(file) => {
+                      const validationMessage = validateAgentUpload(file, "ID document");
+                      if (validationMessage !== true) {
+                        toast({ title: "File too large", description: validationMessage, variant: "destructive" });
+                        return;
+                      }
+                      setIdDocument(file);
+                    }}
                     icon={<FileText className="h-5 w-5" />}
                   />
 
@@ -216,7 +244,14 @@ export default function RegisterAgent() {
                     label="Passport photo"
                     description="Upload a recent passport-size photo"
                     file={passportPhoto}
-                    onChange={setPassportPhoto}
+                    onChange={(file) => {
+                      const validationMessage = validateAgentUpload(file, "Passport photo");
+                      if (validationMessage !== true) {
+                        toast({ title: "File too large", description: validationMessage, variant: "destructive" });
+                        return;
+                      }
+                      setPassportPhoto(file);
+                    }}
                     icon={<Camera className="h-5 w-5" />}
                   />
                 </div>
