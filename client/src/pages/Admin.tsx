@@ -491,8 +491,13 @@ export default function Admin() {
   const [categoryNameDraft, setCategoryNameDraft] = useState("");
   const [categoryFieldsDraft, setCategoryFieldsDraft] = useState<AdminCategoryField[]>([]);
 
-  if (!user || user.role !== "admin") {
+  if (!user) {
     navigate("/login");
+    return null;
+  }
+
+  if (user.role !== "admin") {
+    navigate("/dashboard");
     return null;
   }
 
