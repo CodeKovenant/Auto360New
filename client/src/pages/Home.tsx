@@ -364,7 +364,7 @@ export default function Home() {
                     Browse Businesses
                   </Button>
                 </Link>
-                <Link href="/register-business">
+                <Link href="/login">
                   <Button className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg" data-testid="button-register-hero">
                     Register Your Business
                   </Button>
@@ -524,7 +524,7 @@ export default function Home() {
                 <div className="text-center py-12 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
                   <Icon className="w-12 h-12 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
                   <p className="text-muted-foreground">{emptyMessage}</p>
-                  <Link href="/register-business">
+                  <Link href="/login">
                     <Button variant="outline" className="mt-4">{emptyCta}</Button>
                   </Link>
                 </div>
@@ -661,7 +661,7 @@ export default function Home() {
             ))}
           </div>
           <div className="text-center mt-10">
-            <Link href="/register-business">
+            <Link href="/login">
               <Button size="lg" className="bg-red-600 hover:bg-red-700 text-white px-8">
                 Get Listed Today
               </Button>
@@ -685,7 +685,7 @@ export default function Home() {
             Reach thousands of customers across Kenya who are searching for trusted automotive services.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/register-business">
+            <Link href="/login">
               <Button size="lg" className="bg-orange-500 hover:bg-orange-400 text-white px-10 text-base font-semibold shadow-xl shadow-red-900/50" data-testid="button-cta-register">
                 Create Business Listing
               </Button>

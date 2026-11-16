@@ -141,7 +141,7 @@ export default function Navbar() {
                   <Link href="/login">
                     <Button variant="ghost" size="sm" className="text-xs" data-testid="nav-login">Login</Button>
                   </Link>
-                  <Link href="/register-business">
+                  <Link href="/login">
                     <Button size="sm" data-testid="nav-signup" className="text-xs bg-red-600 hover:bg-red-700 text-white">
                       Get Started
                     </Button>
@@ -224,7 +224,7 @@ export default function Navbar() {
                   <Link href="/login" onClick={() => setOpen(false)} className="flex-1">
                     <Button variant="outline" size="sm" className="w-full text-sm" data-testid="mobile-login">Login</Button>
                   </Link>
-                  <Link href="/register-business" onClick={() => setOpen(false)} className="flex-1">
+                  <Link href="/login" onClick={() => setOpen(false)} className="flex-1">
                     <Button size="sm" className="w-full text-sm bg-red-600 hover:bg-red-700 text-white" data-testid="mobile-signup">Get Started</Button>
                   </Link>
                 </div>

@@ -108,7 +108,7 @@ export default function AutoDealers() {
                     Browse Dealers
                   </Button>
                 </a>
-                <Link href="/register-business">
+                <Link href="/login">
                   <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-6" data-testid="button-list-dealership">
                     List Your Dealership
                   </Button>
@@ -232,7 +232,7 @@ export default function AutoDealers() {
               <p className="text-sm text-muted-foreground" data-testid="dealers-count">
                 {businesses.length} dealer{businesses.length !== 1 ? "s" : ""} found
               </p>
-              <Link href="/register-business">
+              <Link href="/login">
                 <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white text-xs" data-testid="button-register-dealer">
                   <ChevronRight className="w-3.5 h-3.5 mr-1" />
                   Register Your Dealership
@@ -277,7 +277,7 @@ export default function AutoDealers() {
               {hasFilters && (
                 <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
               )}
-              <Link href="/register-business">
+              <Link href="/login">
                 <Button className="bg-red-600 hover:bg-red-700 text-white">Register Your Dealership</Button>
               </Link>
             </div>

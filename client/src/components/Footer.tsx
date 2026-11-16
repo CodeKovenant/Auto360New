@@ -60,7 +60,7 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-5">Company</h4>
             <ul className="space-y-3 text-sm text-gray-400">
               <li><Link href="/#how-it-works" className="hover:text-white transition-colors">How it works</Link></li>
-              <li><Link href="/register-business" className="hover:text-white transition-colors">Register your Business</Link></li>
+              <li><Link href="/login" className="hover:text-white transition-colors">Register your Business</Link></li>
               <li><Link href="/register-agent" className="hover:text-white transition-colors">Register as an Agent</Link></li>
               <li><Link href="/terms" className="hover:text-white transition-colors">Terms and condition</Link></li>
               <li><a href="mailto:info@auto360.co.ke" className="hover:text-white transition-colors">Contacts</a></li>

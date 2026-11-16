@@ -103,7 +103,7 @@ export default function AutoGarages() {
                     Browse Garages
                   </Button>
                 </a>
-                <Link href="/register-business">
+                <Link href="/login">
                   <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-6" data-testid="button-list-garage">
                     List Your Garage
                   </Button>
@@ -226,7 +226,7 @@ export default function AutoGarages() {
               <p className="text-sm text-muted-foreground" data-testid="garages-count">
                 {businesses.length} garage{businesses.length !== 1 ? "s" : ""} found
               </p>
-              <Link href="/register-business">
+              <Link href="/login">
                 <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white text-xs" data-testid="button-register-garage">
                   <ChevronRight className="w-3.5 h-3.5 mr-1" />
                   Register Your Garage
@@ -271,7 +271,7 @@ export default function AutoGarages() {
               {hasFilters && (
                 <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
               )}
-              <Link href="/register-business">
+              <Link href="/login">
                 <Button className="bg-red-600 hover:bg-red-700 text-white">Register Your Garage</Button>
               </Link>
             </div>

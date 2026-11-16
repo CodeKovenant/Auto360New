@@ -103,7 +103,7 @@ export default function AutoSpares() {
                     Browse Spare Parts
                   </Button>
                 </a>
-                <Link href="/register-business">
+                <Link href="/login">
                   <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-6" data-testid="button-list-spares-shop">
                     List Your Shop
                   </Button>
@@ -226,7 +226,7 @@ export default function AutoSpares() {
               <p className="text-sm text-muted-foreground" data-testid="spares-count">
                 {businesses.length} shop{businesses.length !== 1 ? "s" : ""} found
               </p>
-              <Link href="/register-business">
+              <Link href="/login">
                 <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs" data-testid="button-register-spares">
                   <ChevronRight className="w-3.5 h-3.5 mr-1" />
                   Register Your Shop
@@ -271,7 +271,7 @@ export default function AutoSpares() {
               {hasFilters && (
                 <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
               )}
-              <Link href="/register-business">
+              <Link href="/login">
                 <Button className="bg-orange-500 hover:bg-orange-600 text-white">Register Your Shop</Button>
               </Link>
             </div>

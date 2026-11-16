@@ -250,7 +250,7 @@ export default function AutomotiveSupport() {
             <p className="text-muted-foreground mb-4 max-w-sm mx-auto">
               Be the first to list your {currentTab.label.toLowerCase()} business and reach customers across Kenya.
             </p>
-            <Link href="/register-business">
+            <Link href="/login">
               <Button className="bg-red-600 hover:bg-red-700 text-white">
                 Register Your Business
               </Button>
