@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import express from "express";
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, countDistinct, desc, eq } from "drizzle-orm";
 import { createServer, type Server } from "http";
 import {
   storage, db, ensurePersistentUploadsTable, savePersistentUpload, getPersistentUpload,
@@ -491,6 +491,37 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const limit = Number.isFinite(raw) ? raw : 6;
       const sections = await storage.getHomepageBusinessSections(limit);
       res.json(sections);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/home/stats", async (_req, res) => {
+    try {
+      const [
+        [{ businessesListed }],
+        [{ citiesCovered }],
+        [{ carBrands }],
+        [{ carListings }],
+        [{ sparePartListings }],
+        [{ garageListings }],
+        [{ supportListings }],
+      ] = await Promise.all([
+        db.select({ businessesListed: count() }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false))),
+        db.select({ citiesCovered: countDistinct(businesses.city) }).from(businesses).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false))),
+        db.select({ carBrands: countDistinct(cars.brand) }).from(cars).innerJoin(businesses, eq(cars.dealerId, businesses.id)).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(cars.suspended, false))),
+        db.select({ carListings: count() }).from(cars).innerJoin(businesses, eq(cars.dealerId, businesses.id)).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(cars.suspended, false))),
+        db.select({ sparePartListings: count() }).from(spareParts).innerJoin(businesses, eq(spareParts.businessId, businesses.id)).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(spareParts.suspended, false))),
+        db.select({ garageListings: count() }).from(garageServices).innerJoin(businesses, eq(garageServices.garageId, businesses.id)).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(garageServices.suspended, false))),
+        db.select({ supportListings: count() }).from(supportServices).innerJoin(businesses, eq(supportServices.businessId, businesses.id)).where(and(eq(businesses.status, "approved"), eq(businesses.suspended, false), eq(supportServices.suspended, false))),
+      ]);
+
+      res.json({
+        businessesListed: Number(businessesListed),
+        citiesCovered: Number(citiesCovered),
+        carBrands: Number(carBrands),
+        verifiedListings: Number(carListings) + Number(sparePartListings) + Number(garageListings) + Number(supportListings),
+      });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }

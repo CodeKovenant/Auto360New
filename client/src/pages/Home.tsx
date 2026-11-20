@@ -28,7 +28,7 @@ const HOME_SPOTLIGHT_SECTIONS: {
   href: string;
   icon: LucideIcon;
 }[] = [
-  { category: "car_dealer", businessCategories: ["car_dealer"], title: "Featured Car Dealers", subtitle: "Trusted dealers and showrooms near you", href: "/automobile-dealers", icon: Car },
+  { category: "car_dealer", businessCategories: ["car_dealer"], title: "Automobile Dealers", subtitle: "Trusted dealers and showrooms near you", href: "/automobile-dealers", icon: Car },
   { category: "spare_parts", businessCategories: ["spare_parts"], title: "Featured AutoSpares", subtitle: "Genuine and quality parts for all vehicle makes", href: "/autospares-dealers", icon: Package },
   { category: "garage", businessCategories: ["garage"], title: "Featured Garages", subtitle: "Trusted mechanics and auto repair shops near you", href: "/autogarage-repair", icon: Wrench },
   { category: "automotive_support", businessCategories: ["car_wash", "insurance", "other"], title: "Featured Automotive Support Businesses", subtitle: "Featured automotive support providers across Kenya", href: "/automotive-support", icon: Shield },
@@ -100,6 +100,12 @@ type RecentReview = { id: string; name: string; rating: number; comment: string;
 type FeaturedSparePart = SparePart & { businessName: string; businessCity: string; businessLogo: string | null; galleryImage: string | null };
 type FeaturedSupportService = SupportService & { businessName: string; businessCity: string; businessLogo: string | null; businessSubcategory: string | null; galleryImage: string | null };
 type FeaturedHomeOffers = { spareParts: FeaturedSparePart[]; supportServices: FeaturedSupportService[] };
+type HomeStats = {
+  businessesListed: number;
+  citiesCovered: number;
+  carBrands: number;
+  verifiedListings: number;
+};
 
 type FeaturedListingCardProps = {
   label: string;
@@ -236,6 +242,10 @@ export default function Home() {
 
   const { data: recentReviews, isLoading: reviewsLoading } = useQuery<RecentReview[]>({
     queryKey: ["/api/reviews/recent"],
+  });
+
+  const { data: homeStats } = useQuery<HomeStats>({
+    queryKey: ["/api/home/stats"],
   });
 
   const featuredListings: FeaturedListingCardProps[] = [
@@ -380,10 +390,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
-              { num: "500+", label: "Businesses Listed", icon: Building2 },
-              { num: "47", label: "Counties Covered", icon: MapPin },
-              { num: "50+", label: "Car Brands", icon: Car },
-              { num: "100%", label: "Verified Listings", icon: BadgeCheck },
+              { num: homeStats ? homeStats.businessesListed.toLocaleString("en-KE") : "—", label: "Businesses Listed", icon: Building2 },
+              { num: homeStats ? homeStats.citiesCovered.toLocaleString("en-KE") : "—", label: "Cities Covered", icon: MapPin },
+              { num: homeStats ? homeStats.carBrands.toLocaleString("en-KE") : "—", label: "Car Brands", icon: Car },
+              { num: homeStats ? homeStats.verifiedListings.toLocaleString("en-KE") : "—", label: "Verified Listings", icon: BadgeCheck },
             ].map(stat => (
               <div key={stat.label} className="flex flex-col items-center gap-1">
                 <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-1">
@@ -510,7 +520,9 @@ export default function Home() {
                 </div>
                 <Link href={block.href}>
                   <Button variant="outline" className="flex items-center gap-1">
-                    View all {block.title} <ChevronRight className="w-4 h-4" />
+                    {block.category === "car_dealer"
+                      ? "View all automobile dealers"
+                      : `View all ${block.title}`} <ChevronRight className="w-4 h-4" />
                   </Button>
                 </Link>
               </div>
