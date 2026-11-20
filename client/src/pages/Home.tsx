@@ -28,7 +28,7 @@ const HOME_SPOTLIGHT_SECTIONS: {
   href: string;
   icon: LucideIcon;
 }[] = [
-  { category: "car_dealer", businessCategories: ["car_dealer"], title: "Automobile Dealers", subtitle: "Trusted dealers and showrooms near you", href: "/automobile-dealers", icon: Car },
+  { category: "car_dealer", businessCategories: ["car_dealer"], title: "Featured Automobiles Dealers", subtitle: "Trusted dealers and showrooms near you", href: "/automobile-dealers", icon: Car },
   { category: "spare_parts", businessCategories: ["spare_parts"], title: "Featured AutoSpares", subtitle: "Genuine and quality parts for all vehicle makes", href: "/autospares-dealers", icon: Package },
   { category: "garage", businessCategories: ["garage"], title: "Featured Garages", subtitle: "Trusted mechanics and auto repair shops near you", href: "/autogarage-repair", icon: Wrench },
   { category: "automotive_support", businessCategories: ["car_wash", "insurance", "other"], title: "Featured Automotive Support Businesses", subtitle: "Featured automotive support providers across Kenya", href: "/automotive-support", icon: Shield },
