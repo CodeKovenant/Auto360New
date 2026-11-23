@@ -69,6 +69,7 @@ const HERO_SERVICE_SLIDES = [
     accent: "Dealers",
     badge: "Verified Car Dealers",
     description: "Explore trusted car dealers with quality new and used vehicles across Kenya.",
+    image: "/hero-bg.jpeg",
   },
   {
     label: "Autospares Dealers",
@@ -76,6 +77,7 @@ const HERO_SERVICE_SLIDES = [
     accent: "Dealers",
     badge: "Genuine Spare Parts",
     description: "Find quality spare parts, accessories and workshop essentials from trusted suppliers.",
+    image: "/spares-parts-banner.png",
   },
   {
     label: "Autogarage Repair",
@@ -83,6 +85,7 @@ const HERO_SERVICE_SLIDES = [
     accent: "Repair",
     badge: "Trusted Garage Services",
     description: "Book reliable garage repairs, servicing and maintenance from vetted automotive experts.",
+    image: "/garage-banner.png",
   },
   {
     label: "Automotive Support",
@@ -90,6 +93,7 @@ const HERO_SERVICE_SLIDES = [
     accent: "Support",
     badge: "Support & Protection",
     description: "Discover car wash, insurance, financing and other essential automotive support services.",
+    image: "/hero-bg.jpeg",
   },
 ] as const;
 
@@ -320,7 +324,7 @@ export default function Home() {
         <div
           className={`hero-banner-slide relative flex min-h-[85vh] items-center justify-start text-left hero-banner-slide--${heroSlidePhase}`}
           style={{
-            backgroundImage: "url(/hero-bg.jpeg)",
+            backgroundImage: `url("${activeHeroSlide.image}")`,
             backgroundSize: "cover",
             backgroundPosition: "center right",
           }}

@@ -1,0 +1,72 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Copy slider banner images",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/d",
+				"/c",
+				"copy /Y \"C:\\Users\\Market\\AppData\\Roaming\\Code\\agentSessionData\\e3e5591f-a06e-48e9-9e5c-732188006fe3\\attachments\\b1c08de7-9f7a-4b69-8837-04fb1b0e5500\\Garage - Banner_3.png\" \"C:\\Users\\Market\\Desktop\\auto360\\Auto360New\\client\\public\\garage-banner.png\" && copy /Y \"C:\\Users\\Market\\AppData\\Roaming\\Code\\agentSessionData\\e3e5591f-a06e-48e9-9e5c-732188006fe3\\attachments\\5cd6fa9f-04b9-43d9-ae46-edfc47559294\\Spares Parts - Banner.png\" \"C:\\Users\\Market\\Desktop\\auto360\\Auto360New\\client\\public\\spares-parts-banner.png\""
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Locate banner attachments",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/d",
+				"/c",
+				"where /r C:\\Users\\Market \"Garage - Banner_3.png\" & where /r C:\\Users\\Market \"Spares Parts - Banner.png\""
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Copy banner assets with Python",
+			"type": "shell",
+			"command": "python.exe",
+			"args": [
+				"-c",
+				"import shutil; garage=r'C:\\Users\\Market\\AppData\\Roaming\\Code\\agentSessionData\\e3e5591f-a06e-48e9-9e5c-732188006fe3\\attachments\\b1c08de7-9f7a-4b69-8837-04fb1b0e5500\\Garage - Banner_3.png'; spares=r'C:\\Users\\Market\\AppData\\Roaming\\Code\\agentSessionData\\e3e5591f-a06e-48e9-9e5c-732188006fe3\\attachments\\5cd6fa9f-04b9-43d9-ae46-edfc47559294\\Spares Parts - Banner.png'; public=r'C:\\Users\\Market\\Desktop\\auto360\\Auto360New\\client\\public'; shutil.copy2(garage, public+r'\\garage-banner.png'); shutil.copy2(spares, public+r'\\spares-parts-banner.png'); print('copied')"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Copy banner assets with Node",
+			"type": "shell",
+			"command": "node.exe",
+			"args": [
+				"-e",
+				"const fs=require('fs'); fs.copyFileSync('C:\\\\Users\\\\Market\\\\AppData\\\\Roaming\\\\Code\\\\agentSessionData\\\\e3e5591f-a06e-48e9-9e5c-732188006fe3\\\\attachments\\\\b1c08de7-9f7a-4b69-8837-04fb1b0e5500\\\\Garage - Banner_3.png','C:\\\\Users\\\\Market\\\\Desktop\\\\auto360\\\\Auto360New\\\\client\\\\public\\\\garage-banner.png'); fs.copyFileSync('C:\\\\Users\\\\Market\\\\AppData\\\\Roaming\\\\Code\\\\agentSessionData\\\\e3e5591f-a06e-48e9-9e5c-732188006fe3\\\\attachments\\\\5cd6fa9f-04b9-43d9-ae46-edfc47559294\\\\Spares Parts - Banner.png','C:\\\\Users\\\\Market\\\\Desktop\\\\auto360\\\\Auto360New\\\\client\\\\public\\\\spares-parts-banner.png'); console.log('copied')"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Copy banners using Node",
+			"type": "shell",
+			"command": "node.exe",
+			"args": [
+				"-e",
+				"const fs=require(\"fs\");fs.copyFileSync(\"C:\\\\Users\\\\Market\\\\AppData\\\\Roaming\\\\Code\\\\agentSessionData\\\\e3e5591f-a06e-48e9-9e5c-732188006fe3\\\\attachments\\\\b1c08de7-9f7a-4b69-8837-04fb1b0e5500\\\\Garage - Banner_3.png\",\"C:\\\\Users\\\\Market\\\\Desktop\\\\auto360\\\\Auto360New\\\\client\\\\public\\\\garage-banner.png\");fs.copyFileSync(\"C:\\\\Users\\\\Market\\\\AppData\\\\Roaming\\\\Code\\\\agentSessionData\\\\e3e5591f-a06e-48e9-9e5c-732188006fe3\\\\attachments\\\\5cd6fa9f-04b9-43d9-ae46-edfc47559294\\\\Spares Parts - Banner.png\",\"C:\\\\Users\\\\Market\\\\Desktop\\\\auto360\\\\Auto360New\\\\client\\\\public\\\\spares-parts-banner.png\");console.log(\"copied\")"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Copy banner image files",
+			"type": "shell",
+			"command": "node.exe",
+			"args": [
+				"copy-slider-assets.js"
+			],
+			"isBackground": false,
+			"group": "build"
+		}
+	]
+}
